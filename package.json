@@ -136,7 +136,7 @@
     "vitest": "^1.0.4"
   },
   "optionalDependencies": {
-    "@sentry/nextjs": "^10.38.0",
+    "@opentelemetry/api": "*",
     "nodemailer": "^8.0.1"
   }
 }

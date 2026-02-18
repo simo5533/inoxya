@@ -135,7 +135,8 @@ const nextConfig = {
         })
       )
       
-      // Ignorer les dépendances Sentry optionnelles au build pour éviter les erreurs
+      // Ignorer les dépendances Sentry et OpenTelemetry au build ET au runtime
+      // Cela évite l'erreur "Cannot find module '@opentelemetry/api'"
       config.plugins.push(
         new webpack.IgnorePlugin({
           resourceRegExp: /^@sentry\/nextjs$/,
@@ -144,6 +145,12 @@ const nextConfig = {
       config.plugins.push(
         new webpack.IgnorePlugin({
           resourceRegExp: /^@opentelemetry/,
+        })
+      )
+      // Ignorer aussi les sous-modules OpenTelemetry
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /@opentelemetry\/.*/,
         })
       )
       

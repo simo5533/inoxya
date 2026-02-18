@@ -7,41 +7,22 @@
  */
 
 // Import conditionnel de Sentry (optionnel)
-// Utiliser une fonction pour éviter l'erreur au build si le module n'existe pas
-function loadSentry(): any {
-  // Ne jamais charger Sentry au build - seulement au runtime si disponible
-  // Cela évite les erreurs Webpack avec les dépendances optionnelles
-  if (typeof window === 'undefined' && process.env['NEXT_PHASE'] !== 'phase-production-build') {
-    // Côté serveur uniquement, et pas pendant le build
-    try {
-      // Vérifier d'abord si NEXT_PUBLIC_SENTRY_DSN est défini
-      // Si non, ne pas essayer de charger Sentry du tout
-      if (!process.env['NEXT_PUBLIC_SENTRY_DSN']) {
-        return null
-      }
-      
-      // Utiliser Function constructor pour éviter que Webpack analyse ce require
-      const requireFunc = new Function('moduleName', 'return require(moduleName)')
-      const sentry = requireFunc('@sentry/nextjs')
-      
-      // Vérifier que Sentry est bien chargé
-      if (!sentry || typeof sentry.init !== 'function') {
-        return null
-      }
-      
-      return sentry
-    } catch (error: any) {
-      // Si erreur (module manquant, dépendances manquantes, etc.), ignorer silencieusement
-      // Ne pas logger pour éviter le spam dans les logs
-      return null
-    }
-  }
-  return null
-}
+// DÉSACTIVÉ COMPLÈTEMENT pour éviter l'erreur OpenTelemetry
+// Sentry sera réactivé plus tard si nécessaire avec une configuration complète
+// NOTE: loadSentry() supprimé car non utilisé - Sentry complètement désactivé
 
-const isProduction = process.env.NODE_ENV === 'production'
-const sentryDsn = process.env['NEXT_PUBLIC_SENTRY_DSN']
+// DÉSACTIVER SENTRY COMPLÈTEMENT POUR ÉVITER LES ERREURS OPENTELEMETRY
+// Sentry sera réactivé plus tard si nécessaire avec une configuration complète
+// NOTE: isProduction et sentryDsn supprimés car non utilisés
 
+// NE PAS INITIALISER SENTRY - DÉSACTIVÉ TEMPORAIREMENT
+// Cela évite l'erreur "Cannot find module '@opentelemetry/api'"
+// Pour réactiver Sentry plus tard:
+// 1. Installer toutes les dépendances OpenTelemetry
+// 2. Configurer NEXT_PUBLIC_SENTRY_DSN
+// 3. Décommenter le code ci-dessous
+
+/*
 // Initialiser Sentry si DSN est configuré et package disponible
 // IMPORTANT: Ne jamais bloquer le site si Sentry échoue
 if (isProduction && sentryDsn) {
@@ -81,6 +62,7 @@ if (isProduction && sentryDsn) {
     // Le site doit fonctionner même sans Sentry
   }
 }
+*/
 
 /**
  * Initialiser le monitoring côté client (pour MonitoringProvider)
@@ -101,36 +83,11 @@ export function logError(
     metadata?: Record<string, unknown>
   }
 ) {
-  const Sentry = loadSentry()
-  if (isProduction && sentryDsn && Sentry) {
-    try {
-      Sentry.withScope((scope: any) => {
-        if (context?.userId) {
-          scope.setUser({ id: context.userId })
-        }
-        if (context?.operation) {
-          scope.setTag('operation', context.operation)
-        }
-        if (context?.metadata) {
-          Object.entries(context.metadata).forEach(([key, value]) => {
-            scope.setExtra(key, value)
-          })
-        }
-        Sentry.captureException(error)
-      })
-    } catch (sentryError) {
-      // Fallback si Sentry échoue
-      console.error('[ERROR]', context?.operation || 'Unknown', error)
-      if (context?.metadata) {
-        console.error('[CONTEXT]', context.metadata)
-      }
-    }
-  } else {
-    // En développement ou sans Sentry, utiliser console.error
-    console.error('[ERROR]', context?.operation || 'Unknown', error)
-    if (context?.metadata) {
-      console.error('[CONTEXT]', context.metadata)
-    }
+  // SENTRY DÉSACTIVÉ - Utiliser console.error uniquement
+  // En développement ou sans Sentry, utiliser console.error
+  console.error('[ERROR]', context?.operation || 'Unknown', error)
+  if (context?.metadata) {
+    console.error('[CONTEXT]', context.metadata)
   }
 }
 
@@ -145,22 +102,9 @@ export function logInfo(
     metadata?: Record<string, unknown>
   }
 ) {
-  const Sentry = loadSentry()
-  if (isProduction && sentryDsn && Sentry) {
-    try {
-      Sentry.addBreadcrumb({
-        message,
-        level: 'info',
-        data: context?.metadata || {},
-      })
-    } catch (sentryError) {
-      // Fallback si Sentry échoue
-      console.log('[INFO]', context?.operation || 'Unknown', message, context?.metadata || {})
-    }
-  } else {
-    // En développement ou sans Sentry, utiliser console.log
-    console.log('[INFO]', context?.operation || 'Unknown', message, context?.metadata || {})
-  }
+  // SENTRY DÉSACTIVÉ - Utiliser console.log uniquement
+  // En développement ou sans Sentry, utiliser console.log
+  console.log('[INFO]', context?.operation || 'Unknown', message, context?.metadata || {})
 }
 
 /**
@@ -196,20 +140,13 @@ export function withMonitoring<T extends (...args: any[]) => any>(
   fn: T,
   operation: string
 ): T {
+  // SENTRY DÉSACTIVÉ - Exécuter la fonction directement
   return ((...args: Parameters<T>) => {
-    const Sentry = loadSentry()
-    if (isProduction && sentryDsn && Sentry) {
-      return Sentry.withScope((scope: any) => {
-        scope.setTag('operation', operation)
-        try {
-          return fn(...args)
-        } catch (error) {
-          Sentry.captureException(error)
-          throw error
-        }
-      })
-    } else {
+    try {
       return fn(...args)
+    } catch (error) {
+      console.error('[ERROR]', operation, error)
+      throw error
     }
   }) as T
 }
