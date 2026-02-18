@@ -1,6 +1,7 @@
 // Forcer le rendu dynamique pour toutes les pages [locale] pour éviter les erreurs next-intl
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const dynamicParams = true
 
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
@@ -14,8 +15,12 @@ import LocaleHtmlAttributes from "@/components/LocaleHtmlAttributes"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientProviders } from "@/components/ClientProviders"
 
+// Désactiver complètement la génération statique pour éviter l'erreur dynamicAccess
+// Retourner un tableau vide force Next.js à rendre toutes les pages dynamiquement
 export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }))
+  // Retourner un tableau vide désactive le prerendering
+  // Toutes les pages seront rendues à la demande (SSR uniquement)
+  return []
 }
 
 export default async function LocaleLayout({

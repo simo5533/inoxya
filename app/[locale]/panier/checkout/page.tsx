@@ -1,5 +1,10 @@
 "use client"
 
+// Forcer le rendu dynamique pour éviter l'erreur dynamicAccess
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const dynamicParams = true
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

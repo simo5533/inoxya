@@ -12,11 +12,9 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 const nextConfig = {
   // Fix warning: Multiple lockfiles detected
   outputFileTracingRoot: __dirname,
-  // Désactiver complètement le prerendering pour éviter les erreurs next-intl
-  // Toutes les pages seront rendues à la demande (SSR)
-  experimental: {
-    dynamicIO: true,
-  },
+  // Désactiver complètement le prerendering pour éviter les erreurs next-intl dynamicAccess
+  // Toutes les pages seront rendues à la demande (SSR uniquement)
+  output: 'standalone',
   // CONTRAINTES STRICTES FORCÉES - Production et développement
   eslint: {
     ignoreDuringBuilds: true, // Désactivé temporairement - erreurs mineures (apostrophes)

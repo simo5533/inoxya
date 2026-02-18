@@ -2,6 +2,8 @@
 
 // Forcer le rendu dynamique pour éviter les erreurs next-intl
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const dynamicParams = true
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"

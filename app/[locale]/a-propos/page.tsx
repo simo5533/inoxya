@@ -1,3 +1,8 @@
+// Forcer le rendu dynamique pour éviter l'erreur dynamicAccess
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const dynamicParams = true
+
 import { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
