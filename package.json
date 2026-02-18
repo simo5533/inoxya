@@ -4,6 +4,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
+    "postinstall": "node scripts/create-opentelemetry-mock.js",
     "dev": "node scripts/dev-server.js",
     "build": "next build",
     "start": "next start",
