@@ -7,9 +7,19 @@ export default getRequestConfig(async ({ locale }) => {
     locale = routing.defaultLocale
   }
 
+  // Charger les messages de manière sécurisée
+  let messages
+  try {
+    messages = (await import(`../messages/${locale}.json`)).default
+  } catch (error) {
+    // Fallback vers la locale par défaut si le fichier n'existe pas
+    console.warn(`Messages pour ${locale} non trouvés, utilisation de ${routing.defaultLocale}`)
+    messages = (await import(`../messages/${routing.defaultLocale}.json`)).default
+  }
+
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default
+    messages
   }
 })
 

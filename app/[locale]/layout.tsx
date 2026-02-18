@@ -1,3 +1,7 @@
+// Forcer le rendu dynamique pour toutes les pages [locale] pour éviter les erreurs next-intl
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
