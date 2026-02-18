@@ -9,9 +9,9 @@ export const routing = defineRouting({
   defaultLocale: 'fr',
   
   // Configuration du préfixe de locale
-  // 'as-needed' : /fr/ est optionnel, / est équivalent à /fr/
-  // 'always' : toujours afficher le préfixe (peut causer des boucles de redirection)
-  localePrefix: 'as-needed', // Permettre / sans préfixe pour éviter les boucles
+  // 'always' : toujours afficher le préfixe (plus simple, évite les problèmes de compilation)
+  // 'as-needed' : peut causer des problèmes avec Next.js 15 + force-dynamic
+  localePrefix: 'always', // Toujours afficher le préfixe pour éviter les problèmes de compilation
   
   // Désactiver la détection automatique de la langue du navigateur
   // Pour forcer le français par défaut

@@ -6,12 +6,14 @@ import { routing } from './i18n/routing'
 export default createMiddleware(routing)
 
 export const config = {
-  // Matcher compatible avec next-intl
+  // Matcher optimisé pour next-intl avec localePrefix: 'always'
+  // Plus restrictif pour éviter de compiler toutes les pages en même temps
   matcher: [
-    // Match all pathnames except for
-    // - … if they start with `/api`, `/_next` or `/_vercel`
-    // - … the ones containing a dot (e.g. `favicon.ico`)
-    '/((?!api|_next|_vercel|.*\\..*).*)',
+    // Match seulement les routes qui ne sont pas des fichiers statiques ou API
+    // Exclure explicitement les fichiers avec extensions
+    '/((?!api|_next|_vercel|.*\\.(?:ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|eot|json|xml|txt|pdf)).*)',
+    // Inclure explicitement la racine pour la redirection
+    '/',
   ],
 }
 
