@@ -113,6 +113,12 @@ const nextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         '@': path.resolve(__dirname),
+        // Rediriger le chemin interne Next.js vers le package npm OU un mock vide
+        'next/dist/compiled/@opentelemetry/api': '@opentelemetry/api',
+        // Alternative: créer un mock si le package n'existe pas
+        ...(isServer ? {
+          'next/dist/compiled/@opentelemetry/api': path.resolve(__dirname, 'lib/mocks/opentelemetry-mock.js'),
+        } : {}),
       }
       
       // Configuration pour sql.js - éviter les problèmes de module
