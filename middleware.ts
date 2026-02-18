@@ -4,39 +4,47 @@ import type { NextRequest } from 'next/server'
 // Créer le middleware next-intl avec gestion d'erreur robuste
 let intlMiddleware: ((request: NextRequest) => NextResponse) | null = null
 let intlInitialized = false
+let intlInitPromise: Promise<void> | null = null
 
 // Initialisation lazy et sécurisée du middleware i18n
 // Utilise import() dynamique pour compatibilité Edge runtime
 async function initializeIntlMiddleware() {
   if (intlInitialized) return
+  if (intlInitPromise) return intlInitPromise
   
-  try {
-    // Utiliser import() dynamique (compatible Edge runtime)
-    const [nextIntlModule, routingModule] = await Promise.all([
-      import('next-intl/middleware'),
-      import('./i18n/routing')
-    ])
-    
-    const createMiddleware = nextIntlModule.default
-    const { routing } = routingModule
-    
-    if (createMiddleware && typeof createMiddleware === 'function' && routing) {
-      intlMiddleware = createMiddleware(routing)
-      intlInitialized = true
+  intlInitPromise = (async () => {
+    try {
+      // Utiliser import() dynamique (compatible Edge runtime)
+      const [nextIntlModule, routingModule] = await Promise.all([
+        import('next-intl/middleware'),
+        import('./i18n/routing')
+      ])
+      
+      const createMiddleware = nextIntlModule.default
+      const { routing } = routingModule
+      
+      if (createMiddleware && typeof createMiddleware === 'function' && routing) {
+        intlMiddleware = createMiddleware(routing)
+        intlInitialized = true
+      }
+    } catch (error: any) {
+      // En cas d'erreur, désactiver i18n complètement
+      console.error('[Middleware] i18n désactivé - erreur:', error?.message || String(error))
+      intlMiddleware = null
+      intlInitialized = true // Marquer comme initialisé pour éviter de réessayer
     }
-  } catch (error: any) {
-    // En cas d'erreur, désactiver i18n complètement
-    console.error('[Middleware] i18n désactivé - erreur:', error?.message || String(error))
-    intlMiddleware = null
-    intlInitialized = true // Marquer comme initialisé pour éviter de réessayer
-  }
+  })()
+  
+  return intlInitPromise
 }
 
 export async function middleware(request: NextRequest) {
   try {
     // Initialiser i18n si pas encore fait (await pour import dynamique)
-    if (!intlInitialized) {
+    if (!intlInitialized && !intlInitPromise) {
       await initializeIntlMiddleware()
+    } else if (intlInitPromise) {
+      await intlInitPromise
     }
     
     const { pathname } = request.nextUrl
