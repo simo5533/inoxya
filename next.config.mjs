@@ -12,10 +12,6 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 const nextConfig = {
   // Fix warning: Multiple lockfiles detected
   outputFileTracingRoot: __dirname,
-  // Désactiver OpenTelemetry pour éviter l'erreur "Cannot find module '@opentelemetry/api'"
-  experimental: {
-    instrumentationHook: false,
-  },
   // CONTRAINTES STRICTES FORCÉES - Production et développement
   eslint: {
     ignoreDuringBuilds: true, // Désactivé temporairement - erreurs mineures (apostrophes)
