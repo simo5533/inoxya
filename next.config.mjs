@@ -113,13 +113,9 @@ const nextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         '@': path.resolve(__dirname),
-        // Rediriger le chemin interne Next.js vers le package npm OU un mock vide
-        'next/dist/compiled/@opentelemetry/api': '@opentelemetry/api',
-        // Alternative: créer un mock si le package n'existe pas
-        ...(isServer ? {
-          'next/dist/compiled/@opentelemetry/api': path.resolve(__dirname, 'lib/mocks/opentelemetry-mock.js'),
-        } : {}),
       }
+      
+      // Ne pas utiliser d'alias pour éviter la récursion
       
       // Configuration pour sql.js - éviter les problèmes de module
       config.resolve.fallback = {
@@ -141,22 +137,11 @@ const nextConfig = {
         })
       )
       
-      // Ignorer les dépendances Sentry et OpenTelemetry au build ET au runtime
-      // Cela évite l'erreur "Cannot find module '@opentelemetry/api'"
+      // Ignorer Sentry uniquement
+      // OpenTelemetry est maintenant créé directement dans node_modules via postinstall
       config.plugins.push(
         new webpack.IgnorePlugin({
           resourceRegExp: /^@sentry\/nextjs$/,
-        })
-      )
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^@opentelemetry/,
-        })
-      )
-      // Ignorer aussi les sous-modules OpenTelemetry
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /@opentelemetry\/.*/,
         })
       )
       

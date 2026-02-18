@@ -4,9 +4,9 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "postinstall": "node scripts/create-opentelemetry-mock.js",
+    "postinstall": "node scripts/fix-opentelemetry.js",
+    "prebuild": "node scripts/fix-opentelemetry.js",
     "dev": "node scripts/dev-server.js",
-    "prebuild": "node scripts/create-opentelemetry-mock.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -138,7 +138,7 @@
     "vitest": "^1.0.4"
   },
   "optionalDependencies": {
-    "@opentelemetry/api": "*",
+    "@opentelemetry/api": "1.9.0",
     "@opentelemetry/instrumentation": "^0.212.0",
     "@opentelemetry/sdk-node": "^0.212.0",
     "nodemailer": "^8.0.1"
