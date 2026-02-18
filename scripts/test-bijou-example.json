@@ -1,0 +1,37 @@
+{
+  "bijou_test": {
+    "name": "Bague Élégance Or Rose",
+    "name_ar": "خاتم الأناقة الذهبي الوردي",
+    "description": "Bague en acier inoxydable 316L premium avec finition or rose. Design minimaliste et intemporel, parfaite pour toutes les occasions. Cette bague allie élégance et durabilité, résistante à l'eau et aux taches. Un bijou qui sublime votre style avec raffinement.",
+    "price": 149.99,
+    "original_price": 199.99,
+    "category": "Bagues",
+    "image_url": "/images/bijoux/bagues/bague-elegance-or-rose.jpg",
+    "rating": 4.8,
+    "reviews_count": 127,
+    "is_available": true,
+    "is_featured": true,
+    "is_custom": false,
+    "stock_quantity": 50
+  },
+  "exemple_texte_complet": {
+    "titre": "Bague Élégance Or Rose - INOXYA BIJOUX",
+    "description_courte": "Bague premium en acier inoxydable 316L avec finition or rose",
+    "description_longue": "Découvrez la Bague Élégance Or Rose, une création INOXYA qui allie sophistication et modernité. Fabriquée en acier inoxydable 316L de qualité premium, cette bague arbore une magnifique finition or rose qui apporte une touche de chaleur et d'élégance à votre tenue.\n\n✨ CARACTÉRISTIQUES PREMIUM :\n• Acier inoxydable 316L hypoallergénique\n• Finition or rose résistante et durable\n• Design minimaliste et intemporel\n• Taille ajustable (tailles 48 à 64)\n• Résistant à l'eau et aux taches\n• Garantie à vie contre l'oxydation\n\n💎 QUALITÉ INOXYA :\nCette bague incarne l'excellence INOXYA avec un savoir-faire artisanal et des matériaux de première qualité. Parfaite pour un cadeau ou pour vous faire plaisir, elle s'adapte à tous les styles et toutes les occasions.\n\n📦 LIVRAISON GRATUITE :\nLivraison gratuite partout au Maroc. Paiement à la livraison disponible.",
+    "points_forts": [
+      "Acier inoxydable 316L premium",
+      "Finition or rose élégante",
+      "Design intemporel",
+      "Hypoallergénique",
+      "Résistant à l'eau",
+      "Garantie qualité INOXYA"
+    ],
+    "specifications": {
+      "matiere": "Acier inoxydable 316L",
+      "finition": "Or rose",
+      "tailles_disponibles": "48 à 64",
+      "poids": "~3g",
+      "garantie": "À vie contre l'oxydation"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond orange vibrant -->
+  <rect width="50" height="50" fill="#FF8C00" rx="6"/>
+  <!-- Diamant blanc avec facettes élégantes -->
+  <path d="M25 8L15 18L25 28L35 18L25 8Z" fill="white" opacity="0.98"/>
+  <path d="M25 28L15 38L25 42L35 38L25 28Z" fill="white" opacity="0.98"/>
+  <!-- Ligne horizontale au milieu (facette) -->
+  <line x1="15" y1="18" x2="35" y2="18" stroke="white" stroke-width="2.5" opacity="0.9"/>
+  <!-- Ligne verticale (facette) -->
+  <line x1="25" y1="8" x2="25" y2="42" stroke="white" stroke-width="2.5" opacity="0.9"/>
+</svg>

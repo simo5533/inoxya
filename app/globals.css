@@ -1,0 +1,548 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --radius: 0.5rem;
+
+    /* Couleurs INOXYA selon votre analyse */
+    --orange-inoxya: 255 140 0; /* #FF8C00 */
+    --gold-inoxya: 212 175 55; /* #D4AF37 */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Police arabe pour les noms en arabe */
+.font-arabic {
+  font-family: "Amiri", "Times New Roman", serif;
+  direction: rtl;
+  text-align: right;
+}
+
+/* 📐 Responsive selon votre spécification */
+/* Desktop: 3 par ligne */
+@media (min-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tablet: 2 par ligne */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile: 1 par ligne */
+@media (max-width: 639px) {
+  .product-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+/* Animations personnalisées pour les effets */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes shimmer-slow {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(255, 140, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 140, 0, 0.8), 0 0 30px rgba(255, 140, 0, 0.6);
+  }
+}
+
+@keyframes luxury-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(255, 140, 0, 0.3), 0 0 40px rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 140, 0, 0.6), 0 0 60px rgba(212, 175, 55, 0.4);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Gradient radial utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #ff8c00 0%, #d4af37 25%, #ff8c00 50%, #d4af37 75%, #ff8c00 100%);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-shimmer-slow {
+  animation: shimmer-slow 3s ease-in-out infinite;
+}
+
+.animate-luxury-pulse {
+  animation: luxury-pulse 3s ease-in-out infinite;
+}
+
+/* Effets de luxe selon votre palette */
+.luxury-gradient {
+  background: linear-gradient(135deg, #ff8c00 0%, #d4af37 100%);
+}
+
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Hover effects pour les cartes produits */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Effets spéciaux pour les étiquettes */
+.badge-glow {
+  box-shadow: 0 0 10px rgba(255, 140, 0, 0.5);
+}
+
+/* Animation de shimmer pour les prix */
+.price-shimmer {
+  background: linear-gradient(90deg, #ff8c00 0%, #d4af37 25%, #ff8c00 50%, #d4af37 75%, #ff8c00 100%);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Styles pour les étoiles de notation */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.star-filled {
+  color: #fbbf24;
+  fill: #fbbf24;
+}
+
+.star-empty {
+  color: #d1d5db;
+}
+
+/* Effets hover pour les boutons */
+.btn-hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.btn-hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Styles pour les cases produits responsives */
+.product-card {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .product-card {
+    max-width: 320px;
+  }
+}
+
+/* Animation pour les étiquettes */
+@keyframes pulse-badge {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.badge-pulse {
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+/* Effets spéciaux pour la section "Notre Collection" */
+.collection-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.collection-card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(255, 140, 0, 0.1), transparent);
+  animation: rotate 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.collection-card:hover::before {
+  opacity: 1;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Effet de particules flottantes */
+.floating-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  background: rgba(255, 140, 0, 0.6);
+  border-radius: 50%;
+  animation: float-particle 6s ease-in-out infinite;
+}
+
+@keyframes float-particle {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Correction alignement boutons produits */
+.product-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  height: 36px; /* Hauteur fixe pour tous les boutons */
+}
+
+.product-btn-voir {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0; /* Permet la flexibilité */
+}
+
+.product-btn-cart {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Assure que les boutons ont la même hauteur sur mobile */
+@media (max-width: 640px) {
+  .product-buttons {
+    height: 40px;
+  }
+
+  .product-btn-cart {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Styles luxueux pour les selects */
+select {
+  background-image: none;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
+/* Effet de brillance sur les titres */
+.luxury-title {
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-title::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* ⚡ OPTIMISATION DES IMAGES DES PACKS - Netteté et qualité maximale */
+/* Styles pour améliorer le rendu des images sans pixelisation */
+.pack-image-container,
+[class*="aspect-[4/3]"],
+[class*="aspect-video"] {
+  /* Forcer l'utilisation de l'accélération GPU */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Préserver la netteté lors du redimensionnement */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: auto;
+  /* Antialiasing optimisé */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimisation spécifique pour les images Next.js Image dans les packs */
+.pack-image-container img,
+[class*="aspect-[4/3]"] img,
+[class*="aspect-video"] img {
+  /* Qualité d'image maximale */
+  image-rendering: auto;
+  image-rendering: -webkit-optimize-contrast;
+  /* Rendu sans pixelisation */
+  -ms-interpolation-mode: bicubic;
+  /* Antialiasing pour les images */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prévenir l'étirement au-delà de la résolution native */
+  max-width: 100%;
+  max-height: 100%;
+  /* Rendu fluide */
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Forcer l'accélération GPU */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Qualité de rendu optimale */
+  -webkit-filter: contrast(1) brightness(1) saturate(1);
+  filter: contrast(1) brightness(1) saturate(1);
+}
+
+/* Amélioration du zoom sans pixelisation */
+.pack-image-container:hover img,
+[class*="aspect-[4/3]"]:hover img,
+[class*="aspect-video"]:hover img {
+  /* Transition fluide pour le zoom */
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-transition: -webkit-transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Préserver la qualité lors du zoom */
+  image-rendering: auto;
+  /* Forcer le re-rendu avec qualité maximale */
+  -webkit-filter: contrast(1.02) brightness(1.01);
+  filter: contrast(1.02) brightness(1.01);
+}
+
+/* Classe utilitaire pour images haute résolution */
+.high-resolution-image {
+  /* Charger les images 2x pour les écrans Retina */
+  image-rendering: auto;
+  -ms-interpolation-mode: bicubic;
+  /* Optimisation pour HD/2x */
+  -webkit-transform: translateZ(0) scale(1);
+  transform: translateZ(0) scale(1);
+  will-change: transform;
+}
+
+/* Responsive images - S'assurer que les images ne sont pas étirées */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .pack-image-container img,
+  [class*="aspect-[4/3]"] img,
+  [class*="aspect-video"] img {
+    /* Pour les écrans Retina/HD, utiliser la meilleure qualité */
+    image-rendering: auto;
+    -ms-interpolation-mode: bicubic;
+  }
+}
+
+/* Prévenir la compression excessive côté navigateur */
+.pack-image-optimized {
+  /* Indiquer au navigateur de préserver la qualité */
+  image-rendering: auto;
+  /* Désactiver toute compression automatique */
+  -webkit-image-rendering: auto;
+  /* Qualité maximale */
+  object-fit: cover;
+  object-position: center;
+}

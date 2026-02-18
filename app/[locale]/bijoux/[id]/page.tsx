@@ -1,0 +1,566 @@
+import Image from "next/image"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import type { Metadata } from "next"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Star, ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw, MessageCircle, Star as StarIcon } from "lucide-react"
+import { getBijouById, getAllBijoux } from "@/lib/database"
+import OrderForm from "@/components/OrderForm"
+import ProductImageGallery from "@/components/ProductImageGallery"
+import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
+import { getSiteUrlSync } from '@/lib/site-url'
+import { getTranslations } from 'next-intl/server'
+
+const siteUrl = getSiteUrlSync()
+
+// Force dynamic rendering - do NOT prerender at build time
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+/**
+ * Generate metadata for product page
+ */
+export async function generateMetadata({ params }: { params: Promise<{ id: string; locale: string }> }): Promise<Metadata> {
+  try {
+    const { id, locale } = await params
+    const bijou = await getBijouById(id)
+    const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
+    
+    if (!bijou) {
+      return {
+        title: t('notFound.title'),
+        description: t('notFound.description'),
+      }
+    }
+
+    // Normaliser l'URL de l'image pour Open Graph
+    const rawImageUrl = bijou.main_image || bijou.image_url || (Array.isArray(bijou.images) ? bijou.images[0] : '') || ''
+    let imageUrl = `${siteUrl}/images/default-product.jpg`
+    if (rawImageUrl) {
+      if (rawImageUrl.startsWith('http')) {
+        imageUrl = rawImageUrl
+      } else if (rawImageUrl.startsWith('/')) {
+        imageUrl = `${siteUrl}${rawImageUrl}`
+      } else {
+        imageUrl = `${siteUrl}/${rawImageUrl}`
+      }
+    }
+    
+    const price = bijou.price ? `${bijou.price} MAD` : ''
+    const description = bijou.description || t('description', { name: bijou.name, price })
+
+    return {
+      metadataBase: new URL(siteUrl),
+      title: `${bijou.name} | INOXYA BIJOUX`,
+      description,
+      keywords: [bijou.name, bijou.category_id || 'bijoux', 'acier inoxydable', 'bijoux berbères'],
+      openGraph: {
+        title: bijou.name,
+        description,
+        type: 'website',
+        url: `${siteUrl}/${locale}/bijoux/${id}`,
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: bijou.name,
+          },
+        ],
+        siteName: 'INOXYA BIJOUX',
+        locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: bijou.name,
+        description,
+        images: [imageUrl],
+      },
+      alternates: {
+        canonical: `${siteUrl}/${locale}/bijoux/${id}`,
+        languages: {
+          'fr': `${siteUrl}/fr/bijoux/${id}`,
+          'ar': `${siteUrl}/ar/bijoux/${id}`,
+        },
+      },
+    }
+  } catch (error) {
+    // En cas d'erreur, retourner des métadonnées par défaut
+    const { logger } = await import('@/lib/logger')
+    logger.error('[generateMetadata bijoux] Erreur:', error)
+    const { locale } = await params
+    const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
+    return {
+      title: t('default.title'),
+      description: t('default.description'),
+    }
+  }
+}
+
+/**
+ * Dynamic page : /[locale]/bijoux/[id]
+ */
+export default async function BijouDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
+  const { id, locale } = await params
+  const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
+
+  // Récupérer le produit avec gestion d'erreur robuste
+  let bijou: Awaited<ReturnType<typeof getBijouById>> | null = null
+  try {
+    bijou = await getBijouById(id)
+  } catch (error) {
+    console.error(`[BijouDetailPage] Erreur lors de la récupération du produit ${id}:`, error)
+    notFound()
+  }
+
+  // Si produit non trouvé → 404
+  if (!bijou) {
+    notFound()
+  }
+
+  // À ce point, TypeScript sait que bijou n'est pas null
+  // Créer une référence locale pour éviter les problèmes de type
+  const product = bijou
+  
+  // Récupérer des produits similaires
+  let allBijoux = await getAllBijoux()
+  if (!allBijoux || allBijoux.length === 0) {
+    allBijoux = []
+  }
+  const similarProducts = allBijoux
+    .filter(b => b.id !== id && b.category_id === product.category_id)
+    .slice(0, 4)
+
+  const rating = product.rating ?? 4.5
+  const reviews = product.reviews_count ?? 0
+
+  // Préparer les images pour le schema et la galerie
+  // Gérer les images qui peuvent être un string JSON, un array, ou undefined
+  let imagesArray: string[] = []
+  if (product.images) {
+    if (Array.isArray(product.images)) {
+      // Filtrer les badges (promo, nouveau, etc.) et garder seulement les vraies images
+      imagesArray = product.images.filter((img: any) => 
+        typeof img === 'string' && (img.startsWith('/') || img.startsWith('http'))
+      )
+    } else if (typeof product.images === 'string') {
+      try {
+        const parsed = JSON.parse(product.images)
+        if (Array.isArray(parsed)) {
+          imagesArray = parsed.filter((img: any) => 
+            typeof img === 'string' && (img.startsWith('/') || img.startsWith('http'))
+          )
+        }
+      } catch {
+        // Si ce n'est pas du JSON valide, ignorer
+      }
+    }
+  }
+  
+  const mainImage = product.main_image || product.image_url || ''
+  const allImages = mainImage 
+    ? [mainImage, ...imagesArray].filter(Boolean).filter((img, index, arr) => arr.indexOf(img) === index) // Supprimer les doublons
+    : imagesArray
+  
+  // Normaliser les URLs d'images pour le schema
+  const normalizedImages = allImages.map((img: string) => {
+    if (img.startsWith('http')) return img
+    if (img.startsWith('/')) return `${siteUrl}${img}`
+    return `${siteUrl}/${img}`
+  })
+
+  // Préparer le breadcrumb pour SEO
+  const categoryName = (product as any).category_id || (product as any).category || t('breadcrumb.jewelry')
+  const categorySlug = (product as any).category_id || ''
+  const breadcrumbItems = [
+    { name: t('breadcrumb.home'), url: siteUrl },
+    { name: t('breadcrumb.jewelry'), url: `${siteUrl}/${locale}/bijoux` },
+    ...(categoryName !== t('breadcrumb.jewelry') && categorySlug ? [{ name: categoryName, url: `${siteUrl}/${locale}/bijoux?category=${categorySlug}` }] : []),
+    { name: product.name, url: `${siteUrl}/${locale}/bijoux/${product.id}` },
+  ]
+
+  return (
+    <>
+      <ProductSchema
+        product={{
+          id: product.id,
+          name: product.name,
+          description: product.description || undefined,
+          price: product.price,
+          main_image: normalizedImages[0] || undefined,
+          images: normalizedImages,
+          rating: rating,
+          reviews_count: reviews,
+        }}
+        siteUrl={siteUrl}
+      />
+      <BreadcrumbSchema items={breadcrumbItems} />
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+        {/* back link */}
+        <Link 
+          href={`/${locale}/bijoux`}
+          className="inline-flex items-center text-sm text-gray-600 hover:text-luxury-gold transition-colors mb-6 group"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+          {t('backToCatalog')}
+        </Link>
+
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* image gallery */}
+          <div className="space-y-4">
+            <ProductImageGallery
+              mainImage={mainImage || "/placeholder.svg"}
+              images={imagesArray}
+              productName={product.name}
+            />
+          </div>
+
+          {/* details */}
+          <div className="space-y-6">
+            {/* badges (promo, nouveau, …) */}
+            <div className="flex flex-wrap gap-2">
+              {(() => {
+                // Extraire les tags depuis images (peut être array ou string JSON)
+                let imageTags: string[] = []
+                if (product.images) {
+                  if (Array.isArray(product.images)) {
+                    imageTags = product.images.filter((img: any) => 
+                      typeof img === 'string' && !img.startsWith('/') && !img.startsWith('http')
+                    )
+                  } else if (typeof product.images === 'string') {
+                    try {
+                      const parsed = JSON.parse(product.images)
+                      if (Array.isArray(parsed)) {
+                        imageTags = parsed.filter((img: any) => 
+                          typeof img === 'string' && !img.startsWith('/') && !img.startsWith('http')
+                        )
+                      }
+                    } catch {
+                      // Si ce n'est pas du JSON, vérifier si c'est une string simple avec des tags
+                      if (product.images.includes('promo') || product.images.includes('nouveau')) {
+                        imageTags = product.images.split(',').map((s: string) => s.trim())
+                      }
+                    }
+                  }
+                }
+                return (
+                  <>
+                    {imageTags.includes("promo") && <Badge className="bg-red-500 text-white font-semibold px-3 py-1">{t('badges.promo')}</Badge>}
+                    {imageTags.includes("nouveau") && <Badge className="bg-green-500 text-white font-semibold px-3 py-1">{t('badges.new')}</Badge>}
+                    {imageTags.includes("bestseller") && <Badge className="bg-blue-500 text-white font-semibold px-3 py-1">{t('badges.bestseller')}</Badge>}
+                    {imageTags.includes("premium") && <Badge className="bg-yellow-500 text-black font-semibold px-3 py-1">{t('badges.premium')}</Badge>}
+                    {product.is_featured && <Badge className="bg-luxury-gold text-luxury-black font-semibold px-3 py-1 border border-luxury-gold/30">{t('badges.featured')}</Badge>}
+                  </>
+                )
+              })()}
+            </div>
+
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3 tracking-tight leading-tight">{product.name}</h1>
+              {product.name_ar && (
+                <div className="font-arabic text-2xl text-gray-600 mb-4 text-right">{product.name_ar}</div>
+              )}
+            </div>
+
+            {/* rating */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-5 h-5 ${
+                      i < Math.floor(rating) ? "fill-luxury-gold text-luxury-gold" : "text-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-base font-medium text-gray-700">
+                {rating.toFixed(1)} <span className="text-gray-500">({reviews} {t('reviews')})</span>
+              </span>
+            </div>
+
+            {/* price */}
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-4xl font-bold text-luxury-gold">{Math.round(product.price)} MAD</span>
+              {product.original_price && product.original_price !== product.price && (
+                <>
+                  <span className="text-xl line-through text-gray-400">{Math.round(product.original_price)} MAD</span>
+                  <Badge className="bg-red-500 text-white font-semibold">
+                    -{Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
+                  </Badge>
+                </>
+              )}
+            </div>
+
+            {/* Stock status */}
+            <div className="mb-6">
+              {product.is_available ? (
+                <Badge className="bg-green-100 text-green-700 border-green-300">
+                  {t('stock.inStock')}
+                </Badge>
+              ) : (
+                <Badge className="bg-red-100 text-red-700 border-red-300">
+                  {t('stock.outOfStock')}
+                </Badge>
+              )}
+            </div>
+
+            <div className="text-gray-700 leading-relaxed mb-8 text-lg">
+              {product.description || t('defaultDescription', { name: product.name })}
+            </div>
+
+            {/* Formulaire de commande */}
+            <div className="mb-8 bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+              <OrderForm 
+                productName={product.name}
+                price={Math.round(product.price)}
+                productId={product.id}
+              />
+            </div>
+
+            {/* Actions secondaires */}
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="flex-1 border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
+              >
+                <Heart className="w-5 h-5 mr-2" />
+                {t('actions.addToFavorites')}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
+              >
+                <Share2 className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Garanties et services */}
+            <div className="mt-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">{t('guarantees.title')}</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Truck className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{t('guarantees.shipping.title')}</p>
+                    <p className="text-sm text-gray-600">{t('guarantees.shipping.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Shield className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{t('guarantees.warranty.title')}</p>
+                    <p className="text-sm text-gray-600">{t('guarantees.warranty.description')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-luxury-gold/20 rounded-lg">
+                    <RotateCcw className="w-5 h-5 text-luxury-gold" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{t('guarantees.return.title')}</p>
+                    <p className="text-sm text-gray-600">{t('guarantees.return.description')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Onglets avec informations détaillées */}
+        <div className="mt-16">
+          <Tabs defaultValue="description" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="description">{t('tabs.description')}</TabsTrigger>
+              <TabsTrigger value="specifications">{t('tabs.specifications')}</TabsTrigger>
+              <TabsTrigger value="reviews">{t('tabs.reviews', { count: reviews })}</TabsTrigger>
+              <TabsTrigger value="shipping">{t('tabs.shipping')}</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="description" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">{t('tabs.descriptionTitle')}</h3>
+                  <div className="text-gray-700 leading-relaxed">
+                    {product.description || t('defaultDescription', { name: product.name })}
+                  </div>
+                  <div className="mt-6 grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-2">{t('tabs.features')}</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• {t('tabs.feature1')}</li>
+                        <li>• {t('tabs.feature2')}</li>
+                        <li>• {t('tabs.feature3')}</li>
+                        <li>• {t('tabs.feature4')}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">{t('tabs.maintenance')}</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• {t('tabs.maintenance1')}</li>
+                        <li>• {t('tabs.maintenance2')}</li>
+                        <li>• {t('tabs.maintenance3')}</li>
+                        <li>• {t('tabs.maintenance4')}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="specifications" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">{t('tabs.specificationsTitle')}</h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{t('tabs.material')}</span>
+                        <span className="font-medium">{t('tabs.materialValue')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{t('tabs.finish')}</span>
+                        <span className="font-medium">{t('tabs.finishValue')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{t('tabs.weight')}</span>
+                        <span className="font-medium">{t('tabs.weightValue')}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{t('tabs.warranty')}</span>
+                        <span className="font-medium">{t('tabs.warrantyValue')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{t('tabs.origin')}</span>
+                        <span className="font-medium">{t('tabs.originValue')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{t('tabs.craftsmanship')}</span>
+                        <span className="font-medium">{t('tabs.craftsmanshipValue')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="reviews" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold">{t('tabs.reviewsTitle')}</h3>
+                    <Button variant="outline" size="sm">
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      {t('tabs.leaveReview')}
+                    </Button>
+                  </div>
+                  
+                  {/* Avis d'exemple */}
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border-b pb-4 last:border-b-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex">
+                            {[...Array(5)].map((_, j) => (
+                              <StarIcon
+                                key={j}
+                                className={`w-4 h-4 ${
+                                  j < 5 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-600">{t('tabs.reviewExample', { name: 'Fatima A.', days: 2 })}</span>
+                        </div>
+                        <p className="text-gray-700">
+                          {t('tabs.reviewText')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="shipping" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">{t('tabs.shippingTitle')}</h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-3">{t('tabs.shippingSection')}</h4>
+                      <ul className="text-sm text-gray-600 space-y-2">
+                        <li>• {t('tabs.shipping1')}</li>
+                        <li>• {t('tabs.shipping2')}</li>
+                        <li>• {t('tabs.shipping3')}</li>
+                        <li>• {t('tabs.shipping4')}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-3">{t('tabs.returnsSection')}</h4>
+                      <ul className="text-sm text-gray-600 space-y-2">
+                        <li>• {t('tabs.returns1')}</li>
+                        <li>• {t('tabs.returns2')}</li>
+                        <li>• {t('tabs.returns3')}</li>
+                        <li>• {t('tabs.returns4')}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Produits similaires */}
+        {similarProducts.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">{t('similarProducts')}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {similarProducts.map((product) => (
+                <Link key={product.id} href={`/${locale}/bijoux/${product.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100 mb-3">
+                        <Image
+                          src={product.image_url || "/placeholder.svg"}
+                          alt={`${product.name} - Bijou en acier inoxydable premium INOXYA - Produit similaire`}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                        />
+                      </div>
+                      <h3 className="font-semibold text-sm mb-1 line-clamp-2">{product.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-luxury-gold font-bold">{Math.round(product.price)} MAD</span>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs text-gray-600">{(product as any).rating?.toFixed(1) || "0.0"}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    </>
+  )
+}
+

@@ -1,0 +1,225 @@
+openapi: 3.0.0
+info:
+  title: INOXYA BIJOUX API
+  description: API REST pour la plateforme e-commerce INOXYA BIJOUX
+  version: 1.0.0
+  contact:
+    name: Support INOXYA BIJOUX
+    email: support@inoxya-bijoux.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de développement
+  - url: https://inoxya-bijoux.com/api
+    description: Serveur de production
+
+tags:
+  - name: Products
+    description: Gestion des produits
+  - name: Orders
+    description: Gestion des commandes
+  - name: Auth
+    description: Authentification
+  - name: Cart
+    description: Panier utilisateur
+  - name: Favorites
+    description: Favoris utilisateur
+  - name: Admin
+    description: Administration (requiert authentification admin)
+
+paths:
+  /products:
+    get:
+      tags: [Products]
+      summary: Liste des produits
+      description: Récupère la liste des produits disponibles
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filtrer par catégorie
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Recherche textuelle
+      responses:
+        '200':
+          description: Liste des produits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: Détails d'un produit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Détails du produit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Connexion utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          description: Identifiants invalides
+        '429':
+          description: Trop de tentatives
+
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Créer une commande
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Commande créée
+        '400':
+          description: Données invalides
+        '429':
+          description: Trop de requêtes
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        category:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        stock:
+          type: number
+        is_available:
+          type: boolean
+
+    LoginRequest:
+      type: object
+      required:
+        - phone
+        - password
+      properties:
+        phone:
+          type: string
+          example: "0612345678"
+        password:
+          type: string
+          format: password
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - items
+        - customer_name
+        - customer_phone
+        - customer_address
+        - city
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              bijou_id:
+                type: string
+              pack_id:
+                type: string
+              quantity:
+                type: number
+        customer_name:
+          type: string
+        customer_phone:
+          type: string
+        customer_address:
+          type: string
+        city:
+          type: string
+        notes:
+          type: string
+
+  responses:
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    ServerError:
+      description: Erreur serveur
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+security:
+  - BearerAuth: []
+

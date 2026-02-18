@@ -1,0 +1,101 @@
+import type React from "react"
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { OrganizationSchema } from "@/components/StructuredData"
+
+// Validation environnement au démarrage (serveur uniquement)
+if (typeof window === 'undefined') {
+  try {
+    const { ensureValidEnvironment } = require('@/lib/env-validator')
+    ensureValidEnvironment()
+  } catch (error) {
+    // En développement, on continue même si validation échoue
+    if (process.env['NODE_ENV'] === 'production') {
+      console.error('[CRITICAL] Environment validation failed:', error)
+    }
+  }
+}
+
+const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
+
+import { getSiteUrlSync } from '@/lib/site-url'
+const siteUrl = getSiteUrlSync()
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "INOXYA BIJOUX - Embellie ton âme",
+    template: "%s | INOXYA BIJOUX"
+  },
+  description: "Bijoux en acier inoxydable de qualité premium. Durables, hypoallergéniques et élégants. Collection berbère authentique.",
+  keywords: ["bijoux", "acier inoxydable", "bijoux berbères", "bijoux maroc", "bijoux premium", "colliers", "bagues", "bracelets"],
+  authors: [{ name: "INOXYA BIJOUX" }],
+  creator: "INOXYA BIJOUX",
+  publisher: "INOXYA BIJOUX",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    url: siteUrl,
+    siteName: "INOXYA BIJOUX",
+    title: "INOXYA BIJOUX - Embellie ton âme",
+    description: "Bijoux en acier inoxydable de qualité premium. Durables, hypoallergéniques et élégants.",
+    images: [
+      {
+        url: `${siteUrl}/images/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "INOXYA BIJOUX",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "INOXYA BIJOUX - Embellie ton âme",
+    description: "Bijoux en acier inoxydable de qualité premium",
+    images: [`${siteUrl}/images/og-image.jpg`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // google: 'your-google-verification-code',
+    // yandex: 'your-yandex-verification-code',
+  },
+  icons: {
+    icon: '/logo-inoxya-icon.svg',
+    apple: '/logo-inoxya-icon.svg',
+  },
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  // Ce layout gère toutes les routes (admin, API, et [locale])
+  // Le layout [locale] est imbriqué dans celui-ci
+  return (
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        <OrganizationSchema siteUrl={siteUrl} />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
+        {children}
+      </body>
+    </html>
+  )
+}

@@ -1,0 +1,21 @@
+<svg width="180" height="70" viewBox="0 0 180 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Diamant stylisé noir avec facettes blanches -->
+  <g transform="translate(90, 20)">
+    <!-- Forme principale du diamant (noir) -->
+    <path d="M0 -12L-10 0L0 12L10 0L0 -12Z" fill="black"/>
+    <!-- Facettes blanches supérieures -->
+    <path d="M0 -12L-5 -4L0 0L5 -4L0 -12Z" fill="white" opacity="0.95"/>
+    <!-- Facettes blanches inférieures -->
+    <path d="M0 0L-5 4L0 12L5 4L0 0Z" fill="white" opacity="0.75"/>
+    <!-- Ligne horizontale (facette) -->
+    <line x1="-10" y1="0" x2="10" y2="0" stroke="white" stroke-width="2" opacity="0.85"/>
+    <!-- Ligne verticale (facette) -->
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="2" opacity="0.85"/>
+  </g>
+  
+  <!-- Texte INOXYA (serif, gras) -->
+  <text x="90" y="45" font-family="Georgia, serif" font-size="22" font-weight="bold" text-anchor="middle" fill="black" letter-spacing="3px">INOXYA</text>
+  
+  <!-- Texte EMBELLIE TON ÂME (serif, plus petit) -->
+  <text x="90" y="62" font-family="Georgia, serif" font-size="9" text-anchor="middle" fill="black" letter-spacing="1.5px">EMBELLIE TON ÂME</text>
+</svg>

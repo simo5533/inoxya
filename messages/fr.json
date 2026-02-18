@@ -1,0 +1,614 @@
+{
+  "common": {
+    "language": "Langue",
+    "french": "Français",
+    "arabic": "العربية",
+    "search": "Recherche",
+    "cart": "Panier",
+    "favorites": "Favoris",
+    "login": "Connexion",
+    "register": "S'inscrire",
+    "logout": "Déconnexion",
+    "admin": "Admin",
+    "myAccount": "Mon Compte"
+  },
+  "header": {
+    "freeShipping": "Livraison gratuite dès 200 MAD • Bijoux en acier inoxydable • Retour gratuit 30 jours",
+    "navigation": {
+      "jewelry": "Bijoux",
+      "collections": "Collections",
+      "custom": "Sur Mesure",
+      "about": "À propos"
+    }
+  },
+  "home": {
+    "hero": {
+      "discoverCollection": "Découvrir la Collection",
+      "ourPacks": "Nos Packs",
+      "discover": "Découvrir"
+    },
+    "banner": {
+      "title1": "Collection Élégance",
+      "subtitle1": "Bijoux traditionnels marocains",
+      "title2": "Artisanat Premium",
+      "subtitle2": "Savoir-faire ancestral",
+      "title3": "Créations Uniques",
+      "subtitle3": "Acier inoxydable 316L"
+    },
+    "features": {
+      "title": "Pourquoi choisir INOXYA ?",
+      "subtitle": "Excellence et qualité au service de votre élégance",
+      "premium": {
+        "title": "Qualité Premium",
+        "description": "Acier inoxydable 316L, durable et hypoallergénique"
+      },
+      "shipping": {
+        "title": "Livraison Gratuite",
+        "description": "Dès 200 MAD d'achat partout au Maroc"
+      },
+      "warranty": {
+        "title": "Garantie Qualité",
+        "description": "Satisfait ou remboursé sous 30 jours"
+      },
+      "support": {
+        "title": "Support Client",
+        "description": "Service client disponible 7j/7"
+      }
+    },
+    "featured": {
+      "title": "Bijoux Vedettes",
+      "subtitle": "Découvrez nos pièces les plus appréciées",
+      "viewAll": "Voir tout",
+      "badge": "Collection Premium",
+      "noProducts": "Aucun bijou vedette disponible pour le moment",
+      "noProductsSubtitle": "Les produits vedettes apparaîtront ici une fois disponibles"
+    },
+    "categories": {
+      "title": "Notre Collection",
+      "subtitle": "Explorez nos catégories de bijoux",
+      "viewCategory": "Voir la catégorie"
+    },
+    "cta": {
+      "title": "Prêt à embellir votre style ?",
+      "subtitle": "Découvrez notre collection complète de bijoux en acier inoxydable",
+      "button": "Voir tous les bijoux"
+    }
+  },
+  "footer": {
+    "tagline": "Embellie ton âme avec nos bijoux en acier inoxydable premium",
+    "badges": {
+      "stainlessSteel": "Acier inoxydable 316L",
+      "durable": "Durable",
+      "hypoallergenic": "Hypoallergénique"
+    },
+    "navigation": {
+      "title": "Navigation",
+      "packs": "Nos Packs",
+      "allJewelry": "Tous les Bijoux",
+      "custom": "Sur Mesure",
+      "favorites": "Mes Favoris"
+    },
+    "customerService": {
+      "title": "Service Client",
+      "faq": "FAQ"
+    },
+    "contact": {
+      "title": "Contact",
+      "whatsapp": "WhatsApp",
+      "openMaps": "Ouvrir sur Google Maps",
+      "showMap": "Voir sur la carte",
+      "hideMap": "Masquer la carte"
+    },
+    "copyright": "© {year} INOXYA BIJOUX. Tous droits réservés.",
+    "values": {
+      "quality": "Qualité",
+      "service": "Service",
+      "satisfaction": "Satisfaction"
+    }
+  },
+  "products": {
+    "title": "Nos Bijoux",
+    "subtitle": "Découvrez notre collection complète",
+    "noProducts": "Aucun produit trouvé",
+    "noCategoryProducts": "Aucun produit dans la catégorie sélectionnée",
+    "addToCart": "Ajouter au panier",
+    "addToFavorites": "Ajouter aux favoris",
+    "removeFromFavorites": "Retirer des favoris",
+    "viewDetails": "Voir les détails",
+    "price": "Prix",
+    "originalPrice": "Prix original",
+    "inStock": "En stock",
+    "outOfStock": "Rupture de stock"
+  },
+  "cart": {
+    "title": "Mon Panier",
+    "empty": "Votre panier est vide",
+    "emptyDesc": "Découvrez notre collection de bijoux et ajoutez vos favoris à votre panier.",
+    "continueShopping": "Voir nos bijoux",
+    "checkout": "Passer la commande",
+    "total": "Total",
+    "subtotal": "Sous-total",
+    "shipping": "Livraison",
+    "free": "Gratuite",
+    "savings": "Économies",
+    "item": "article",
+    "items": "articles",
+    "inYourCart": "dans votre panier",
+    "trust": {
+      "freeShipping": "Livraison gratuite au Maroc",
+      "qualityGuarantee": "Garantie de qualité",
+      "return30Days": "Retour sous 30 jours"
+    }
+  },
+  "checkout": {
+    "title": "Finaliser la commande",
+    "subtitle": "Remplissez les informations ci-dessous pour finaliser votre commande",
+    "orderSummary": "Récapitulatif de la commande",
+    "shippingInfo": "Informations de livraison",
+    "paymentMethod": "Méthode de paiement",
+    "placeOrder": "Passer la commande",
+    "city": "Ville",
+    "selectCity": "Sélectionnez votre ville",
+    "address": "Adresse",
+    "cashOnDelivery": "Paiement à la livraison",
+    "bankTransfer": "Virement bancaire",
+    "notes": "Notes (optionnel)",
+    "notesPlaceholder": "Instructions spéciales, heures de livraison, etc.",
+    "total": "Total",
+    "securePayment": "Paiement sécurisé",
+    "trust": {
+      "freeShipping": "Livraison gratuite",
+      "qualityGuarantee": "Garantie de qualité",
+      "return30Days": "Retour sous 30 jours"
+    }
+  },
+  "bijoux": {
+    "title": "Notre Collection | INOXYA BIJOUX",
+    "description": "Découvrez notre collection exclusive de bijoux en acier inoxydable premium. Bagues, colliers, bracelets, boucles d'oreilles et montres berbères authentiques.",
+    "keywords": "bijoux,acier inoxydable,bijoux berbères,bijoux maroc,collection bijoux,bagues,colliers,bracelets,boucles d'oreilles,montres",
+    "pageTitle": "Notre Collection INOXYA",
+    "pageSubtitle": "Découvrez l'excellence de l'acier inoxydable 316L dans chaque création",
+    "categoriesTitle": "Nos Catégories",
+    "categoriesSubtitle": "Explorez notre collection par catégorie",
+    "active": "Actif",
+    "clearFilter": "Effacer le filtre",
+    "allProducts": "Tous les produits",
+    "noProducts": "Aucun bijou disponible pour le moment",
+    "noCategoryProducts": "Aucun bijou dans cette catégorie",
+    "noCategoryProductsDesc": "Découvrez nos autres catégories de bijoux.",
+    "noProductsDesc": "Revenez bientôt pour découvrir notre nouvelle collection.",
+    "backToHome": "Retour à l'accueil",
+    "product": "produit",
+    "products": "produits",
+    "detail": {
+      "notFound": {
+        "title": "Produit non trouvé | INOXYA BIJOUX",
+        "description": "Le produit que vous recherchez n'existe pas."
+      },
+      "default": {
+        "title": "Produit | INOXYA BIJOUX",
+        "description": "Découvrez nos bijoux en acier inoxydable premium."
+      },
+      "description": "Découvrez {name} sur INOXYA BIJOUX. {price}",
+      "backToCatalog": "Retour au catalogue",
+      "badges": {
+        "promo": "Promo",
+        "new": "Nouveau",
+        "bestseller": "Bestseller",
+        "premium": "Premium",
+        "featured": "⭐ Vedette"
+      },
+      "reviews": "avis",
+      "stock": {
+        "inStock": "✓ En stock",
+        "outOfStock": "✗ Rupture de stock"
+      },
+      "defaultDescription": "Découvrez {name}, un bijou en acier inoxydable premium de la collection INOXYA. Qualité exceptionnelle, finition soignée, design élégant et intemporel.",
+      "actions": {
+        "addToFavorites": "Ajouter aux favoris"
+      },
+      "guarantees": {
+        "title": "Garanties & Services",
+        "shipping": {
+          "title": "Livraison gratuite",
+          "description": "Dès 200 MAD d'achat"
+        },
+        "warranty": {
+          "title": "Garantie 2 ans",
+          "description": "Sur tous nos bijoux"
+        },
+        "return": {
+          "title": "Retour gratuit",
+          "description": "Sous 30 jours"
+        }
+      },
+      "tabs": {
+        "description": "Description",
+        "specifications": "Spécifications",
+        "reviews": "Avis ({count})",
+        "shipping": "Livraison",
+        "descriptionTitle": "Description détaillée",
+        "features": "Caractéristiques",
+        "feature1": "Acier inoxydable 316L",
+        "feature2": "Hypoallergénique",
+        "feature3": "Résistant à la corrosion",
+        "feature4": "Finition premium",
+        "maintenance": "Entretien",
+        "maintenance1": "Nettoyage à l'eau savonneuse",
+        "maintenance2": "Séchage avec un chiffon doux",
+        "maintenance3": "Éviter les produits chimiques",
+        "maintenance4": "Stockage dans un endroit sec",
+        "specificationsTitle": "Spécifications techniques",
+        "material": "Matériau",
+        "materialValue": "Acier inoxydable 316L",
+        "finish": "Finition",
+        "finishValue": "Polie miroir",
+        "weight": "Poids",
+        "weightValue": "~15g",
+        "warranty": "Garantie",
+        "warrantyValue": "2 ans",
+        "origin": "Origine",
+        "originValue": "Maroc",
+        "craftsmanship": "Artisanat",
+        "craftsmanshipValue": "Fait main",
+        "reviewsTitle": "Avis clients",
+        "leaveReview": "Laisser un avis",
+        "reviewExample": "{name} • Il y a {days} jours",
+        "reviewText": "Magnifique bijou ! La qualité est exceptionnelle et la finition parfaite. Je recommande vivement INOXYA pour la qualité de leurs créations.",
+        "shippingTitle": "Livraison et retours",
+        "shippingSection": "Livraison",
+        "shipping1": "Livraison gratuite dès 200 MAD",
+        "shipping2": "Délai de livraison : 2-5 jours ouvrés",
+        "shipping3": "Suivi de commande en temps réel",
+        "shipping4": "Emballage sécurisé et élégant",
+        "returnsSection": "Retours",
+        "returns1": "Retour gratuit sous 30 jours",
+        "returns2": "Produit en parfait état requis",
+        "returns3": "Remboursement sous 48h",
+        "returns4": "Échange possible"
+      },
+      "similarProducts": "Produits similaires",
+      "breadcrumb": {
+        "home": "Accueil",
+        "jewelry": "Bijoux"
+      }
+    }
+  },
+  "packs": {
+    "title": "Nos Packs",
+    "subtitle": "Découvrez nos collections de bijoux assortis",
+    "description": "Découvrez nos collections soigneusement sélectionnées, conçues pour créer des ensembles harmonieux et élégants.",
+    "loading": "Chargement de nos packs...",
+    "viewPack": "Voir le pack",
+    "addToCart": "Ajouter au panier",
+    "price": "Prix",
+    "originalPrice": "Prix original",
+    "discount": "Réduction",
+    "premiumCollections": "Collections Premium",
+    "matchedPieces": "Pièces assorties",
+    "guaranteedSavings": "Économies garanties",
+    "qualityAssured": "Qualité assurée",
+    "noPacks": "Aucun pack disponible",
+    "noPacksSubtitle": "Les packs seront affichés ici une fois créés.",
+    "piece": "pièce",
+    "pieces": "pièces",
+    "inThisPack": "dans ce pack",
+    "youSave": "Vous économisez",
+    "proceedToPayment": "Procéder au paiement",
+    "order": "Commander",
+    "fullName": "Nom complet",
+    "phone": "Téléphone",
+    "city": "Ville",
+    "address": "Adresse",
+    "notes": "Notes (optionnel)",
+    "submitOrder": "Confirmer la commande",
+    "ordering": "Commande en cours...",
+    "missingFields": "Champs manquants",
+    "fillAllFields": "Veuillez remplir tous les champs obligatoires.",
+    "viewDetails": "Voir détails",
+    "orderNow": "Commander maintenant",
+    "addedToFavorites": "✅ Ajouté aux favoris",
+    "addedToFavoritesDesc": "{name} a été ajouté à vos favoris.",
+    "error": "❌ Erreur",
+    "errorAddToFavorites": "Impossible d'ajouter le pack aux favoris.",
+    "orderCreated": "✅ Commande créée avec succès",
+    "orderCreatedDesc": "Commande {orderId} créée. Nous vous contacterons sous 24h.",
+    "orderError": "❌ Erreur lors de la commande"
+  },
+  "orderForm": {
+    "title": "Procéder au paiement",
+    "order": "Commande",
+    "fullName": "Nom complet",
+    "fullNamePlaceholder": "Votre nom et prénom",
+    "phone": "Numéro de téléphone",
+    "phonePlaceholder": "06 12 34 56 78",
+    "city": "Ville",
+    "selectCity": "Sélectionnez votre ville",
+    "address": "Adresse complète",
+    "addressPlaceholder": "Rue, quartier, numéro de maison...",
+    "notes": "Notes (optionnel)",
+    "notesPlaceholder": "Instructions spéciales, préférences de livraison...",
+    "submitOrder": "Confirmer la commande - {price} MAD",
+    "processing": "Traitement en cours...",
+    "success": {
+      "title": "Commande envoyée !",
+      "message": "Votre commande a été envoyée avec succès. Nous vous contacterons sous peu.",
+      "order": "Commande",
+      "product": "Produit",
+      "price": "Prix",
+      "name": "Nom",
+      "phone": "Numéro",
+      "city": "Ville",
+      "responseTime": "Réponse sous {time}"
+    },
+    "delivery": {
+      "title": "Livraison",
+      "freeFrom": "Livraison gratuite dès {amount} MAD",
+      "delay": "Délai : {delay}",
+      "payment": "Paiement à la livraison"
+    },
+    "errors": {
+      "csrfMissing": "Token de sécurité manquant. Veuillez rafraîchir la page.",
+      "orderCreation": "Erreur lors de la création de la commande",
+      "orderError": "Erreur lors de l'envoi de la commande"
+    }
+  },
+  "custom": {
+    "title": "Sur Mesure",
+    "subtitle": "Créez votre bijou unique",
+    "pageDescription": "Nous créons des bijoux personnalisés selon vos souhaits",
+    "heroBadge": "Atelier Sur-Mesure",
+    "heroTitle": "Bijoux Sur Mesure",
+    "heroSubtitle": "Créez le bijou de vos rêves. Nos maîtres artisans transforment votre vision en pièce unique d'exception.",
+    "startCreation": "Démarrer ma création",
+    "seeProcess": "Voir le processus",
+    "atelierTitle": "L'ATELIER",
+    "atelierSubtitle": "INOXYA Sur Mesure",
+    "atelierDescription": "Depuis notre atelier, nous créons des bijoux sur mesure qui racontent votre histoire. Chaque pièce est le fruit d'un savoir-faire artisanal transmis de génération en génération.",
+    "atelierDetails": "316L • Finition premium • Sur-mesure",
+    "atelierSignature": "INOXYA — Atelier Sur Mesure",
+    "atelierSignatureDesc": "Fabrication • Contrôle qualité • Finition premium",
+    "formTitle": "Créer votre bijou sur mesure",
+    "formSubtitle": "Remplissez ce formulaire pour nous faire part de vos souhaits",
+    "formCardTitle": "Votre demande personnalisée",
+    "jewelryType": "Type de bijou",
+    "material": "Matériau souhaité",
+    "style": "Style souhaité",
+    "budget": "Budget approximatif",
+    "descriptionLabel": "Description détaillée",
+    "contactInfo": "Vos informations de contact",
+    "fullName": "Nom complet",
+    "email": "Email",
+    "phone": "Téléphone",
+    "placeholders": {
+      "select": "Sélectionnez",
+      "choose": "Choisissez",
+      "indicate": "Indiquez",
+      "describe": "Décrivez en détail le bijou que vous souhaitez...",
+      "yourName": "Votre nom",
+      "yourEmail": "votre@email.com",
+      "yourPhone": "06 12 34 56 78"
+    },
+    "jewelryTypes": {
+      "ring": "Bague",
+      "necklace": "Collier",
+      "earrings": "Boucles d'oreilles",
+      "bracelet": "Bracelet",
+      "pendant": "Pendentif"
+    },
+    "materials": {
+      "gold18k": "Or 18 carats",
+      "gold14k": "Or 14 carats",
+      "silver": "Argent sterling",
+      "platinum": "Platine",
+      "steel": "Acier inoxydable premium"
+    },
+    "styles": {
+      "berber": "Style berbère traditionnel",
+      "modern": "Style moderne",
+      "classic": "Style classique",
+      "contemporary": "Style contemporain"
+    },
+    "budgets": {
+      "1000-3000": "1 000 - 3 000 MAD",
+      "3000-5000": "3 000 - 5 000 MAD",
+      "5000-10000": "5 000 - 10 000 MAD",
+      "10000+": "Plus de 10 000 MAD"
+    },
+    "submit": "Envoyer ma demande",
+    "submitting": "Envoi en cours...",
+    "error": "Une erreur est survenue. Veuillez réessayer.",
+    "reassurance": {
+      "responseTime": "Réponse sous 24h",
+      "privacy": "Confidentialité garantie",
+      "security": "Vos informations sont sécurisées et ne seront jamais partagées."
+    },
+    "success": {
+      "title": "Demande envoyée avec succès !",
+      "message": "Nous avons bien reçu votre demande de bijou sur mesure. Notre équipe vous contactera dans les {hours} heures pour discuter de votre projet.",
+      "newRequest": "Faire une nouvelle demande"
+    },
+    "atelierCards": {
+      "expertCraft": {
+        "title": "Artisanat expert",
+        "description": "Nos maîtres artisans utilisent des techniques traditionnelles transmises de génération en génération pour créer des bijoux d'exception."
+      },
+      "customDesign": {
+        "title": "Design personnalisé",
+        "description": "Chaque bijou est conçu selon vos souhaits, reflétant votre personnalité et votre style unique."
+      },
+      "premiumFinish": {
+        "title": "Finition premium",
+        "description": "Une attention méticuleuse aux détails garantit une finition irréprochable et durable."
+      }
+    },
+    "process": {
+      "title": "Notre Processus",
+      "subtitle": "Un parcours raffiné en 4 étapes pour créer votre bijou unique",
+      "step": "Étape",
+      "steps": {
+        "inspiration": {
+          "title": "Inspiration",
+          "description": "Partagez votre vision et vos idées. Notre équipe de designers vous accompagne pour définir chaque détail."
+        },
+        "validation": {
+          "title": "Validation",
+          "description": "Nous créons des esquisses détaillées et vous présentons le design final avant validation."
+        },
+        "fabrication": {
+          "title": "Fabrication",
+          "description": "Nos maîtres artisans créent votre bijou avec des techniques traditionnelles et des matériaux premium."
+        },
+        "delivery": {
+          "title": "Livraison",
+          "description": "Votre bijou sur mesure est livré dans un écrin premium, accompagné d'un certificat d'authenticité."
+        }
+      }
+    },
+    "faqSection": {
+      "title": "Questions Fréquentes",
+      "questions": {
+        "q1": {
+          "question": "Combien de temps prend la création d'un bijou sur mesure ?",
+          "answer": "Le délai varie selon la complexité du bijou, généralement entre 2 et 6 semaines. Nous vous fournirons un planning détaillé après validation du design."
+        },
+        "q2": {
+          "question": "Puis-je modifier le design après validation ?",
+          "answer": "Des ajustements mineurs sont possibles avant le début de la fabrication. Une fois la fabrication commencée, les modifications peuvent entraîner des frais supplémentaires."
+        },
+        "q3": {
+          "question": "Quels matériaux sont disponibles ?",
+          "answer": "Nous travaillons avec l'or 18K et 14K, l'argent sterling, le platine et l'acier inoxydable premium 316L. Tous nos matériaux sont certifiés et de qualité supérieure."
+        },
+        "q4": {
+          "question": "Proposez-vous une garantie ?",
+          "answer": "Oui, tous nos bijoux sur mesure bénéficient d'une garantie de 2 ans couvrant les défauts de fabrication. Un certificat d'authenticité est fourni avec chaque pièce."
+        },
+        "q5": {
+          "question": "Comment puis-je suivre l'avancement de ma commande ?",
+          "answer": "Nous vous tiendrons informé à chaque étape importante : validation du design, début de fabrication, finition et préparation de l'envoi. Vous recevrez des photos de votre bijou avant l'envoi."
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Prêt à créer votre bijou unique ?",
+      "subtitle": "Contactez-nous dès aujourd'hui pour discuter de votre projet",
+      "tagline": "INOXYA — Embellie ton âme"
+    }
+  },
+  "faq": {
+    "title": "FAQ | INOXYA BIJOUX",
+    "description": "Questions fréquentes sur nos bijoux en acier inoxydable 316L. Informations sur la livraison, les retours, les garanties, les paiements et les commandes sur mesure. Support client disponible.",
+    "keywords": "FAQ,questions fréquentes,livraison,retours,garantie,paiement,bijoux sur mesure,acier inoxydable 316L",
+    "subtitle": "Trouvez les réponses à vos questions",
+    "questions": {
+      "q1": "Quels matériaux utilisez-vous pour vos bijoux ?",
+      "a1": "Nos bijoux sont fabriqués en acier inoxydable 316L de qualité premium, garantissant une résistance exceptionnelle à l'oxydation et une durabilité à vie. Tous nos bijoux sont hypoallergéniques et parfaitement adaptés aux peaux sensibles.",
+      "q2": "Vos bijoux sont-ils garantis ?",
+      "a2": "Oui, tous nos bijoux bénéficient d'une garantie à vie contre l'oxydation et les défauts de fabrication. Nous garantissons également la satisfaction client : si vous n'êtes pas satisfait, nous vous remboursons intégralement sous 30 jours.",
+      "q3": "Comment commander un bijou sur mesure ?",
+      "a3": "Rendez-vous sur notre page Sur Mesure et remplissez le formulaire détaillé avec vos préférences. Notre équipe d'artisans vous contactera sous 48h pour discuter de votre projet et vous proposer un devis personnalisé.",
+      "q4": "Quels sont les délais de livraison ?",
+      "a4": "La livraison standard prend 2-5 jours ouvrés au Maroc. Pour les commandes express, nous proposons une livraison en 24h dans les grandes villes. La livraison est gratuite dès 200 MAD d'achat.",
+      "q5": "Acceptez-vous les retours ?",
+      "a5": "Oui, nous acceptons les retours sous 30 jours après réception. Les bijoux doivent être dans leur état d'origine, non portés et avec leur emballage. Les frais de retour sont à votre charge sauf en cas de défaut.",
+      "q6": "Quels modes de paiement acceptez-vous ?",
+      "a6": "Nous acceptons le paiement à la livraison (contre remboursement), les virements bancaires, et les paiements en ligne sécurisés. Tous les paiements sont 100% sécurisés et cryptés.",
+      "q7": "Proposez-vous des packs de bijoux ?",
+      "a7": "Oui, nous proposons des packs exclusifs qui regroupent plusieurs bijoux assortis à prix avantageux. Parfait pour offrir ou pour compléter votre collection.",
+      "q8": "Comment entretenir mes bijoux INOXYA ?",
+      "a8": "Nos bijoux en acier inoxydable nécessitent peu d'entretien. Un simple nettoyage avec un chiffon doux suffit. Évitez les produits chimiques agressifs. Pour un éclat optimal, utilisez notre kit de nettoyage premium (offert avec chaque commande)."
+    },
+    "categories": {
+      "all": "Tous",
+      "delivery": "Livraison",
+      "payment": "Paiement",
+      "products": "Produits",
+      "returns": "Retours",
+      "custom": "Sur mesure",
+      "warranty": "Garantie"
+    },
+    "links": {
+      "collection": "collection",
+      "surMesure": "Sur Mesure",
+      "packs": "packs exclusifs"
+    }
+  },
+  "about": {
+    "title": "À Propos - INOXYA BIJOUX",
+    "description": "Découvrez l'histoire et les valeurs d'INOXYA BIJOUX. Bijoux en acier inoxydable 316L premium, artisanat marocain authentique. Embellie ton âme avec des créations durables et élégantes.",
+    "keywords": "INOXYA BIJOUX,à propos,histoire,valeurs,acier inoxydable 316L,bijoux maroc,artisanat,qualité premium",
+    "subtitle": "Découvrez l'histoire d'INOXYA BIJOUX",
+    "heroTitle": "À propos d'INOXYA",
+    "heroSubtitle": "Acier inoxydable 316L premium. Artisanat authentique. Élégance marocaine intemporelle.",
+    "discoverCollection": "Découvrir la collection",
+    "viewPacks": "Voir nos packs",
+    "trustReturns": "Retours 30 jours",
+    "trustShipping": "Livraison gratuite dès 200 MAD",
+    "trustSteel": "Acier inoxydable 316L",
+    "storyTitle": "Notre Histoire",
+    "storyP1": "INOXYA BIJOUX naît d'une passion pour l'artisanat marocain et d'un engagement envers l'excellence. Chaque bijou que nous créons raconte une histoire, celle d'une tradition séculaire alliée à une modernité intemporelle.",
+    "storyP2": "Nous sélectionnons rigoureusement l'acier inoxydable 316L, le standard le plus élevé dans l'industrie, pour garantir à nos clients des bijoux qui résistent au temps, à l'eau et au ternissement.",
+    "storyP3": "Notre mission est simple : embellir votre quotidien avec des créations qui allient esthétique, durabilité et accessibilité, sans compromis sur la qualité.",
+    "promiseTitle": "Notre Promesse",
+    "promiseQuality": "Qualité irréprochable : chaque pièce est inspectée avec soin",
+    "promiseFinishing": "Finitions premium : détails soignés pour un rendu exceptionnel",
+    "promiseService": "Service client dédié : accompagnement personnalisé à chaque étape",
+    "promiseAuthenticity": "Authenticité : designs inspirés de l'artisanat marocain traditionnel",
+    "valuesTitle": "Nos Valeurs",
+    "valuesSubtitle": "Les principes qui guident notre travail et notre relation avec nos clients",
+    "valuePassion": "Passion",
+    "valuePassionDesc": "Une passion authentique pour l'artisanat et la création de bijoux exceptionnels",
+    "valueExcellence": "Excellence",
+    "valueExcellenceDesc": "Un engagement constant vers l'excellence dans chaque détail de nos créations",
+    "valueTrust": "Confiance",
+    "valueTrustDesc": "Une relation de confiance durable avec nos clients et nos partenaires",
+    "valueInnovation": "Innovation",
+    "valueInnovationDesc": "Une approche innovante qui allie tradition marocaine et modernité",
+    "materialsTitle": "Matériaux & Qualité",
+    "materialsSubtitle": "Pourquoi choisir INOXYA BIJOUX",
+    "material316L": "316L Durable & Hypoallergénique",
+    "material316LDesc": "Acier inoxydable de grade médical, parfait pour les peaux sensibles",
+    "materialWater": "Résistant à l'eau & au ternissement",
+    "materialWaterDesc": "Vos bijoux conservent leur éclat même après des années d'utilisation",
+    "materialFinishing": "Finitions Premium",
+    "materialFinishingDesc": "Chaque détail est soigné pour un rendu exceptionnel et professionnel",
+    "materialQuality": "Contrôle Qualité",
+    "materialQualityDesc": "Inspection rigoureuse de chaque pièce avant expédition",
+    "processTitle": "Notre Processus",
+    "processSubtitle": "De l'inspiration à l'expédition, chaque étape est soignée",
+    "stepInspiration": "Inspiration",
+    "stepDesign": "Design",
+    "stepSelection": "Sélection",
+    "stepAssembly": "Assemblage",
+    "stepControl": "Contrôle",
+    "stepShipping": "Expédition",
+    "rating": "4.8/5",
+    "ratingDesc": "Plus de 500 avis clients",
+    "reassuranceShippingTitle": "Expédition Rapide",
+    "reassuranceShippingDesc": "Expédition sous 24-48h • Livraison gratuite dès 200 MAD",
+    "reassuranceReturnsTitle": "Retours Faciles",
+    "reassuranceReturnsDesc": "Retours acceptés sous 30 jours • Remboursement intégral",
+    "reassuranceSupportTitle": "Support Dédié",
+    "reassuranceSupportDesc": "Service client disponible 7j/7 pour répondre à vos questions"
+  },
+  "favorites": {
+    "title": "Mes Favoris",
+    "noFavorites": "Aucun favori pour le moment",
+    "noFavoritesDesc": "Ajoutez des bijoux à vos favoris en cliquant sur le cœur quand vous parcourez notre collection.",
+    "viewCollection": "Découvrir nos bijoux",
+    "removedFromFavorites": "Retiré des favoris",
+    "removedFromFavoritesDesc": "{name} a été retiré de vos favoris.",
+    "itemRemoved": "Article retiré des favoris.",
+    "addedToCart": "✅ Ajouté au panier",
+    "addedToCartDesc": "{name} a été ajouté au panier avec succès.",
+    "error": "❌ Erreur",
+    "errorAddToCart": "Impossible d'ajouter le produit au panier.",
+    "viewDetails": "Voir les détails",
+    "addToCart": "Ajouter au panier",
+    "removeFromFavorites": "Retirer des favoris",
+    "loading": "Chargement de vos favoris...",
+    "itemsCount": "{count} bijou{plural} dans vos favoris"
+  }
+}
+

@@ -1,0 +1,719 @@
+{
+  "date": "2026-01-15T20:29:58.724Z",
+  "completion": 96.9,
+  "details": {
+    "pages": {
+      "total": 15,
+      "ok": 15,
+      "percent": 100
+    },
+    "api": {
+      "total": 13,
+      "ok": 13,
+      "percent": 100
+    },
+    "components": {
+      "total": 12,
+      "ok": 12,
+      "percent": 100
+    },
+    "features": {
+      "total": 16,
+      "ok": 14,
+      "percent": 87.5
+    }
+  },
+  "structure": {
+    "app": [
+      {
+        "type": "dir",
+        "name": "a-propos",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\a-propos"
+      },
+      {
+        "type": "dir",
+        "name": "admin",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\admin"
+      },
+      {
+        "type": "dir",
+        "name": "api",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api"
+      },
+      {
+        "type": "dir",
+        "name": "bijoux",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\bijoux"
+      },
+      {
+        "type": "dir",
+        "name": "bijoux-simple",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\bijoux-simple"
+      },
+      {
+        "type": "dir",
+        "name": "favoris",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\favoris"
+      },
+      {
+        "type": "file",
+        "name": "globals.css",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\globals.css",
+        "ext": ".css"
+      },
+      {
+        "type": "dir",
+        "name": "inscription",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\inscription"
+      },
+      {
+        "type": "file",
+        "name": "layout.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\layout.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "dir",
+        "name": "login",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\login"
+      },
+      {
+        "type": "dir",
+        "name": "packs",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\packs"
+      },
+      {
+        "type": "file",
+        "name": "page.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\page.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "dir",
+        "name": "panier",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\panier"
+      },
+      {
+        "type": "dir",
+        "name": "profile",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\profile"
+      },
+      {
+        "type": "dir",
+        "name": "sur-mesure",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\sur-mesure"
+      },
+      {
+        "type": "dir",
+        "name": "test-produits",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\test-produits"
+      }
+    ],
+    "components": [
+      {
+        "type": "dir",
+        "name": "admin",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\admin"
+      },
+      {
+        "type": "file",
+        "name": "BijouCard.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\BijouCard.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "Cart.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\Cart.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "CategoryCard.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\CategoryCard.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "CategoryImages.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\CategoryImages.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "ConnexionSection.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\ConnexionSection.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "Footer.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\Footer.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "Header.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\Header.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "HeroBanner.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\HeroBanner.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "JewelryBanner.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\JewelryBanner.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "OrderForm.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\OrderForm.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "PackCard.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\PackCard.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "ProductCard.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\ProductCard.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "ProductGrid.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\ProductGrid.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "ProductImageGallery.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\ProductImageGallery.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "file",
+        "name": "theme-provider.tsx",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\theme-provider.tsx",
+        "ext": ".tsx"
+      },
+      {
+        "type": "dir",
+        "name": "ui",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\components\\ui"
+      }
+    ],
+    "lib": [
+      {
+        "type": "file",
+        "name": "admin-auth.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\admin-auth.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "auth-demo.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\auth-demo.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "auth-old.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\auth-old.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "auth.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\auth.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "cart-favorites.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\cart-favorites.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "database-adapter.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\database-adapter.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "database.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\database.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "email.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\email.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "image-config.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\image-config.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "image-utils.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\image-utils.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "logger.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\logger.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "order-config.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\order-config.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "pack-management.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\pack-management.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "postgres.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\postgres.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "process-product-image.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\process-product-image.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "product-images.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\product-images.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "security.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\security.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "social-links.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\social-links.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "sqlite.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\sqlite.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "types.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\types.ts",
+        "ext": ".ts"
+      },
+      {
+        "type": "file",
+        "name": "utils.ts",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\lib\\utils.ts",
+        "ext": ".ts"
+      }
+    ],
+    "api": [
+      {
+        "type": "dir",
+        "name": "admin",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\admin"
+      },
+      {
+        "type": "dir",
+        "name": "auth",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\auth"
+      },
+      {
+        "type": "dir",
+        "name": "cart",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\cart"
+      },
+      {
+        "type": "dir",
+        "name": "checkout",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\checkout"
+      },
+      {
+        "type": "dir",
+        "name": "custom-requests",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\custom-requests"
+      },
+      {
+        "type": "dir",
+        "name": "favorites",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\favorites"
+      },
+      {
+        "type": "dir",
+        "name": "images",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\images"
+      },
+      {
+        "type": "dir",
+        "name": "invoices",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\invoices"
+      },
+      {
+        "type": "dir",
+        "name": "orders",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\orders"
+      },
+      {
+        "type": "dir",
+        "name": "packs",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\packs"
+      },
+      {
+        "type": "dir",
+        "name": "payments",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\payments"
+      },
+      {
+        "type": "dir",
+        "name": "products",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\products"
+      },
+      {
+        "type": "dir",
+        "name": "test",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\test"
+      },
+      {
+        "type": "dir",
+        "name": "upload",
+        "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\app\\api\\upload"
+      }
+    ]
+  },
+  "pages": {
+    "/": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 270,
+      "imports": 11
+    },
+    "/bijoux": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 72,
+      "imports": 6
+    },
+    "/bijoux/[id]": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 326,
+      "imports": 13
+    },
+    "/packs": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 485,
+      "imports": 12
+    },
+    "/panier": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 402,
+      "imports": 12
+    },
+    "/favoris": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 383,
+      "imports": 13
+    },
+    "/profile": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 177,
+      "imports": 9
+    },
+    "/login": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 124,
+      "imports": 11
+    },
+    "/inscription": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 221,
+      "imports": 11
+    },
+    "/admin": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 81,
+      "imports": 6
+    },
+    "/admin/produits": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 447,
+      "imports": 10
+    },
+    "/admin/orders": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 186,
+      "imports": 5
+    },
+    "/admin/packs": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 40,
+      "imports": 3
+    },
+    "/sur-mesure": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 361,
+      "imports": 9
+    },
+    "/a-propos": {
+      "exists": true,
+      "hasErrors": false,
+      "lines": 207,
+      "imports": 4
+    }
+  },
+  "api": {
+    "/api/products": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 229,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/products/[id]": {
+      "exists": true,
+      "methods": "GET,PUT,DELETE",
+      "lines": 295,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/packs": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 146,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/packs/[id]": {
+      "exists": true,
+      "methods": "GET,PUT,DELETE",
+      "lines": 122,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/cart": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 181,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/favorites": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 70,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/orders": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 91,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/checkout": {
+      "exists": true,
+      "methods": "POST",
+      "lines": 83,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/auth/login": {
+      "exists": true,
+      "methods": "POST",
+      "lines": 37,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/auth/register": {
+      "exists": true,
+      "methods": "POST",
+      "lines": 37,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/admin/products": {
+      "exists": true,
+      "methods": "POST",
+      "lines": 22,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/admin/packs": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 91,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    },
+    "/api/admin/notifications": {
+      "exists": true,
+      "methods": "GET,POST",
+      "lines": 17,
+      "hasErrorHandling": true,
+      "hasValidation": false
+    }
+  },
+  "components": {
+    "ProductCard": {
+      "exists": true,
+      "file": "components/ProductCard.tsx",
+      "lines": 263,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "PackCard": {
+      "exists": true,
+      "file": "components/PackCard.tsx",
+      "lines": 606,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "CategoryCard": {
+      "exists": true,
+      "file": "components/CategoryCard.tsx",
+      "lines": 136,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "Header": {
+      "exists": true,
+      "file": "components/Header.tsx",
+      "lines": 177,
+      "hasProps": false,
+      "hasErrors": false
+    },
+    "Footer": {
+      "exists": true,
+      "file": "components/Footer.tsx",
+      "lines": 150,
+      "hasProps": false,
+      "hasErrors": false
+    },
+    "ProductGrid": {
+      "exists": true,
+      "file": "components/ProductGrid.tsx",
+      "lines": 201,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "HeroBanner": {
+      "exists": true,
+      "file": "components/HeroBanner.tsx",
+      "lines": 69,
+      "hasProps": false,
+      "hasErrors": false
+    },
+    "AdminDashboard": {
+      "exists": true,
+      "file": "components/admin/AdminDashboard.tsx",
+      "lines": 403,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "AdminProducts": {
+      "exists": true,
+      "file": "components/admin/AdminProducts.tsx",
+      "lines": 295,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "AdminOrders": {
+      "exists": true,
+      "file": "components/admin/AdminOrders.tsx",
+      "lines": 441,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "AdminUsers": {
+      "exists": true,
+      "file": "components/admin/AdminUsers.tsx",
+      "lines": 313,
+      "hasProps": true,
+      "hasErrors": false
+    },
+    "ProductImageGallery": {
+      "exists": true,
+      "file": "components/ProductImageGallery.tsx",
+      "lines": 121,
+      "hasProps": true,
+      "hasErrors": false
+    }
+  },
+  "database": {
+    "exists": true,
+    "size": "584.00 KB",
+    "path": "C:\\Users\\hassa\\Desktop\\inoxya-bijoux 2\\data\\inoxya_bijoux.db"
+  },
+  "fonctionnalites": {
+    "E-commerce": {
+      "Catalogue produits": true,
+      "Détail produit": true,
+      "Panier": true,
+      "Favoris": true,
+      "Packs": true,
+      "Checkout": true
+    },
+    "Authentification": {
+      "Login": true,
+      "Inscription": true,
+      "Profil": true
+    },
+    "Administration": {
+      "Dashboard": true,
+      "Gestion produits": true,
+      "Gestion commandes": true,
+      "Gestion packs": true
+    },
+    "Infrastructure": {
+      "Base de données": true,
+      "API Routes": 13,
+      "Composants UI": 12
+    }
+  },
+  "erreurs": [],
+  "recommandations": []
+}

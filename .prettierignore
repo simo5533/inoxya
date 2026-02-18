@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+.next
+out
+dist
+build
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Logs
+logs
+*.log
+
+# Environment
+.env*
+!.env.example
+
+# Generated
+coverage
+.vercel
+
+# Images and assets
+public/images
+lib/image*
+lib/pack*
+
+# Documentation (keep as is)
+*.md
+!CHANGELOG.md
+
+# Scripts (keep as is)
+scripts/
+
+# Config files
+package-lock.json
+

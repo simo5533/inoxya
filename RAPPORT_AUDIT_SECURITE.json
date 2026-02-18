@@ -1,0 +1,170 @@
+{
+  "date": "2026-01-30T22:35:02.481Z",
+  "totalIssues": 19,
+  "issues": {
+    "securite": [
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "app\\inscription\\page.tsx",
+        "line": 230,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: Password ? <EyeOff className=\"h-4 w-4\" /> : <Eye c",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "app\\inscription\\page.tsx",
+        "line": 254,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: Password ? <EyeOff className=\"h-4 w-4\" /> : <Eye c",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "app\\login\\page.tsx",
+        "line": 29,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: password, setPassword] = useState(\"\")\n  const [sho",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "app\\login\\page.tsx",
+        "line": 120,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: Password ? <EyeOff className=\"h-4 w-4\" /> : <Eye c",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "components\\admin\\UserForm.tsx",
+        "line": 73,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: password = \"Le mot de passe est requis pour un nou",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "components\\admin\\UserForm.tsx",
+        "line": 199,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: password && <div className=\"text-sm text-red-500\">",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "XSS",
+        "file": "components\\ui\\chart.tsx",
+        "line": 81,
+        "severity": "HIGH",
+        "issue": "Risque XSS détecté: InnerHTML=",
+        "fix": "Utiliser textContent ou sanitizer"
+      },
+      {
+        "type": "XSS",
+        "file": "components\\ui\\chart.tsx",
+        "line": 81,
+        "severity": "HIGH",
+        "issue": "Risque XSS détecté: dangerouslySetInnerHTML",
+        "fix": "Utiliser textContent ou sanitizer"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "lib\\auth-demo.ts",
+        "line": 67,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: password: string, firstName: string, lastName: str",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "lib\\auth-old.ts",
+        "line": 41,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: password: string, firstName: string, lastName: str",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "lib\\auth.ts",
+        "line": 132,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: password: string, firstName: string, lastName: str",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SQL_INJECTION",
+        "file": "lib\\database-adapter.ts",
+        "line": 1986,
+        "severity": "CRITICAL",
+        "issue": "Risque SQL Injection: Query(\n          'UPDATE cart_items SET quantity = quantity + $1 WHERE user_id = $2 AND bijou_id = $3'",
+        "fix": "Utiliser des requêtes paramétrées"
+      },
+      {
+        "type": "SQL_INJECTION",
+        "file": "lib\\database-adapter.ts",
+        "line": 772,
+        "severity": "CRITICAL",
+        "issue": "Risque SQL Injection: execute(\n          'UPDATE cart_items SET quantity = quantity + ? WHERE user_id = ? AND bijou_id = ?'",
+        "fix": "Utiliser des requêtes paramétrées"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "lib\\security.ts",
+        "line": 161,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: token = cookieStore.get('auth_token')?.value\r\n\r\n  ",
+        "fix": "Utiliser variables d'environnement"
+      },
+      {
+        "type": "SECRET_EXPOSED",
+        "file": "lib\\sqlite.ts",
+        "line": 105,
+        "severity": "CRITICAL",
+        "issue": "Secret potentiellement exposé: PasswordHash = bcrypt.hashSync('Admin123!', 10)\r\n ",
+        "fix": "Utiliser variables d'environnement"
+      }
+    ],
+    "frontend": [
+      {
+        "type": "CONSOLE_LOG",
+        "file": "app\\bijoux-simple\\page.tsx",
+        "severity": "LOW",
+        "issue": "2 console.log détecté(s)",
+        "fix": "Remplacer par logger ou supprimer"
+      },
+      {
+        "type": "CONSOLE_LOG",
+        "file": "app\\test-produits\\page.tsx",
+        "severity": "LOW",
+        "issue": "4 console.log détecté(s)",
+        "fix": "Remplacer par logger ou supprimer"
+      },
+      {
+        "type": "CONSOLE_LOG",
+        "file": "components\\admin\\AdminPacksManagement.tsx",
+        "severity": "LOW",
+        "issue": "2 console.log détecté(s)",
+        "fix": "Remplacer par logger ou supprimer"
+      },
+      {
+        "type": "CONSOLE_LOG",
+        "file": "lib\\logger.ts",
+        "severity": "LOW",
+        "issue": "3 console.log détecté(s)",
+        "fix": "Remplacer par logger ou supprimer"
+      }
+    ],
+    "backend": [],
+    "database": [],
+    "liaison": [],
+    "critiques": []
+  },
+  "summary": {
+    "securite": 15,
+    "frontend": 4,
+    "backend": 0,
+    "database": 0,
+    "liaison": 0,
+    "critiques": 0
+  }
+}
