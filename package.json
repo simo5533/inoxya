@@ -137,6 +137,8 @@
   },
   "optionalDependencies": {
     "@opentelemetry/api": "*",
+    "@opentelemetry/instrumentation": "^0.212.0",
+    "@opentelemetry/sdk-node": "^0.212.0",
     "nodemailer": "^8.0.1"
   }
 }
