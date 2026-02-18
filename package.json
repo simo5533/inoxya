@@ -6,6 +6,7 @@
   "scripts": {
     "postinstall": "node scripts/create-opentelemetry-mock.js",
     "dev": "node scripts/dev-server.js",
+    "prebuild": "node scripts/create-opentelemetry-mock.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
