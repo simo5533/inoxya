@@ -5,17 +5,18 @@ import "./globals.css"
 import { OrganizationSchema } from "@/components/StructuredData"
 
 // Validation environnement au démarrage (serveur uniquement)
-if (typeof window === 'undefined') {
-  try {
-    const { ensureValidEnvironment } = require('@/lib/env-validator')
-    ensureValidEnvironment()
-  } catch (error) {
-    // En développement, on continue même si validation échoue
-    if (process.env['NODE_ENV'] === 'production') {
-      console.error('[CRITICAL] Environment validation failed:', error)
-    }
-  }
-}
+// TEMPORAIRE: Désactivé pour diagnostic - réactiver après fix
+// if (typeof window === 'undefined') {
+//   try {
+//     const { ensureValidEnvironment } = require('@/lib/env-validator')
+//     ensureValidEnvironment()
+//   } catch (error) {
+//     // En développement, on continue même si validation échoue
+//     if (process.env['NODE_ENV'] === 'production') {
+//       console.error('[CRITICAL] Environment validation failed:', error)
+//     }
+//   }
+// }
 
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 

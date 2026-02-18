@@ -1,0 +1,205 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Créer le middleware next-intl avec gestion d'erreur robuste
+let intlMiddleware: ((request: NextRequest) => NextResponse) | null = null
+let intlInitialized = false
+let intlInitPromise: Promise<void> | null = null
+
+// Initialisation lazy et sécurisée du middleware i18n
+// Utilise import() dynamique pour compatibilité Edge runtime
+async function initializeIntlMiddleware() {
+  if (intlInitialized) return
+  if (intlInitPromise) return intlInitPromise
+  
+  intlInitPromise = (async () => {
+    try {
+      // Utiliser import() dynamique (compatible Edge runtime)
+      const [nextIntlModule, routingModule] = await Promise.all([
+        import('next-intl/middleware'),
+        import('./i18n/routing')
+      ])
+      
+      const createMiddleware = nextIntlModule.default
+      const { routing } = routingModule
+      
+      if (createMiddleware && typeof createMiddleware === 'function' && routing) {
+        intlMiddleware = createMiddleware(routing)
+        intlInitialized = true
+      }
+    } catch (error: any) {
+      // En cas d'erreur, désactiver i18n complètement
+      console.error('[Middleware] i18n désactivé - erreur:', error?.message || String(error))
+      intlMiddleware = null
+      intlInitialized = true // Marquer comme initialisé pour éviter de réessayer
+    }
+  })()
+  
+  return intlInitPromise
+}
+
+export async function middleware(request: NextRequest) {
+  try {
+    // Initialiser i18n si pas encore fait (await pour import dynamique)
+    if (!intlInitialized && !intlInitPromise) {
+      await initializeIntlMiddleware()
+    } else if (intlInitPromise) {
+      await intlInitPromise
+    }
+    
+    const { pathname } = request.nextUrl
+
+    // EXCLURE /admin et toutes les routes API de l'i18n
+    // Ces routes doivent rester à la racine et non affectées par i18n
+    if (
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/api') ||
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/images') ||
+      pathname.startsWith('/logo-') ||
+      pathname.startsWith('/banner-') ||
+      pathname === '/robots.txt' ||
+      pathname === '/sitemap.xml' ||
+      pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|eot)$/)
+    ) {
+      // Pour les routes exclues, appliquer uniquement le middleware de sécurité existant
+      return applySecurityMiddleware(request)
+    }
+
+    // Pour toutes les autres routes, appliquer d'abord le middleware i18n
+    if (!intlMiddleware) {
+      // Si le middleware i18n n'a pas pu être créé, continuer sans i18n
+      console.warn('[Middleware] Middleware i18n non disponible, continuation sans i18n')
+      return applySecurityMiddleware(request)
+    }
+
+    let response: NextResponse
+    try {
+      response = intlMiddleware(request)
+      
+      // Vérifier si la réponse est une redirection pour éviter les boucles
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location')
+        const currentPath = request.nextUrl.pathname
+        
+        // Éviter les boucles de redirection
+        if (location) {
+          const locationPath = new URL(location, request.url).pathname
+          // Si on redirige vers le même chemin, éviter la boucle
+          if (locationPath === currentPath || (currentPath === '/' && locationPath === '/fr')) {
+            console.warn('[Middleware] Boucle de redirection détectée, permettre l\'accès direct')
+            // Permettre l'accès direct sans redirection
+            const url = request.nextUrl.clone()
+            url.pathname = '/fr'
+            return applySecurityMiddleware(request, NextResponse.rewrite(url))
+          }
+        }
+      }
+    } catch (i18nError) {
+      console.error('[Middleware] Erreur lors de l\'exécution du middleware i18n:', i18nError)
+      // En cas d'erreur i18n, continuer sans i18n
+      response = NextResponse.next()
+    }
+
+    // Ensuite, appliquer les headers de sécurité sur la réponse i18n
+    return applySecurityMiddleware(request, response)
+  } catch (error) {
+    // Gestion d'erreur globale pour éviter que le middleware bloque tout
+    console.error('[Middleware] Erreur critique dans le middleware:', error)
+    // Retourner une réponse basique pour éviter de bloquer le site
+    try {
+      return applySecurityMiddleware(request)
+    } catch (securityError) {
+      console.error('[Middleware] Erreur même dans applySecurityMiddleware:', securityError)
+      // Dernière solution: retourner une réponse Next.js basique
+      return NextResponse.next()
+    }
+  }
+}
+
+// Fonction pour appliquer les headers de sécurité (extrait du middleware original)
+function applySecurityMiddleware(request: NextRequest, existingResponse?: NextResponse) {
+  // Forcer HTTPS en production
+  const isProduction = process.env.NODE_ENV === 'production'
+  const protocol = request.headers.get('x-forwarded-proto') || 
+                   (request.url.startsWith('https') ? 'https' : 'http')
+  
+  // Rediriger HTTP vers HTTPS en production
+  if (isProduction && protocol === 'http' && !existingResponse) {
+    const url = request.nextUrl.clone()
+    url.protocol = 'https'
+    return NextResponse.redirect(url, 301)
+  }
+  
+  // Utiliser la réponse existante (de i18n) ou créer une nouvelle
+  const response = existingResponse || NextResponse.next()
+  
+  // Configuration CORS explicite
+  const origin = request.headers.get('origin')
+  const allowedOrigin = process.env['NEXT_PUBLIC_SITE_URL'] || 
+                       (isProduction ? null : 'http://localhost:3000')
+  
+  // Autoriser l'origine si elle correspond au site ou localhost en dev
+  if (origin && (origin === allowedOrigin || (!isProduction && origin.includes('localhost')))) {
+    response.headers.set('Access-Control-Allow-Origin', origin)
+  } else if (!isProduction) {
+    // En développement, autoriser localhost
+    response.headers.set('Access-Control-Allow-Origin', 'http://localhost:3000')
+  }
+  
+  // Headers CORS pour les requêtes préliminaires (OPTIONS)
+  if (request.method === 'OPTIONS') {
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token')
+    response.headers.set('Access-Control-Max-Age', '86400')
+    return new NextResponse(null, { status: 204, headers: response.headers })
+  }
+  
+  // Headers de sécurité stricts
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  
+  // Content-Security-Policy avec support Next.js 15 Server Actions
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.google.com https://maps.googleapis.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: https: blob: https://maps.googleapis.com https://maps.gstatic.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https: https://maps.googleapis.com",
+    "frame-src 'self' https://maps.google.com https://www.google.com",
+    "frame-ancestors 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests"
+  ].join('; ')
+  
+  response.headers.set('Content-Security-Policy', cspDirectives)
+  
+  // Forcer HTTPS pour les cookies en production
+  if (isProduction) {
+    const setCookieHeader = response.headers.get('Set-Cookie')
+    if (setCookieHeader) {
+      response.headers.set('Set-Cookie', setCookieHeader.replace(/;\s*Secure/gi, '; Secure'))
+    }
+  }
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths including API routes for CORS
+     * Exceptions:
+     * - _next (Next.js internals including Server Actions)
+     * - favicon.ico (favicon file)
+     * - Static files (images, fonts, etc.)
+     */
+    '/((?!_next|favicon.ico|.*\\.(?:ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|eot)$).*)',
+  ],
+}

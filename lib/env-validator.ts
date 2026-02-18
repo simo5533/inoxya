@@ -4,7 +4,8 @@
  */
 
 import { z } from 'zod'
-import { logger } from './logger'
+// Temporairement désactivé pour éviter les blocages - utiliser console directement
+// import { logger } from './logger'
 
 // ==================== SCHÉMA ZOD ====================
 
@@ -147,17 +148,19 @@ export function validateEnvironment(): EnvValidationResult {
   }
   
   // ==================== LOGGING ====================
+  // Utiliser console au lieu de logger pour éviter les blocages potentiels
+  // Le logger pourrait essayer d'écrire dans un fichier et bloquer
   
   if (errors.length > 0) {
-    logger.error('[ENV VALIDATOR] Erreurs de configuration:', { errors })
+    console.error('[ENV VALIDATOR] Erreurs de configuration:', errors)
   }
   
   if (warnings.length > 0) {
-    logger.warn('[ENV VALIDATOR] Avertissements de configuration:', { warnings })
+    console.warn('[ENV VALIDATOR] Avertissements de configuration:', warnings)
   }
   
   if (errors.length === 0 && warnings.length === 0) {
-    logger.info('[ENV VALIDATOR] ✅ Configuration environnement valide')
+    console.log('[ENV VALIDATOR] ✅ Configuration environnement valide')
   }
   
   return {
@@ -191,9 +194,9 @@ export function ensureValidEnvironment(): void {
       // En production runtime: fail-fast
       throw new Error(errorMessage)
     } else {
-      // En développement: logger seulement
-      logger.error(errorMessage)
-      logger.warn('Continuer en mode développement malgré les erreurs...')
+      // En développement: console seulement (éviter logger qui pourrait bloquer)
+      console.error('[ENV VALIDATOR]', errorMessage)
+      console.warn('[ENV VALIDATOR] Continuer en mode développement malgré les erreurs...')
     }
   }
 }

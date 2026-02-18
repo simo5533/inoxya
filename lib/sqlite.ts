@@ -70,6 +70,17 @@ let betterSqlite3LoadAttempted = false
  * Évite les erreurs Webpack "Cannot read properties of undefined (reading 'call')"
  */
 function loadBetterSqlite3(): { Database: any; available: boolean; error: string | null } {
+  // FORCE_SQLJS: Variable d'environnement pour forcer sql.js et éviter better-sqlite3
+  // Utile pour débloquer la compilation Next.js qui peut être bloquée par better-sqlite3
+  if (process.env['FORCE_SQLJS'] === '1' || process.env['SKIP_BETTER_SQLITE3'] === '1') {
+    betterSqlite3LoadAttempted = true
+    Database = null
+    betterSqlite3Available = false
+    betterSqlite3Error = 'FORCE_SQLJS=1 - better-sqlite3 désactivé'
+    logger.info('[DB] ⚠️ FORCE_SQLJS=1 activé - better-sqlite3 désactivé, utilisation de sql.js uniquement')
+    return { Database, available: false, error: betterSqlite3Error }
+  }
+  
   // Si déjà tenté, retourner le résultat en cache
   if (betterSqlite3LoadAttempted) {
     return { Database, available: betterSqlite3Available, error: betterSqlite3Error }

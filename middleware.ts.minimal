@@ -1,0 +1,21 @@
+// Version minimale du middleware pour debug
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest) {
+  // Version minimale - pas de i18n, juste les headers de sécurité de base
+  const response = NextResponse.next()
+  
+  // Headers de sécurité minimaux
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next|favicon.ico|.*\\.(?:ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|eot)$).*)',
+  ],
+}
+

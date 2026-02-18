@@ -14,7 +14,9 @@ const nextConfig = {
   outputFileTracingRoot: __dirname,
   // Désactiver complètement le prerendering pour éviter les erreurs next-intl dynamicAccess
   // Toutes les pages seront rendues à la demande (SSR uniquement)
-  output: 'standalone',
+  // IMPORTANT: 'standalone' peut causer des problèmes sur Vercel, utiliser seulement pour VPS/Docker
+  // Sur Vercel, ne pas spécifier 'output' (Vercel gère automatiquement)
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   // CONTRAINTES STRICTES FORCÉES - Production et développement
   eslint: {
     ignoreDuringBuilds: true, // Désactivé temporairement - erreurs mineures (apostrophes)
