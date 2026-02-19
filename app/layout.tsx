@@ -21,7 +21,17 @@ import { OrganizationSchema } from "@/components/StructuredData"
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 
 import { getSiteUrlSync } from '@/lib/site-url'
-const siteUrl = getSiteUrlSync()
+
+// OPTIMISATION: Appel synchrone sécurisé avec fallback
+const defaultPort = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
+let siteUrl = `http://localhost:${defaultPort}`
+try {
+  siteUrl = getSiteUrlSync()
+} catch {
+  // Fallback si erreur (évite de bloquer le layout)
+  const defaultPortFallback = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
+  siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] || `http://localhost:${defaultPortFallback}`
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

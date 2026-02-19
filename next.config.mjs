@@ -1,30 +1,40 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
+ 
 import createNextIntlPlugin from 'next-intl/plugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 // Plugin next-intl - utilise i18n/request.ts par défaut
+// OPTIMISATION: Le plugin est activé mais i18n/request.ts a maintenant un timeout
+ 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Fix warning: Multiple lockfiles detected
   outputFileTracingRoot: __dirname,
+  // Transpiler next-intl pour éviter les warnings webpack
+  transpilePackages: ['next-intl'],
   // Désactiver complètement le prerendering pour éviter les erreurs next-intl dynamicAccess
   // Toutes les pages seront rendues à la demande (SSR uniquement)
   // IMPORTANT: 'standalone' peut causer des problèmes sur Vercel, utiliser seulement pour VPS/Docker
   // Sur Vercel, ne pas spécifier 'output' (Vercel gère automatiquement)
   ...(process.env.VERCEL ? {} : { output: 'standalone' }),
-  // CONTRAINTES STRICTES FORCÉES - Production et développement
+  // OPTIMISATION: ESLint et TypeScript - accélérer la compilation
   eslint: {
-    ignoreDuringBuilds: true, // Désactivé temporairement - erreurs mineures (apostrophes)
+    ignoreDuringBuilds: true, // Ignorer ESLint pendant le build (plus rapide)
     dirs: ['app', 'components', 'lib'],
   },
   typescript: {
     ignoreBuildErrors: false, // Activé pour production - erreurs critiques uniquement
     tsconfigPath: './tsconfig.json',
+  },
+  // OPTIMISATION: Compilation plus rapide en dev
+  experimental: {
+    // Optimiser la compilation en développement
+    optimizePackageImports: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-toast'],
   },
   // Optimisations de production
   // swcMinify est activé par défaut dans Next.js 15+
@@ -67,9 +77,10 @@ const nextConfig = {
   },
   images: {
     formats: ['image/avif', 'image/webp'],
-    // Tailles optimisées pour HD/2x (Retina) - Plus de résolutions pour meilleure qualité
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2560, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 640, 750, 828],
+    // OPTIMISATION: Réduire les tailles pour compilation plus rapide
+    // Tailles essentielles uniquement (moins de génération d'images = compilation plus rapide)
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
@@ -106,11 +117,27 @@ const nextConfig = {
     '@opentelemetry/instrumentation-redis',
     '@opentelemetry/instrumentation-sqlite3',
   ],
-  // Configuration Webpack - optimisée pour éviter les erreurs de chargement
+  // Configuration Webpack - optimisée pour compilation rapide
   webpack: (config, { dev, isServer, webpack }) => {
     if (dev) {
-      // En développement, désactiver le cache pour éviter les problèmes
-      config.cache = false
+      // OPTIMISATION: Activer le cache pour compilation rapide
+      // Le cache accélère significativement les recompilations
+      config.cache = {
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename],
+        },
+        cacheDirectory: path.resolve(__dirname, '.next/cache/webpack'),
+        maxMemoryGenerations: 1,
+        compression: 'gzip',
+      }
+      
+      // Supprimer les warnings de console pour next-intl
+      if (config.infrastructureLogging) {
+        config.infrastructureLogging.level = 'error'
+      } else {
+        config.infrastructureLogging = { level: 'error' }
+      }
     }
     
     // Forcer la résolution des alias @/
@@ -208,11 +235,27 @@ const nextConfig = {
       }
     }
     
-    // Ignorer les warnings de source maps en développement
+    // Ignorer les warnings de source maps et next-intl en développement
     if (dev) {
       config.ignoreWarnings = [
         { module: /node_modules/ },
         { file: /\.wasm$/ },
+        // Ignorer le warning webpack.cache.PackFileCacheStrategy pour next-intl
+        {
+          module: /next-intl/,
+        },
+        {
+          message: /Parsing of.*for build dependencies failed at 'import\(t\)'/,
+        },
+        {
+          message: /Build dependencies behind this expression are ignored/,
+        },
+        {
+          message: /webpack\.cache\.PackFileCacheStrategy/,
+        },
+        {
+          message: /webpack\.FileSystemInfo/,
+        },
       ]
     }
     
@@ -220,4 +263,6 @@ const nextConfig = {
   },
 }
 
+// Sentry auto-instruments via sentry.client.config.ts and sentry.server.config.ts
+// No need for withSentryConfig wrapper in Next.js 15
 export default withNextIntl(nextConfig)

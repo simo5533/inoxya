@@ -51,13 +51,21 @@ export async function processProductImage(
     const filename = `${sanitizedName}-${productId}.webp`
     const outputPath = path.join(productsDir, filename)
 
-    // Convert and optimize image to WEBP
+    // Convert and optimize image to WEBP with better compression
+    // Production: quality 85 (bon compromis taille/qualité)
+    // Dev: quality 90 (meilleure qualité pour tests)
+    const quality = process.env.NODE_ENV === 'production' ? 85 : 90
+    
     await sharp(imagePath)
       .resize(800, 800, {
         fit: 'cover',
         position: 'center'
       })
-      .webp({ quality: 90 })
+      .webp({ 
+        quality,
+        effort: 6, // Compression effort (0-6, 6 = meilleure compression)
+        nearLossless: false // Désactivé pour meilleure compression
+      })
       .toFile(outputPath)
 
     // Generate the URL path (relative to public folder)
@@ -80,7 +88,7 @@ export async function processProductImage(
 export async function updateProductImage(
   productId: string | number,
   imageUrl: string
-): Promise<any> {
+): Promise<Product> {
   try {
     // Initialize database if needed
     initializeDatabase()
@@ -99,7 +107,8 @@ export async function updateProductImage(
 
     // Get updated product
     const updatedProducts = select('SELECT * FROM products WHERE id = ?', [productId])
-    const updatedProduct = updatedProducts[0]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updatedProduct = (updatedProducts[0] as any) as Product
 
     logger.info(`Product image updated in database`)
     return updatedProduct
@@ -118,7 +127,7 @@ export async function updateProductImage(
 export async function addImageToProduct(
   imagePath: string,
   productIdOrName: string | number
-): Promise<any> {
+): Promise<Product> {
   try {
     initializeDatabase()
 

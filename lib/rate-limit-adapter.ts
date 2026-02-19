@@ -25,7 +25,9 @@ interface RateLimitResult {
 const memoryStore = new Map<string, RateLimitRecord>()
 
 // Upstash Redis client (lazy import)
-let redisClient: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RedisClient = any
+let redisClient: RedisClient | null = null
 let redisAvailable = false
 
 /**
@@ -47,18 +49,19 @@ async function initRedis(): Promise<boolean> {
   try {
     // Lazy require de @upstash/redis (optionnel, seulement si installé)
     // Utiliser require() avec une vérification dynamique pour éviter l'erreur TypeScript
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let Redis: any
     try {
       // Utiliser eval pour éviter que Next.js ne résolve le module à la compilation
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-eval
+      // eslint-disable-next-line no-eval
       const requireFunc = eval('require')
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+       
       const redisModule = requireFunc('@upstash/redis')
       Redis = redisModule.Redis || redisModule.default?.Redis || redisModule.default
       if (!Redis) {
         throw new Error('Redis class not found in @upstash/redis module')
       }
-    } catch (requireError) {
+    } catch {
       logger.warn('[RATE LIMIT] ⚠️ @upstash/redis non installé, utilisation de la mémoire')
       redisAvailable = false
       return false

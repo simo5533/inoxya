@@ -1,0 +1,20 @@
+// Middleware next-intl - Configuration simple et directe
+import createMiddleware from 'next-intl/middleware'
+import { routing } from './i18n/routing'
+
+// Configuration directe recommandée par next-intl
+export default createMiddleware(routing)
+
+export const config = {
+  // OPTIMISATION: Matcher très restrictif - exclure explicitement les APIs
+  // Le middleware next-intl ne doit PAS traiter les routes /api/*
+  // Cela évite les blocages sur les requêtes API
+  matcher: [
+    // Exclure explicitement:
+    // - /api/* (routes API - CRITIQUE pour éviter les blocages)
+    // - /_next/* (fichiers Next.js internes)
+    // - /_vercel/* (Vercel)
+    // - Fichiers avec extensions (images, fonts, JSON, etc.)
+    '/((?!api|_next|_vercel|.*\\..*).*)',
+  ],
+}

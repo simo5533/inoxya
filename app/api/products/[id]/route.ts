@@ -66,7 +66,7 @@ export async function GET(
     if (product.images && typeof product.images === 'string') {
       try {
         imagesArray = JSON.parse(product.images)
-      } catch (e) {
+      } catch {
         imagesArray = []
       }
     } else if (Array.isArray(product.images)) {
@@ -249,7 +249,7 @@ export async function PUT(
     if (product.images && typeof product.images === 'string') {
       try {
         imagesArray = JSON.parse(product.images)
-      } catch (e) {
+      } catch {
         imagesArray = []
       }
     } else if (Array.isArray(product.images)) {

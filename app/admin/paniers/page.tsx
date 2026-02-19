@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, User, Calendar, Eye } from 'lucide-react'
@@ -168,10 +169,12 @@ export default function AdminCartsPage() {
                       className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       {item.image_url && (
-                        <img
+                        <Image
                           src={item.image_url}
-                          alt={item.product_name}
-                          className="w-16 h-16 object-cover rounded-lg shadow-sm"
+                          alt={item.product_name || 'Produit'}
+                          width={64}
+                          height={64}
+                          className="object-cover rounded-lg shadow-sm"
                         />
                       )}
                       <div className="flex-1">

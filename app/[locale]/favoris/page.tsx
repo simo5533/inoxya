@@ -167,7 +167,7 @@ export default function FavorisPage() {
       })
       // Rafraîchir le compteur du panier dans le header
       window.dispatchEvent(new CustomEvent('cart-updated'))
-    } catch (error) {
+    } catch {
       toast({
         title: t('error'),
         description: t('errorAddToCart'),
@@ -383,7 +383,7 @@ export default function FavorisPage() {
                             title: "✅ Articles ajoutés",
                             description: `${favorites.length} article(s) ajouté(s) au panier avec succès.`,
                           })
-                        } catch (error) {
+                        } catch {
                           toast({
                             title: "❌ Erreur",
                             description: "Impossible d'ajouter tous les articles au panier.",

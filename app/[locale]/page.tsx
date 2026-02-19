@@ -13,8 +13,16 @@ import { TikTokIcon } from "@/components/ui/tiktok-icon"
 import { socialLinks } from "@/lib/social-links"
 import { getSiteUrlSync } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
+import type { Category } from "@/lib/types"
 
-const siteUrl = getSiteUrlSync()
+// Obtenir l'URL du site avec gestion d'erreur
+const defaultPort = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
+let siteUrl = `http://localhost:${defaultPort}`
+try {
+  siteUrl = getSiteUrlSync()
+} catch {
+  siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] || `http://localhost:${defaultPort}`
+}
 
 export const metadata: Metadata = {
   title: "Accueil | INOXYA BIJOUX",
@@ -51,27 +59,62 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const revalidate = 0
 
-export default async function HomePage({
+async function HomePage({
   params,
 }: {
   params: Promise<{ locale: string }>
 }) {
-  const { locale } = await params
-  const t = await getTranslations('home')
+  let locale = 'fr'
+  // Type pour la fonction de traduction
+  type TranslationFunction = (key: string) => string
+  let t: TranslationFunction = (key: string) => key // Fallback par défaut
   
-  // Récupérer les bijoux vedettes depuis la base de données avec gestion d'erreur
-  let featuredProducts: any[] = []
   try {
-    featuredProducts = await getBijouxVedettes(9) // 9 produits pour une grille 3x3
-    // S'assurer que featuredProducts est toujours un tableau
-    if (!Array.isArray(featuredProducts)) {
-      featuredProducts = []
+    const resolvedParams = await params
+    locale = resolvedParams.locale || 'fr'
+    try {
+      t = await getTranslations('home')
+    } catch (translationError) {
+      console.error('[HomePage] Erreur lors de la récupération des traductions:', translationError)
+      // Fallback: fonction qui retourne la clé
+      t = (key: string) => key
     }
   } catch (error) {
+    console.error('[HomePage] Erreur lors de la récupération des paramètres:', error)
+    // Utiliser des valeurs par défaut pour éviter le crash
+    locale = 'fr'
+    t = (key: string) => key // Fallback: retourner la clé
+  }
+  
+  // OPTIMISATION: Récupérer les bijoux vedettes avec timeout pour éviter les blocages
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let featuredProducts: any[] = []
+  try {
+    // Timeout de 5 secondes pour éviter les blocages infinis
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const timeoutPromise = new Promise<any[]>((resolve) => {
+      setTimeout(() => {
+        console.warn('[HomePage] Timeout récupération produits vedettes (5s)')
+        resolve([])
+      }, 5000)
+    })
+    
+    const dbPromise = getBijouxVedettes(9).then((products) => {
+      // S'assurer que featuredProducts est toujours un tableau
+      if (!Array.isArray(products)) {
+        return []
+      }
+      return products
+    }).catch((error) => {
+      console.error('[HomePage] Erreur récupération produits vedettes:', error)
+      return []
+    })
+    
+    // Race entre la requête DB et le timeout
+    featuredProducts = await Promise.race([dbPromise, timeoutPromise])
+  } catch (error) {
     // Logger l'erreur mais ne pas la propager pour éviter les redirections
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[HomePage] Erreur lors de la récupération des produits vedettes:', error)
-    }
+    console.error('[HomePage] Erreur lors de la récupération des produits vedettes:', error)
     featuredProducts = []
   }
   
@@ -111,14 +154,28 @@ export default async function HomePage({
     }
   }
   
-  // Récupérer les catégories avec gestion d'erreur
-  let categories: any[] = []
+  // Récupérer les catégories avec gestion d'erreur et timeout
+  let categories: Category[] = []
   try {
-    categories = await getAllCategories()
-    // S'assurer que categories est toujours un tableau
-    if (!Array.isArray(categories)) {
-      categories = []
-    }
+    // Timeout de 3 secondes pour éviter les blocages
+    const categoriesTimeout = new Promise<Category[]>((resolve) => {
+      setTimeout(() => {
+        console.warn('[HomePage] Timeout récupération catégories (3s)')
+        resolve([])
+      }, 3000)
+    })
+    
+    const categoriesPromise = getAllCategories().then((cats) => {
+      if (!Array.isArray(cats)) {
+        return []
+      }
+      return cats
+    }).catch((error) => {
+      console.error('[HomePage] Erreur récupération catégories:', error)
+      return []
+    })
+    
+    categories = await Promise.race([categoriesPromise, categoriesTimeout])
   } catch (error) {
     // Logger l'erreur mais ne pas la propager pour éviter les redirections
     if (process.env.NODE_ENV === 'development') {
@@ -133,7 +190,7 @@ export default async function HomePage({
   if (categories.length > 0) {
     try {
       categoriesWithCoverImages = await Promise.all(
-        categories.map(async (category: any) => {
+        categories.map(async (category: Category) => {
           try {
             const coverImage = await getCategoryCoverImage(category.slug)
             return {
@@ -167,6 +224,7 @@ export default async function HomePage({
   }
 
   // Récupérer tous les produits pour la section filtrée
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let allProducts: any[] = []
   try {
     allProducts = await getAllBijoux()
@@ -175,6 +233,7 @@ export default async function HomePage({
       allProducts = []
     }
     // Filtrer uniquement les produits disponibles
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     allProducts = allProducts.filter((p: any) => p.is_available === true)
   } catch (error) {
     // Logger l'erreur mais ne pas la propager
@@ -463,3 +522,7 @@ export default async function HomePage({
     </div>
   )
 }
+
+HomePage.displayName = 'HomePage'
+
+export default HomePage

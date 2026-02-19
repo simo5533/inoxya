@@ -21,13 +21,84 @@ import type {
 import { logger } from '../logger'
 import { slugToDbValue } from '../category-mapping'
 
+// Interfaces typées pour les rows PostgreSQL
+interface UserRow {
+  id: string | number
+  phone: string
+  password_hash: string
+  first_name?: string | null
+  last_name?: string | null
+  role?: string
+  created_at?: string | Date
+  updated_at?: string | Date
+}
+
+interface ProductRow {
+  id: string | number
+  name: string
+  name_ar?: string | null
+  description?: string | null
+  price: string | number
+  original_price?: string | number | null
+  image_url?: string | null
+  main_image?: string | null
+  images?: string | string[] | null
+  category_id?: string | number | null
+  category?: string | null
+  is_available?: boolean | null
+  is_active?: boolean | null
+  is_featured?: boolean
+  rating?: string | number | null
+  reviews_count?: string | number | null
+  created_at?: string | Date
+  updated_at?: string | Date
+}
+
+interface OrderRow {
+  id: string | number
+  user_id?: string | number | null
+  total_amount: string | number
+  status: string
+  shipping_address?: string | unknown | null
+  phone?: string | null
+  notes?: string | null
+  created_at?: string | Date
+  updated_at?: string | Date
+}
+
+interface PaymentRow {
+  id: string | number
+  order_id: string | number
+  amount: string | number
+  payment_method: string
+  status: string
+  transaction_id?: string | null
+  created_at?: string | Date
+}
+
+interface PackRow {
+  id: string | number
+  name: string
+  slug: string
+  description?: string | null
+  price: string | number
+  image_url?: string | null
+  is_featured?: boolean
+  created_at?: string | Date
+}
+
 export class PostgresAdapter implements DatabaseAdapter {
   private pool: Pool
 
   constructor(databaseUrl: string) {
+    // Vercel Postgres / Neon optimized pool config
     this.pool = new Pool({
       connectionString: databaseUrl,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: process.env['NODE_ENV'] === 'production' ? { rejectUnauthorized: false } : false,
+      max: 10,           // Max connections (Vercel serverless: keep low)
+      min: 0,            // Allow pool to shrink to 0 (serverless compatible)
+      idleTimeoutMillis: 10000,   // Close idle connections after 10s
+      connectionTimeoutMillis: 5000,  // Fail fast on connection issues
     })
 
     // Gérer les erreurs de connexion
@@ -38,21 +109,25 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   // Users
   async getUserByPhone(phone: string): Promise<User | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<UserRow>(
       'SELECT * FROM users WHERE phone = $1',
       [phone]
     )
     if (result.rows.length === 0) return null
-    return this.mapUser(result.rows[0])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.mapUser(row)
   }
 
   async getUserById(id: string): Promise<User | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<UserRow>(
       'SELECT * FROM users WHERE id = $1',
       [id]
     )
     if (result.rows.length === 0) return null
-    return this.mapUser(result.rows[0])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.mapUser(row)
   }
 
   async createUser(userData: {
@@ -62,7 +137,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     last_name?: string
     role?: string
   }): Promise<User | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<UserRow>(
       `INSERT INTO users (phone, password_hash, first_name, last_name, role)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
@@ -75,12 +150,14 @@ export class PostgresAdapter implements DatabaseAdapter {
       ]
     )
     if (result.rows.length === 0) return null
-    return this.mapUser(result.rows[0])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.mapUser(row)
   }
 
   async getAllUsers(): Promise<User[]> {
-    const result = await this.pool.query('SELECT * FROM users ORDER BY created_at DESC')
-    return result.rows.map(row => this.mapUser(row))
+    const result = await this.pool.query<UserRow>('SELECT * FROM users ORDER BY created_at DESC')
+    return result.rows.filter((row): row is UserRow => row != null).map(row => this.mapUser(row))
   }
 
   async updateUserRole(userId: string, newRole: string): Promise<boolean> {
@@ -94,7 +171,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Products
   async getProducts(categorySlug?: string): Promise<Product[]> {
     let query = 'SELECT * FROM products WHERE (is_active = true OR is_active IS NULL) AND (is_available = true OR is_available IS NULL) ORDER BY created_at DESC'
-    const params: any[] = []
+    const params: (string | number | boolean | null)[] = []
 
     if (categorySlug) {
       const dbValue = slugToDbValue(categorySlug)
@@ -104,26 +181,28 @@ export class PostgresAdapter implements DatabaseAdapter {
       }
     }
 
-    const result = await this.pool.query(query, params)
+    const result = await this.pool.query<ProductRow>(query, params)
     return result.rows.map(row => this.mapProduct(row))
   }
 
   async getProductById(id: string): Promise<Product | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<ProductRow>(
       'SELECT * FROM products WHERE id = $1',
       [id]
     )
     if (result.rows.length === 0) return null
-    return this.mapProduct(result.rows[0])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.mapProduct(row)
   }
 
-  async createProduct(_productData: any): Promise<Product | null> {
+  async createProduct(_productData: Partial<Product>): Promise<Product | null> {
     // TODO: Implémenter si nécessaire
     logger.warn('[PostgresAdapter] createProduct not yet implemented')
     return null
   }
 
-  async updateProduct(_id: string, _productData: any): Promise<boolean> {
+  async updateProduct(_id: string, _productData: Partial<Product>): Promise<boolean> {
     // TODO: Implémenter si nécessaire
     logger.warn('[PostgresAdapter] updateProduct not yet implemented')
     return false
@@ -147,13 +226,13 @@ export class PostgresAdapter implements DatabaseAdapter {
     }))
   }
 
-  async createCategory(_categoryData: any): Promise<Category | null> {
+  async createCategory(_categoryData: Partial<Category>): Promise<Category | null> {
     // TODO: Implémenter si nécessaire
     logger.warn('[PostgresAdapter] createCategory not yet implemented')
     return null
   }
 
-  async updateCategory(_id: string, _categoryData: any): Promise<boolean> {
+  async updateCategory(_id: string, _categoryData: Partial<Category>): Promise<boolean> {
     // TODO: Implémenter si nécessaire
     logger.warn('[PostgresAdapter] updateCategory not yet implemented')
     return false
@@ -161,7 +240,7 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   // Packs
   async getPacks(): Promise<Pack[]> {
-    const result = await this.pool.query('SELECT * FROM packs ORDER BY created_at DESC')
+    const result = await this.pool.query<PackRow>('SELECT * FROM packs ORDER BY created_at DESC')
     return result.rows.map(row => ({
       id: String(row.id),
       name: row.name,
@@ -174,12 +253,13 @@ export class PostgresAdapter implements DatabaseAdapter {
   }
 
   async getPackById(id: string): Promise<Pack | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<PackRow>(
       'SELECT * FROM packs WHERE id = $1 OR slug = $1',
       [id]
     )
     if (result.rows.length === 0) return null
     const row = result.rows[0]
+    if (!row) return null
     return {
       id: String(row.id),
       name: row.name,
@@ -191,13 +271,13 @@ export class PostgresAdapter implements DatabaseAdapter {
     }
   }
 
-  async createPack(_packData: any): Promise<Pack | null> {
+  async createPack(_packData: Partial<Pack>): Promise<Pack | null> {
     // TODO: Implémenter si nécessaire
     logger.warn('[PostgresAdapter] createPack not yet implemented')
     return null
   }
 
-  async updatePack(_id: string, _packData: any): Promise<boolean> {
+  async updatePack(_id: string, _packData: Partial<Pack>): Promise<boolean> {
     // TODO: Implémenter si nécessaire
     logger.warn('[PostgresAdapter] updatePack not yet implemented')
     return false
@@ -211,17 +291,19 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   // Orders
   async getOrders(): Promise<Order[]> {
-    const result = await this.pool.query('SELECT * FROM orders ORDER BY created_at DESC')
+    const result = await this.pool.query<OrderRow>('SELECT * FROM orders ORDER BY created_at DESC')
     return result.rows.map(row => this.mapOrder(row))
   }
 
   async getOrderById(id: string): Promise<Order | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<OrderRow>(
       'SELECT * FROM orders WHERE id = $1',
       [id]
     )
     if (result.rows.length === 0) return null
-    return this.mapOrder(result.rows[0])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.mapOrder(row)
   }
 
   async createOrder(orderData: {
@@ -364,7 +446,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     status?: string
     transaction_id?: string
   }): Promise<Payment | null> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<PaymentRow>(
       `INSERT INTO payments (order_id, amount, payment_method, status, transaction_id)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
@@ -377,11 +459,13 @@ export class PostgresAdapter implements DatabaseAdapter {
       ]
     )
     if (result.rows.length === 0) return null
-    return this.mapPayment(result.rows[0])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.mapPayment(row)
   }
 
   async getPaymentsByOrderId(orderId: string): Promise<Payment[]> {
-    const result = await this.pool.query(
+    const result = await this.pool.query<PaymentRow>(
       'SELECT * FROM payments WHERE order_id = $1',
       [orderId]
     )
@@ -389,7 +473,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   }
 
   async getAllPayments(): Promise<Payment[]> {
-    const result = await this.pool.query('SELECT * FROM payments ORDER BY created_at DESC')
+    const result = await this.pool.query<PaymentRow>('SELECT * FROM payments ORDER BY created_at DESC')
     return result.rows.map(row => this.mapPayment(row))
   }
 
@@ -425,7 +509,7 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   async getNotifications(userId?: string | null): Promise<Notification[]> {
     let query = 'SELECT * FROM notifications'
-    const params: any[] = []
+    const params: (string | null)[] = []
 
     if (userId) {
       query += ' WHERE user_id = $1'
@@ -484,7 +568,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   }
 
   // Mappers
-  private mapUser(row: any): User {
+  private mapUser(row: UserRow): User {
     return {
       id: String(row.id),
       phone: row.phone,
@@ -492,24 +576,30 @@ export class PostgresAdapter implements DatabaseAdapter {
       first_name: row.first_name || undefined,
       last_name: row.last_name || undefined,
       role: row.role || 'user',
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
+      created_at: row.created_at ? (typeof row.created_at === 'string' ? row.created_at : row.created_at.toISOString()) : undefined,
+      updated_at: row.updated_at ? (typeof row.updated_at === 'string' ? row.updated_at : row.updated_at.toISOString()) : undefined,
     }
   }
 
-  private mapProduct(row: any): Product {
+  private mapProduct(row: ProductRow): Product {
     let imagesArray: string[] = []
-    if (row.images) {
-      if (Array.isArray(row.images)) {
-        imagesArray = row.images
-      } else if (typeof row.images === 'string') {
+    const imagesValue = row.images
+    if (imagesValue) {
+      if (Array.isArray(imagesValue)) {
+        imagesArray = imagesValue
+      } else if (typeof imagesValue === 'string') {
         try {
-          imagesArray = JSON.parse(row.images)
+          imagesArray = JSON.parse(imagesValue) as string[]
         } catch {
-          imagesArray = []
+          imagesArray = [imagesValue]
         }
       }
     }
+
+    const imageUrl = row.image_url || row.main_image || '/placeholder.svg'
+    const mainImage = row.main_image || row.image_url || '/placeholder.svg'
+    const categoryId = row.category_id ? String(row.category_id) : (row.category || 'Général')
+    const category = row.category || (row.category_id ? String(row.category_id) : 'Général')
 
     return {
       id: String(row.id),
@@ -518,32 +608,33 @@ export class PostgresAdapter implements DatabaseAdapter {
       description: row.description || undefined,
       price: Number(row.price) || 0,
       original_price: row.original_price ? Number(row.original_price) : undefined,
-      image_url: row.image_url || row.main_image || '/placeholder.svg',
-      main_image: row.main_image || row.image_url || '/placeholder.svg',
+      image_url: imageUrl,
+      main_image: mainImage,
       images: imagesArray.length > 0 ? imagesArray : undefined,
-      category_id: row.category_id || row.category || 'Général',
-      category: row.category || row.category_id || 'Général',
+      category_id: categoryId,
+      category: category,
       is_available: row.is_available !== undefined ? Boolean(row.is_available) : (row.is_active !== undefined ? Boolean(row.is_active) : true),
       is_active: row.is_active !== undefined ? Boolean(row.is_active) : true,
       is_featured: Boolean(row.is_featured),
       rating: row.rating ? Number(row.rating) : undefined,
       reviews_count: row.reviews_count ? Number(row.reviews_count) : undefined,
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined,
-      updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
+      created_at: row.created_at ? (typeof row.created_at === 'string' ? row.created_at : row.created_at.toISOString()) : undefined,
+      updated_at: row.updated_at ? (typeof row.updated_at === 'string' ? row.updated_at : row.updated_at.toISOString()) : undefined,
     }
   }
 
-  private mapOrder(row: any): Order {
+  private mapOrder(row: OrderRow): Order {
     let shippingAddress: unknown = null
-    if (row.shipping_address) {
-      if (typeof row.shipping_address === 'string') {
+    const shippingAddressValue = row.shipping_address
+    if (shippingAddressValue) {
+      if (typeof shippingAddressValue === 'string') {
         try {
-          shippingAddress = JSON.parse(row.shipping_address)
+          shippingAddress = JSON.parse(shippingAddressValue)
         } catch {
-          shippingAddress = row.shipping_address
+          shippingAddress = shippingAddressValue
         }
       } else {
-        shippingAddress = row.shipping_address
+        shippingAddress = shippingAddressValue
       }
     }
 
@@ -555,11 +646,11 @@ export class PostgresAdapter implements DatabaseAdapter {
       shipping_address: shippingAddress || undefined,
       phone: row.phone || undefined,
       notes: row.notes || undefined,
-      created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      created_at: row.created_at ? (typeof row.created_at === 'string' ? row.created_at : row.created_at.toISOString()) : new Date().toISOString(),
     }
   }
 
-  private mapPayment(row: any): Payment {
+  private mapPayment(row: PaymentRow): Payment {
     return {
       id: String(row.id),
       order_id: String(row.order_id),

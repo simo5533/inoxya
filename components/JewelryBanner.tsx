@@ -4,7 +4,7 @@ import Image from "next/image"
 import { Sparkles, Crown, Gem } from "lucide-react"
 import { useTranslations } from 'next-intl'
 
-export default function JewelryBanner() {
+function JewelryBanner() {
   const t = useTranslations('home')
   const [currentImage, setCurrentImage] = useState(0)
   
@@ -98,3 +98,5 @@ export default function JewelryBanner() {
     </div>
   )
 }
+JewelryBanner.displayName = 'JewelryBanner'
+export default JewelryBanner

@@ -1,0 +1,15 @@
+// Middleware TEST - Version ultra-minimale pour diagnostic
+// Si ce middleware fonctionne, le problème vient de next-intl
+import { NextRequest, NextResponse } from 'next/server'
+
+export function middleware(request: NextRequest) {
+  // Laisser passer TOUTES les requêtes sans traitement
+  // Juste pour tester si le serveur répond
+  return NextResponse.next()
+}
+
+export const config = {
+  // Matcher minimal - seulement la racine pour test
+  matcher: '/',
+}
+

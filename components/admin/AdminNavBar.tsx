@@ -18,7 +18,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { routing } from '@/i18n/routing'
 
-export default function AdminNavBar() {
+function AdminNavBar() {
   const pathname = usePathname()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -56,7 +56,11 @@ export default function AdminNavBar() {
       })
       
       // Attendre un peu pour que le cookie soit supprimé
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          resolve()
+        }, 100)
+      })
       
       // Rediriger vers la page d'accueil localisée avec window.location pour forcer la navigation
       // Utiliser replace() pour éviter que l'utilisateur puisse revenir en arrière
@@ -122,4 +126,8 @@ export default function AdminNavBar() {
     </div>
   )
 }
+
+AdminNavBar.displayName = 'AdminNavBar'
+
+export default AdminNavBar
 

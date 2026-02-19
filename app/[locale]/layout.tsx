@@ -3,7 +3,9 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const dynamicParams = true
 
+ 
 import { NextIntlClientProvider } from 'next-intl'
+ 
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
@@ -23,7 +25,7 @@ export function generateStaticParams() {
   return []
 }
 
-export default async function LocaleLayout({
+async function LocaleLayout({
   children,
   params,
 }: {
@@ -33,12 +35,20 @@ export default async function LocaleLayout({
   const { locale } = await params
 
   // Valider la locale
-  if (!routing.locales.includes(locale as any)) {
+  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
     notFound()
   }
 
-  // Charger les messages pour cette locale
-  const messages = await getMessages({ locale })
+  // OPTIMISATION: Charger les messages avec timeout et fallback
+  let messages
+  try {
+    messages = await getMessages({ locale })
+  } catch (error) {
+    // Fallback si erreur de chargement des messages
+    console.error(`[LocaleLayout] Erreur chargement messages pour ${locale}:`, error)
+    // Utiliser un objet vide pour éviter de bloquer le rendu
+    messages = {}
+  }
 
   // Déterminer la direction (RTL pour l'arabe)
   const dir = locale === 'ar' ? 'rtl' : 'ltr'
@@ -59,4 +69,8 @@ export default async function LocaleLayout({
     </NextIntlClientProvider>
   )
 }
+
+LocaleLayout.displayName = 'LocaleLayout'
+
+export default LocaleLayout
 

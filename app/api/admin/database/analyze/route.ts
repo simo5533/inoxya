@@ -51,7 +51,7 @@ export async function GET(_request: NextRequest) {
           analysis.connection.status = true
           analysis.connection.method = 'better-sqlite3'
         }
-      } catch (e) {
+      } catch {
         db = null
       }
     }
@@ -455,7 +455,7 @@ export async function GET(_request: NextRequest) {
           })
         }
       }
-    } catch (e) {
+    } catch {
       // Ignorer les erreurs d'intégrité si les tables n'existent pas
     }
 

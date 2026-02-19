@@ -297,7 +297,7 @@ export default function DatabaseAnalysisPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-800">
               <AlertCircle className="w-5 h-5" />
-              Problèmes d'Intégrité
+              Problèmes d&apos;Intégrité
             </CardTitle>
           </CardHeader>
           <CardContent>

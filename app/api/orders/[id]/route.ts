@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const items = await getOrderItems(id)
     const payments = await getPaymentsByOrderId(id)
     return NextResponse.json({ order, items, payments })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

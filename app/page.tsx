@@ -5,6 +5,10 @@ export const revalidate = 0
 import { redirect } from 'next/navigation'
 
 export default function RootPage() {
-  // Rediriger vers /fr/ (avec localePrefix: 'always', le préfixe est obligatoire)
+  // OPTIMISATION: Redirection immédiate sans await
+  // Avec localePrefix: 'always', le préfixe est obligatoire
   redirect('/fr')
+  
+  // Code jamais atteint mais nécessaire pour TypeScript
+  return null
 }

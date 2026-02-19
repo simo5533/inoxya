@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
           // Charger sql.js de manière dynamique
           let sqlJsModule: any
           try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
             sqlJsModule = require('sql.js')
             logger.info('[API Login] sql.js chargé avec succès')
           } catch (requireError) {

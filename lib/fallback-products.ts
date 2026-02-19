@@ -111,7 +111,7 @@ export function getFallbackProductsFromBijoux(): FallbackProduct[] {
         const files = fs.readdirSync(productPath)
         
         // Chercher main.jpg, thumbnail.jpg, ou la première image
-        let imageFile = files.find(f => f === 'main.jpg') ||
+        const imageFile = files.find(f => f === 'main.jpg') ||
                        files.find(f => f === 'thumbnail.jpg') ||
                        files.find(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
         

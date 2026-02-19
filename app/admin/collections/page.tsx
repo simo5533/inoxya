@@ -107,7 +107,7 @@ export default function NouvelleCollectionPage() {
             className="inline-flex items-center text-sm text-gray-600 mb-4 hover:text-orange-600"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Retour à l'administration
+            Retour à l&apos;administration
           </Link>
           
           <div className="flex items-center justify-between">
@@ -198,7 +198,7 @@ export default function NouvelleCollectionPage() {
               </div>
 
               <div>
-                <Label htmlFor="image_url">URL de l'image *</Label>
+                <Label htmlFor="image_url">URL de l&apos;image *</Label>
                 <Input
                   id="image_url"
                   value={formData['image_url']}

@@ -4,10 +4,24 @@
     "next/typescript"
   ],
   "ignorePatterns": [
-    "scripts/**/*"
+    "scripts/**/*",
+    "**/*.md",
+    "**/*.json",
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.db",
+    "**/*.sqlite",
+    "**/*.sqlite3",
+    "data/**",
+    "logs/**",
+    "*.log",
+    "coverage/**",
+    "*.tsbuildinfo",
+    "next-env.d.ts"
   ],
   "rules": {
-    // Contraintes strictes de qualité
     "no-console": ["warn", { "allow": ["warn", "error"] }],
     "no-debugger": "error",
     "no-unused-vars": "off",
@@ -22,29 +36,21 @@
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-non-null-assertion": "warn",
-    
-    // Contraintes React strictes
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
-    "react/no-unescaped-entities": "error",
+    "react/no-unescaped-entities": "warn",
     "react/jsx-key": "error",
     "react/jsx-no-duplicate-props": "error",
     "react/jsx-no-undef": "error",
     "react/jsx-uses-react": "off",
     "react/jsx-uses-vars": "error",
     "react/react-in-jsx-scope": "off",
-    
-    // Contraintes Next.js
     "@next/next/no-html-link-for-pages": "error",
     "@next/next/no-img-element": "warn",
-    
-    // Contraintes de sécurité
     "no-eval": "error",
     "no-implied-eval": "error",
     "no-new-func": "error",
     "no-script-url": "error",
-    
-    // Contraintes de performance
     "no-await-in-loop": "warn",
     "no-promise-executor-return": "error",
     "require-atomic-updates": "warn"

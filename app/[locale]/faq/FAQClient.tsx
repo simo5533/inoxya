@@ -324,7 +324,7 @@ export default function FAQClient() {
     }
     
     const parts: React.ReactNode[] = []
-    let processedText = answer
+    const processedText = answer
     let lastIndex = 0
     
     const sortedLinks = [...links].sort((a, b) => {

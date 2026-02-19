@@ -36,8 +36,9 @@ export function getSiteUrl(request?: Request): string {
     return 'https://your-domain.vercel.app'
   }
 
-  // En développement, localhost
-  return 'http://localhost:3000'
+  // En développement, localhost (utiliser le port depuis PORT ou NEXT_PUBLIC_PORT)
+  const port = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
+  return `http://localhost:${port}`
 }
 
 /**
@@ -54,6 +55,8 @@ export function getSiteUrlSync(): string {
     return 'https://your-domain.vercel.app'
   }
 
-  return 'http://localhost:3000'
+  // En développement, utiliser le port depuis PORT ou NEXT_PUBLIC_PORT
+  const port = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
+  return `http://localhost:${port}`
 }
 

@@ -114,7 +114,7 @@ class Logger {
             console.error(`[ERROR] ${message}`, errorDisplay, metadata ? JSON.stringify(metadata, null, 2) : '')
           }
         }
-      } catch (logError) {
+      } catch {
         // Fallback si le logging échoue
         const errorMessage = error instanceof Error 
           ? error.message 

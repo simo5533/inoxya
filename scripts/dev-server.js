@@ -109,21 +109,63 @@ async function main() {
 }
 
 function startServer(port) {
-  // Sur Windows, utiliser shell: true pour que npx soit trouvé
-  // Mais utiliser des arguments séparés pour éviter les problèmes de sécurité
+  // Utiliser directement le binaire next depuis node_modules
+  const path = require('path')
+  const fs = require('fs')
   const isWindows = process.platform === 'win32'
-  const nextDev = spawn('npx', ['next', 'dev', '-p', port.toString(), '-H', HOST], {
+  
+  // Chemin vers next dans node_modules/.bin
+  const nextBin = path.join(process.cwd(), 'node_modules', '.bin', isWindows ? 'next.cmd' : 'next')
+  
+  let command, args
+  if (fs.existsSync(nextBin)) {
+    // Utiliser directement le binaire next
+    if (isWindows) {
+      // Sur Windows, les .cmd doivent être exécutés via cmd.exe /c
+      command = 'cmd.exe'
+      args = ['/c', nextBin, 'dev', '-p', port.toString(), '-H', HOST]
+    } else {
+      command = 'node'
+      args = [nextBin, 'dev', '-p', port.toString(), '-H', HOST]
+    }
+  } else {
+    // Fallback: utiliser npx (mais avec des arguments séparés)
+    command = isWindows ? 'cmd.exe' : 'npx'
+    args = isWindows 
+      ? ['/c', 'npx', 'next', 'dev', '-p', port.toString(), '-H', HOST]
+      : ['next', 'dev', '-p', port.toString(), '-H', HOST]
+  }
+  
+  console.log(`🔧 Commande: ${command} ${args.join(' ')}`)
+  
+  const nextDev = spawn(command, args, {
     stdio: 'inherit',
-    shell: isWindows, // Shell nécessaire sur Windows pour trouver npx
+    shell: false, // Pas de shell pour éviter le warning de sécurité
+    cwd: process.cwd(),
     env: {
       ...process.env,
       PORT: port.toString(),
     }
   })
   
+  // Ignorer les erreurs EPIPE (broken pipe) - terminal fermé
+  process.stdout.on('error', (error) => {
+    if (error.code !== 'EPIPE') {
+      console.error('❌ stdout error:', error.message)
+    }
+  })
+  
+  process.stderr.on('error', (error) => {
+    if (error.code !== 'EPIPE') {
+      console.error('❌ stderr error:', error.message)
+    }
+  })
+  
   nextDev.on('error', (error) => {
-    console.error('❌ Failed to start Next.js dev server:', error.message)
-    process.exit(1)
+    if (error.code !== 'EPIPE') {
+      console.error('❌ Failed to start Next.js dev server:', error.message)
+      process.exit(1)
+    }
   })
   
   nextDev.on('exit', (code) => {

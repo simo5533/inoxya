@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import type React from "react"
 import { requireAdmin } from "@/lib/admin-auth"
 import { redirect } from "next/navigation"
+import { logger } from "@/lib/logger"
 import "@/styles/admin-premium.css"
 import AdminNavBar from "@/components/admin/AdminNavBar"
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminLayout({
+async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
@@ -21,14 +22,10 @@ export default async function AdminLayout({
   try {
     const user = await requireAdmin()
     // Logger pour diagnostic
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AdminLayout] Utilisateur admin authentifié:', { userId: user.id, phone: user.phone, role: user.role })
-    }
+    logger.debug('[AdminLayout] Utilisateur admin authentifié', { userId: user.id, phone: user.phone, role: user.role })
   } catch (error) {
     // Logger pour diagnostic
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[AdminLayout] Erreur requireAdmin:', error)
-    }
+    logger.error('[AdminLayout] Erreur requireAdmin', error)
     redirect('/login?redirect=/admin')
   }
 
@@ -39,4 +36,8 @@ export default async function AdminLayout({
     </div>
   )
 }
+
+AdminLayout.displayName = 'AdminLayout'
+
+export default AdminLayout
 

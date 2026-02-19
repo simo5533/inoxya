@@ -33,7 +33,7 @@ export default function AdminPageWrapper({ children }: AdminPageWrapperProps) {
         }
         
         setIsAuthorized(true)
-      } catch (error) {
+      } catch {
         router.push('/login?redirect=/admin')
       } finally {
         setLoading(false)

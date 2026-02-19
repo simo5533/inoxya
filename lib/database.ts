@@ -74,21 +74,24 @@ export async function getBijouxVedettes(limit = 8) {
           isConnected = forceConnection()
         }
       }
+      
       if (isConnected) {
-        await new Promise(resolve => setTimeout(resolve, 50))
+        const products = await getSqliteProductsAsync()
+        const activeProducts = products.filter((p) => p.is_available === true)
+        const featured = activeProducts.filter((p) => p.is_featured === true)
+        const result = featured.length > 0 
+          ? featured.slice(0, limit)
+          : activeProducts.slice(0, limit)
+        return result
       }
       
-      const products = await getSqliteProductsAsync()
-      const activeProducts = products.filter((p: any) => p.is_available === true)
-      const featured = activeProducts.filter((p: any) => p.is_featured === true)
-      const result = featured.length > 0 
-        ? featured.slice(0, limit)
-        : activeProducts.slice(0, limit)
-      return result
+      // Si toujours pas connecté, lancer l'erreur pour que l'appelant la gère
+      throw new Error('Impossible de se connecter à la base de données')
     }
   } catch (error) {
     logger.error('Erreur getBijouxVedettes:', error)
-    return []
+    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
+    throw error
   }
 }
 
@@ -109,11 +112,6 @@ export async function getAllBijoux(categorySlug?: string) {
       }
     }
     
-    // Attendre un peu pour s'assurer que la DB est complètement chargée
-    if (isConnected) {
-      await new Promise(resolve => setTimeout(resolve, 50))
-    }
-    
     // Si un slug de catégorie est fourni, filtrer par catégorie
     if (categorySlug) {
       const dbValue = slugToDbValue(categorySlug)
@@ -123,20 +121,37 @@ export async function getAllBijoux(categorySlug?: string) {
         initializeDatabase()
         
         const sqlQuery = 'SELECT * FROM products WHERE (is_active = 1 OR is_active IS NULL) AND category = ? ORDER BY created_at DESC'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const products = await selectAsync(sqlQuery, [dbValue]) as any[]
         
-        return products.map((product: any) => ({
+        return products.map((product: {
+          id?: number
+          name?: string
+          name_ar?: string | null
+          description?: string | null
+          price?: number
+          original_price?: number | null
+          image_url?: string | null
+          main_image?: string | null
+          images?: string | null
+          is_active?: number | boolean | null
+          is_available?: number | boolean | null
+          is_featured?: number | boolean | null
+          category?: string | null
+          category_id?: string | null
+          created_at?: string | null
+        }) => ({
           id: String(product.id || ''),
           name: product.name || 'Produit sans nom',
-          name_ar: product.name_ar,
-          description: product.description,
+          name_ar: product.name_ar || undefined,
+          description: product.description || undefined,
           price: Number(product.price) || 0,
           original_price: product.original_price ? Number(product.original_price) : undefined,
           image_url: product.image_url || product.main_image || '/placeholder.svg',
           main_image: product.main_image || product.image_url || '/placeholder.svg',
-          images: product.images,
+          images: product.images || undefined,
           is_available: product.is_available !== undefined ? Boolean(product.is_available) : (product.is_active !== undefined ? Boolean(product.is_active) : true),
-          is_featured: Boolean(product.is_featured),
+          is_featured: product.is_featured !== undefined ? Boolean(product.is_featured) : false,
           category_id: product.category_id || product.category || 'Général',
           created_at: product.created_at || new Date().toISOString(),
         }))
@@ -147,13 +162,13 @@ export async function getAllBijoux(categorySlug?: string) {
     // PHASE B: Utiliser la version asynchrone qui garantit l'initialisation sql.js
     const products = await getSqliteProductsAsync()
     // Filtrer les produits actifs
-    const activeProducts = products.filter((p: any) => {
-      const isActive = p.is_active === 1 || p.is_active === true || p.is_active === null || p.is_active === undefined
-      const isAvailable = p.is_available === true || p.is_available === 1 || (p.is_available === undefined && isActive)
+    const activeProducts = products.filter((p) => {
+      const isActive = p.is_active === true || p.is_active === null || p.is_active === undefined
+      const isAvailable = p.is_available === true || (p.is_available === undefined && isActive)
       return isActive && isAvailable
     })
     
-    return activeProducts.map((product: any) => {
+    return activeProducts.map((product) => {
       // Convertir images en tableau si nécessaire
       let imagesArray: string[] = []
       if (product.images) {
@@ -199,8 +214,9 @@ export async function getAllBijoux(categorySlug?: string) {
       }
     })
   } catch (error) {
-    console.error('Erreur getAllBijoux:', error)
-    return []
+    logger.error('Erreur getAllBijoux:', error)
+    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
+    throw error
   }
 }
 
@@ -215,7 +231,11 @@ export async function getBijouById(id: string) {
       }
     }
     if (isConnected) {
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          resolve()
+        }, 50)
+      })
     }
     return await getSqliteProductByIdAsync(id)
   } catch {
@@ -227,18 +247,23 @@ export async function getAllCategories() {
   try {
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
+    
     if (!isConnected) {
       isConnected = await initSqlJsAsync()
       if (isConnected) {
         isConnected = forceConnection()
       }
     }
-    if (isConnected) {
-      await new Promise(resolve => setTimeout(resolve, 50))
+    
+    if (!isConnected) {
+      throw new Error('Impossible de se connecter à la base de données')
     }
+    
     return await getSqliteCategories()
-  } catch {
-    return []
+  } catch (error) {
+    logger.error('Erreur getAllCategories:', error)
+    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
+    throw error
   }
 }
 
@@ -246,18 +271,23 @@ export async function getAllPacks() {
   try {
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
+    
     if (!isConnected) {
       isConnected = await initSqlJsAsync()
       if (isConnected) {
         isConnected = forceConnection()
       }
     }
-    if (isConnected) {
-      await new Promise(resolve => setTimeout(resolve, 50))
+    
+    if (!isConnected) {
+      throw new Error('Impossible de se connecter à la base de données')
     }
+    
     return await getSqlitePacksAsync()
-  } catch {
-    return []
+  } catch (error) {
+    logger.error('Erreur getAllPacks:', error)
+    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
+    throw error
   }
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -18,7 +18,7 @@ export default function AdminOrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true)
       const res = await fetch(`/api/orders/${params.id}`, { 
@@ -52,7 +52,7 @@ export default function AdminOrderDetailPage() {
     } finally { 
       setLoading(false) 
     }
-  }
+  }, [params.id])
 
   useEffect(() => { 
     load()
@@ -69,7 +69,7 @@ export default function AdminOrderDetailPage() {
       }
     }
     fetchCsrfToken()
-  }, [params.id])
+  }, [load])
 
   const updateStatus = async (status: string) => {
     if (!csrfToken) {

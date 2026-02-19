@@ -13,16 +13,23 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      include: ['lib/**/*.ts', 'hooks/**/*.ts'],
       exclude: [
-        'node_modules/',
-        'tests/',
+        'lib/db/**',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
         '.next/',
         'out/',
         'dist/',
+        'node_modules/',
+        'tests/',
       ],
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 50,
+      },
     },
   },
   resolve: {

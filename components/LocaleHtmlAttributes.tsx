@@ -3,7 +3,7 @@
 import { useLocale } from 'next-intl'
 import { useEffect } from 'react'
 
-export default function LocaleHtmlAttributes() {
+function LocaleHtmlAttributes() {
   const locale = useLocale()
 
   useEffect(() => {
@@ -27,4 +27,6 @@ export default function LocaleHtmlAttributes() {
 
   return null
 }
+LocaleHtmlAttributes.displayName = 'LocaleHtmlAttributes'
+export default LocaleHtmlAttributes
 

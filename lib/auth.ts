@@ -23,7 +23,7 @@ export async function loginUser(phone: string, password: string) {
     
     if (!user) {
       // Logger pour diagnostic (dev uniquement)
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env['NODE_ENV'] === 'development') {
         console.log('[loginUser] Utilisateur non trouvé:', { phone: normalizedPhone })
       }
       return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
@@ -32,7 +32,7 @@ export async function loginUser(phone: string, password: string) {
     const isValid = bcrypt.compareSync(password, user.password_hash)
     if (!isValid) {
       // Logger pour diagnostic (dev uniquement)
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env['NODE_ENV'] === 'development') {
         console.log('[loginUser] Mot de passe incorrect pour:', { phone: normalizedPhone, userId: user.id })
       }
       return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
@@ -41,8 +41,8 @@ export async function loginUser(phone: string, password: string) {
     const cookieStore = await cookies()
     cookieStore.set("user_id", user.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // "lax" en dev pour permettre les redirections
+      secure: process.env['NODE_ENV'] === "production",
+      sameSite: process.env['NODE_ENV'] === "production" ? "strict" : "lax", // "lax" en dev pour permettre les redirections
       maxAge: 60 * 60 * 24 * 7, // 7 jours
       path: '/' // Explicit path pour garantir la portée
     })
@@ -86,7 +86,7 @@ export async function registerUser(phone: string, password: string, firstName: s
     const cookieStore = await cookies()
     cookieStore.set("user_id", newUser.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env['NODE_ENV'] === "production",
       sameSite: "strict",
       maxAge: 60 * 60 * 24 * 7, // 7 jours
       path: '/' // Explicit path pour garantir la portée
@@ -125,13 +125,13 @@ export async function getCurrentUser() {
     const userId = cookieStore.get("user_id")?.value
 
     if (!userId) {
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env['NODE_ENV'] === 'development') {
         console.log('[getCurrentUser] Aucun cookie user_id trouvé')
       }
       return null
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env['NODE_ENV'] === 'development') {
       console.log('[getCurrentUser] Cookie user_id trouvé:', userId)
     }
 
@@ -143,7 +143,7 @@ export async function getCurrentUser() {
     }
     
     if (!isConnected) {
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env['NODE_ENV'] === 'development') {
         console.log('[getCurrentUser] Impossible de se connecter à la DB')
       }
       return null
@@ -151,13 +151,13 @@ export async function getCurrentUser() {
     
     const user = getUserById(userId)
     if (!user) {
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env['NODE_ENV'] === 'development') {
         console.log('[getCurrentUser] Utilisateur non trouvé avec ID:', userId)
       }
       return null
     }
     
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env['NODE_ENV'] === 'development') {
       console.log('[getCurrentUser] Utilisateur trouvé:', { id: user.id, phone: user.phone, role: user.role })
     }
 

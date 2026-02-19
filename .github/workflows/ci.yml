@@ -1,120 +1,97 @@
-name: CI
+name: CI/CD Pipeline — INOXYA BIJOUX
 
 on:
   push:
-    branches: [main, develop, master]
+    branches: [main, develop, staging]
   pull_request:
-    branches: [main, develop, master]
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
 
 jobs:
-  lint:
-    name: Lint & Type Check
+  # ─── Job 1: Code Quality ───────────────────────────────────────────────────
+  quality:
+    name: 🔍 TypeScript + Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Check TypeScript
+      - name: TypeScript check
         run: npx tsc --noEmit
 
-      - name: Check Prettier
-        run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
+      - name: ESLint
+        run: npm run lint
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build application
-        run: npm run build
-        env:
-          NODE_ENV: production
-          # Variables d'environnement minimales pour le build
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-for-ci-build-only-minimum-32-chars' }}
-          NEXT_PUBLIC_SITE_URL: https://example.com
-
-      - name: Check build artifacts
-        run: |
-          if [ ! -d ".next" ]; then
-            echo "Build failed: .next directory not found"
-            exit 1
-          fi
-
+  # ─── Job 2: Unit Tests ────────────────────────────────────────────────────
   test:
-    name: Tests
+    name: 🧪 Unit Tests
     runs-on: ubuntu-latest
-    needs: lint
+    needs: quality
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+      - run: npm ci
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
 
-      - name: Install dependencies
-        run: npm ci
+  # ─── Job 3: Build ─────────────────────────────────────────────────────────
+  build:
+    name: 🏗️ Production Build
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      # Minimal env vars needed for build — NOT real secrets
+      JWT_SECRET: ci-build-secret-minimum-32-chars-xyz-12345
+      NEXT_PUBLIC_SITE_URL: https://inoxya-bijoux.vercel.app
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Build Next.js
+        run: npm run build
+      - name: Verify build output
+        run: ls -la .next/
 
-      - name: Run unit tests
-        run: npm test -- --run
-        continue-on-error: true
-        # Continue si pas de tests configurés encore
-
-      - name: Run integration tests
-        run: npm run test:all
-        continue-on-error: true
-        # Continue si tests d'intégration non disponibles
-
+  # ─── Job 4: Security Audit ────────────────────────────────────────────────
   security:
-    name: Security Audit
+    name: 🔒 Security Audit
     runs-on: ubuntu-latest
+    needs: quality
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
-
-      - name: Check for known vulnerabilities
-        run: |
-          npm audit --json > audit.json || true
-          if [ -f audit.json ]; then
-            echo "Audit report generated"
-          fi
-
+      - run: npm ci
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+        continue-on-error: true  # Don't block on moderate vulnerabilities

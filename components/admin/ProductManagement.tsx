@@ -273,7 +273,7 @@ export default function ProductManagement() {
       if (typeof product.images === 'string') {
         try {
           secondaryImages = JSON.parse(product.images)
-        } catch (e) {
+        } catch {
           secondaryImages = []
         }
       } else if (Array.isArray(product.images)) {
@@ -915,3 +915,5 @@ function ProductForm({ formData, errors, onInputChange, onSubmit, onCancel, load
     </div>
   )
 }
+
+ProductManagement.displayName = 'ProductManagement'

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Save, Upload, Plus, X } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { logger } from "@/lib/logger"
 
 interface ProductFormData {
@@ -61,7 +62,7 @@ const categories = [
   { id: "cat-bagues", name: "Bagues", slug: "bagues" },
   { id: "cat-colliers", name: "Colliers", slug: "colliers" },
   { id: "cat-bracelets", name: "Bracelets", slug: "bracelets" },
-  { id: "cat-boucles", name: "Boucles d'oreilles", slug: "boucles-oreilles" },
+  { id: "cat-boucles", name: "Boucles d&apos;oreilles", slug: "boucles-oreilles" },
   { id: "cat-broches", name: "Nos packs", slug: "broches" }
 ]
 
@@ -494,18 +495,17 @@ export default function NouveauProduitPage() {
                     {formData.image_url && (
                       <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={formData.image_url} 
-                            alt="Aperçu" 
-                            className="h-20 w-20 object-cover rounded border-2 border-green-300" 
-                            onError={(e) => { 
-                              (e.target as HTMLImageElement).style.display = 'none'
-                              const parent = (e.target as HTMLImageElement).parentElement
-                              if (parent) {
-                                parent.innerHTML = '<p class="text-xs text-red-500">⚠️ Impossible de charger l\'image. Vérifiez l\'URL.</p>'
-                              }
-                            }} 
-                          />
+                          <div className="relative h-20 w-20">
+                            <Image 
+                              src={formData.image_url} 
+                              alt="Aperçu" 
+                              fill
+                              className="object-cover rounded border-2 border-green-300" 
+                              onError={() => {
+                                // Error handled by Next.js Image component
+                              }}
+                            />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-green-800 mb-1">✅ Image principale définie</p>
                             <p className="text-xs text-gray-600 truncate" title={formData.image_url}>{formData.image_url}</p>
@@ -555,7 +555,9 @@ export default function NouveauProduitPage() {
                     </div>
                     {formData.imageSecondary1 && (
                       <div className="mt-2 flex items-center gap-3">
-                        <img src={formData.imageSecondary1} alt="Aperçu 1" className="h-16 w-16 object-cover rounded border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        <div className="relative h-16 w-16">
+                          <Image src={formData.imageSecondary1} alt="Aperçu 1" fill className="object-cover rounded border" />
+                        </div>
                         <p className="text-xs text-gray-500 truncate flex-1" title={formData.imageSecondary1}>{formData.imageSecondary1}</p>
                       </div>
                     )}
@@ -594,7 +596,9 @@ export default function NouveauProduitPage() {
                     </div>
                     {formData.imageSecondary2 && (
                       <div className="mt-2 flex items-center gap-3">
-                        <img src={formData.imageSecondary2} alt="Aperçu 2" className="h-16 w-16 object-cover rounded border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        <div className="relative h-16 w-16">
+                          <Image src={formData.imageSecondary2} alt="Aperçu 2" fill className="object-cover rounded border" />
+                        </div>
                         <p className="text-xs text-gray-500 truncate flex-1" title={formData.imageSecondary2}>{formData.imageSecondary2}</p>
                       </div>
                     )}
@@ -711,7 +715,7 @@ export default function NouveauProduitPage() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="reviews_count">Nombre d'avis</Label>
+                    <Label htmlFor="reviews_count">Nombre d&apos;avis</Label>
                     <Input
                       id="reviews_count"
                       type="number"

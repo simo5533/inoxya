@@ -7,7 +7,7 @@ import { normalizeImageUrl } from './image-path'
 /**
  * PHASE 0: Sérialiseur robuste d'erreurs pour révéler les vraies erreurs (pas [object Object])
  */
-export function serializeError(err: unknown): {
+interface SerializedError {
   name?: string
   message: string
   stack?: string
@@ -16,18 +16,27 @@ export function serializeError(err: unknown): {
   syscall?: string
   cause?: unknown
   [key: string]: unknown
-} {
+}
+
+interface SystemError extends Error {
+  code?: string | number
+  errno?: number
+  syscall?: string
+}
+
+export function serializeError(err: unknown): SerializedError {
   if (err instanceof Error) {
-    const serialized: any = {
+    const serialized: SerializedError = {
       name: err.name,
       message: err.message,
       stack: err.stack,
     }
     
     // Ajouter les propriétés spécifiques aux erreurs système
-    if ('code' in err) serialized.code = (err as any).code
-    if ('errno' in err) serialized.errno = (err as any).errno
-    if ('syscall' in err) serialized.syscall = (err as any).syscall
+    const systemErr = err as SystemError
+    if ('code' in err) serialized.code = systemErr.code
+    if ('errno' in err) serialized.errno = systemErr.errno
+    if ('syscall' in err) serialized.syscall = systemErr.syscall
     if ('cause' in err) serialized.cause = err.cause
     
     // Ajouter toutes les autres propriétés propres
@@ -367,7 +376,7 @@ function ensureDatabaseConnection(): void {
       const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number }
       const packCount = db.prepare('SELECT COUNT(*) as count FROM packs').get() as { count: number }
       logger.info(`[DB] ✅ Connected successfully: ${productCount.count} products, ${packCount.count} packs`)
-    } catch (countError) {
+    } catch {
       // Tables pas encore créées, c'est normal au premier démarrage
       logger.info(`[DB] ✅ Connected successfully (tables will be created on first use)`)
     }
@@ -437,6 +446,7 @@ export async function initSqlJsAsync(): Promise<boolean> {
       return sqlJsInit && sqlJsInit.Database ? true : false
     }
     
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const sqlJs = require('sql.js')
     const absDbPath = path.resolve(dbPath)
     
@@ -531,6 +541,7 @@ export function forceConnection(): boolean {
   if (!db) {
     try {
       if (!sqlJsInit || !sqlJsInit.Database) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const sqlJs = require('sql.js')
         if (sqlJs.Database) {
           sqlJsInit = sqlJs
@@ -577,6 +588,7 @@ export function testConnection(): boolean {
       // Essayer avec sql.js fallback
       try {
         if (!sqlJsInit) {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
           const sqlJs = require('sql.js')
           if (sqlJs.Database) {
             sqlJsInit = sqlJs
@@ -662,6 +674,7 @@ export function initializeDatabase(): void {
     if (!sqlJsDb) {
       try {
         if (!sqlJsInit) {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
           const sqlJs = require('sql.js')
           if (sqlJs.Database) {
             sqlJsInit = sqlJs
@@ -686,7 +699,7 @@ export function initializeDatabase(): void {
             logger.info('[initializeDatabase] sql.js fallback initialisé')
           }
         }
-      } catch (e) {
+      } catch {
         // Ignorer les erreurs d'initialisation sql.js
       }
     }
@@ -811,6 +824,7 @@ export function initializeDatabase(): void {
     // Ce mot de passe est uniquement pour le développement/test
     // En production, les utilisateurs admin doivent être créés via l'interface admin ou l'API
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const bcrypt = require('bcryptjs')
       const adminPasswordHash = bcrypt.hashSync('Admin123!', 10)
       
@@ -1120,6 +1134,7 @@ export function getUserById(id: string): { id: string; phone: string; first_name
 export function createUser(userData: { phone: string; password_hash: string; first_name?: string; last_name?: string; role?: string }): { id: string; phone: string; first_name?: string; last_name?: string; role: string } | null {
   if (!db) return null
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const bcrypt = require('bcryptjs')
     const hash = bcrypt.hashSync(userData.password_hash, 10)
     const result = db.prepare(`
@@ -1188,7 +1203,7 @@ export async function getProductsAsync(): Promise<{ id: string; name: string; na
             imagesArray = imagesArray.map((img: string) => normalizeImageUrl(img))
           }
           images = JSON.stringify(imagesArray)
-        } catch (e) {
+        } catch {
           // Ignorer les erreurs de parsing
         }
       }
@@ -1652,7 +1667,7 @@ export async function createOrderFull(data: {
       if (!testResult) {
         throw new Error('Table orders does not exist or is empty')
       }
-    } catch (tableError) {
+    } catch {
       logger.error('[createOrderFull] Table orders does not exist, initializing database...')
       initializeDatabase()
       // Réessayer après initialisation
@@ -1661,7 +1676,7 @@ export async function createOrderFull(data: {
         if (!retryResult) {
           throw new Error('Table orders still does not exist after initialization')
         }
-      } catch (retryError) {
+      } catch {
         logger.error('[createOrderFull] Table orders still does not exist after initialization')
         return null
       }
@@ -1724,7 +1739,7 @@ export async function createOrderFull(data: {
           if (!hasPackId) {
             executeQuery(`ALTER TABLE order_items ADD COLUMN pack_id TEXT`, [])
           }
-        } catch (_e) {
+        } catch {
           // Colonne existe déjà ou erreur, continuer
         }
         
@@ -2428,7 +2443,7 @@ export function selectRows(query: string, params: unknown[] = []): Record<string
                 logger.info(`[selectRows] sql.js DB chargée (${(dbStats.size / 1024).toFixed(2)} KB)`)
               }
             }
-          } catch (_loadError) {
+          } catch {
             logger.warn('[selectRows] Impossible de charger sql.js de manière synchrone, utilisez selectAsync() à la place')
             return []
           }
@@ -2614,6 +2629,7 @@ export function select(query: string, params: unknown[] = []): unknown[] {
   // Essayer d'initialiser sql.js automatiquement si pas déjà fait
   if (!sqlJsInit || !sqlJsInit.Database) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const sqlJs = require('sql.js')
       
       // Essayer de charger sql.js de manière synchrone si possible

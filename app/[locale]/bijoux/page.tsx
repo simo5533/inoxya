@@ -87,7 +87,11 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
   
   // Attendre un peu pour s'assurer que la DB est complètement chargée
   if (isConnected) {
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise<void>(resolve => {
+      setTimeout(() => {
+        resolve()
+      }, 100)
+    })
   }
   
   // Récupérer les bijoux (filtrés par catégorie si slug fourni)

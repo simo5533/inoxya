@@ -122,8 +122,8 @@ export default function AdminOrdersPage() {
       }
       
       // Vérifier que la réponse est valide
-      const result = await res.json().catch((jsonError) => {
-        console.error('[updateStatus] Erreur parsing JSON réponse:', jsonError)
+      const result = await res.json().catch(() => {
+        console.error('[updateStatus] Erreur parsing JSON réponse')
         return { success: false }
       })
       

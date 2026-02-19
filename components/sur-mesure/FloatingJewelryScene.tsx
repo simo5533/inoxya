@@ -29,6 +29,89 @@ const jewelryImages = [
   "/images/categories/boucles-oreilles-category.jpeg",
 ]
 
+// Composant séparé pour chaque élément flottant (permet l'utilisation de hooks)
+function FloatingJewelryElement({ 
+  element, 
+  scrollYProgress 
+}: { 
+  element: JewelryElement
+  scrollYProgress: ReturnType<typeof useScroll>['scrollYProgress']
+}) {
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [0, element.size * 0.4])
+  const parallaxX = useTransform(scrollYProgress, [0, 1], [0, element.size * 0.2])
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [1, 1.1, 1])
+
+  return (
+    <motion.div
+      className="absolute"
+      style={{
+        left: `${element.x}%`,
+        top: `${element.y}%`,
+        width: `${element.size}px`,
+        height: `${element.size}px`,
+        x: parallaxX,
+        y: parallaxY,
+        scale: scale,
+        zIndex: element.zIndex,
+      }}
+      animate={{
+        y: [0, -40, 0],
+        rotate: [element.rotation, element.rotation + 360],
+        opacity: [0.15, 0.35, 0.15],
+      }}
+      transition={{
+        duration: element.duration,
+        delay: element.delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    >
+      {/* Container avec glow effect */}
+      <div className="relative w-full h-full group">
+        {/* Glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#C9A227]/20 via-[#D6B36A]/10 to-transparent rounded-full blur-xl opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
+        
+        {/* Image du bijou */}
+        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#D6B36A]/30 shadow-2xl backdrop-blur-sm">
+          <Image
+            src={element.image}
+            alt={`Bijou flottant ${element.id + 1}`}
+            fill
+            className="object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
+            sizes={`${element.size}px`}
+            quality={85}
+          />
+          
+          {/* Overlay avec gradient doré */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#C9A227]/10 via-transparent to-[#D6B36A]/20 mix-blend-overlay"></div>
+          
+          {/* Highlight specular */}
+          <div className="absolute top-1/4 left-1/4 w-1/3 h-1/3 rounded-full bg-gradient-to-br from-white/40 via-white/20 to-transparent blur-sm opacity-60"></div>
+        </div>
+        
+        {/* Reflet animé */}
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          animate={{
+            background: [
+              "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent 50%)",
+              "radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.1), transparent 50%)",
+              "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent 50%)",
+            ]
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      </div>
+    </motion.div>
+  )
+}
+
+FloatingJewelryElement.displayName = 'FloatingJewelryElement'
+
 export default function FloatingJewelryScene() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -114,80 +197,15 @@ export default function FloatingJewelryScene() {
       ))}
 
       {/* Bijoux flottants avec vraies images */}
-      {elements.map((element) => {
-        const parallaxY = useTransform(scrollYProgress, [0, 1], [0, element.size * 0.4])
-        const parallaxX = useTransform(scrollYProgress, [0, 1], [0, element.size * 0.2])
-        const scale = useTransform(scrollYProgress, [0, 0.5, 1], [1, 1.1, 1])
-
-        return (
-          <motion.div
-            key={element.id}
-            className="absolute"
-            style={{
-              left: `${element.x}%`,
-              top: `${element.y}%`,
-              width: `${element.size}px`,
-              height: `${element.size}px`,
-              x: parallaxX,
-              y: parallaxY,
-              scale: scale,
-              zIndex: element.zIndex,
-            }}
-            animate={{
-              y: [0, -40, 0],
-              rotate: [element.rotation, element.rotation + 360],
-              opacity: [0.15, 0.35, 0.15],
-            }}
-            transition={{
-              duration: element.duration,
-              delay: element.delay,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            {/* Container avec glow effect */}
-            <div className="relative w-full h-full group">
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#C9A227]/20 via-[#D6B36A]/10 to-transparent rounded-full blur-xl opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
-              
-              {/* Image du bijou */}
-              <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#D6B36A]/30 shadow-2xl backdrop-blur-sm">
-                <Image
-                  src={element.image}
-                  alt={`Bijou flottant ${element.id + 1}`}
-                  fill
-                  className="object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
-                  sizes={`${element.size}px`}
-                  quality={85}
-                />
-                
-                {/* Overlay avec gradient doré */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#C9A227]/10 via-transparent to-[#D6B36A]/20 mix-blend-overlay"></div>
-                
-                {/* Highlight specular */}
-                <div className="absolute top-1/4 left-1/4 w-1/3 h-1/3 rounded-full bg-gradient-to-br from-white/40 via-white/20 to-transparent blur-sm opacity-60"></div>
-              </div>
-              
-              {/* Reflet animé */}
-              <motion.div
-                className="absolute inset-0 rounded-full"
-                animate={{
-                  background: [
-                    "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent 50%)",
-                    "radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.1), transparent 50%)",
-                    "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent 50%)",
-                  ]
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-            </div>
-          </motion.div>
-        )
-      })}
+      {elements.map((element) => (
+        <FloatingJewelryElement
+          key={element.id}
+          element={element}
+          scrollYProgress={scrollYProgress}
+        />
+      ))}
     </div>
   )
 }
+
+FloatingJewelryScene.displayName = 'FloatingJewelryScene'

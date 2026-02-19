@@ -18,4 +18,5 @@ export function ClientProviders({ children }: { children: ReactNode }) {
     </ErrorBoundary>
   )
 }
+ClientProviders.displayName = 'ClientProviders'
 

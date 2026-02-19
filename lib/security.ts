@@ -284,9 +284,16 @@ export function generatePasswordResetToken(userId: string): string {
 /**
  * Vérification du token de réinitialisation
  */
+interface PasswordResetTokenPayload {
+  userId: string
+  type: 'password_reset'
+  iat?: number
+  exp?: number
+}
+
 export function verifyPasswordResetToken(token: string): { userId: string } | null {
   try {
-    const decoded = jwt.verify(token, getJwtSecret()) as any
+    const decoded = jwt.verify(token, getJwtSecret()) as PasswordResetTokenPayload
     if (decoded.type === 'password_reset') {
       return { userId: decoded.userId }
     }
@@ -425,6 +432,7 @@ export function validateNumericId(id: string | number): boolean {
  * Générer un token CSRF sécurisé (pour formulaires)
  */
 export function generateCSRFToken(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const crypto = require('crypto')
   return crypto.randomBytes(32).toString('hex')
 }

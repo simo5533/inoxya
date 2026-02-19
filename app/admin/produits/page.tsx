@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 // Force dynamic rendering to avoid build-time errors
 export const dynamic = 'force-dynamic'
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -179,7 +180,7 @@ export default function AdminProduitsPage() {
               errorMessage = extractedError
             }
           }
-        } catch (jsonError) {
+        } catch {
           // Si ce n'est pas du JSON, essayer de lire le texte
           try {
             const responseClone = res.clone()
@@ -197,7 +198,7 @@ export default function AdminProduitsPage() {
                 errorMessage = text
               }
             }
-          } catch (textError) {
+          } catch {
             // Si tout échoue, utiliser le message par défaut basé sur le status
             if (res.status === 404) {
               errorMessage = 'Produit non trouvé'
@@ -282,7 +283,7 @@ export default function AdminProduitsPage() {
       setFilteredProducts(prev => prev.filter(p => p.id !== productId))
       
       if (process.env.NODE_ENV === 'development') {
-        console.log("Produit supprimé avec succès:", { productId })
+        // Produit supprimé avec succès - log supprimé pour production
       }
       alert(`✅ Produit supprimé avec succès de la base de données.`)
     } catch (error) {
@@ -453,7 +454,7 @@ export default function AdminProduitsPage() {
                   <SelectItem value="cat-bagues">Bagues</SelectItem>
                   <SelectItem value="cat-colliers">Colliers</SelectItem>
                   <SelectItem value="cat-bracelets">Bracelets</SelectItem>
-                  <SelectItem value="cat-boucles">Boucles d'oreilles</SelectItem>
+                  <SelectItem value="cat-boucles">Boucles d&apos;oreilles</SelectItem>
                   <SelectItem value="cat-broches">Nos packs</SelectItem>
                 </SelectContent>
               </Select>
@@ -481,11 +482,12 @@ export default function AdminProduitsPage() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-6">
                   {/* Image du produit */}
-                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <img
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    <Image
                       src={product.image_url || "/placeholder.svg"}
                       alt={product.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                   

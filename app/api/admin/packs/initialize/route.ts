@@ -268,7 +268,7 @@ export async function POST(_request: NextRequest) {
               // On met original_price dans la description si la colonne n'existe pas
               description: `Pack officiel INOXYA - ${packData.name}. Prix original: ${packData.original_price} MAD, Prix actuel: ${packData.current_price} MAD.`
             })
-          } catch (error) {
+          } catch {
             // Ignorer si original_price n'est pas supporté
             logger.debug(`original_price non supporté pour ${packData.name}`)
           }
