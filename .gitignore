@@ -50,3 +50,23 @@ coverage/
 .env*.local
 
 .vercel
+
+# Documentation temporaire (ne pas commiter)
+ANALYSE_*.md
+BUGS_*.md
+CORRECTION_*.md
+DIAGNOSTIC_*.md
+FIX_*.md
+GUIDE_*.md
+INSTRUCTIONS_*.md
+NOTE_*.md
+OPTIMISATIONS_*.md
+PHASE_*.md
+PROJET_*.md
+RAPPORT_*.md
+RESUME_*.md
+SOLUTION_*.md
+VERIFICATION_*.md
+middleware.ts.*
+middleware.backup.ts
+*.old
