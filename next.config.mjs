@@ -268,21 +268,61 @@ const nextConfig = {
 // Sentry auto-instruments via sentry.client.config.ts and sentry.server.config.ts
 // No need for withSentryConfig wrapper in Next.js 15
 
+// Fonction pour nettoyer récursivement tous les flags expérimentaux incompatibles
+function cleanExperimentalFlags(config) {
+  if (!config) return config
+  
+  // S'assurer que experimental existe
+  if (!config.experimental) {
+    config.experimental = {}
+  }
+  
+  // Liste de TOUS les flags incompatibles avec Next.js 15.5.12 stable
+  const incompatibleFlags = [
+    'cacheComponents',
+    'dynamicIO',
+    'ppr',
+    'reactCompiler',
+    'serverActions', // Stable mais on le supprime pour éviter les conflits
+  ]
+  
+  // Supprimer chaque flag problématique de manière agressive
+  incompatibleFlags.forEach(flag => {
+    if (config.experimental && config.experimental[flag] !== undefined) {
+      delete config.experimental[flag]
+    }
+    // Supprimer aussi si défini à false (certaines versions peuvent le faire)
+    if (config.experimental && config.experimental[flag] === false) {
+      delete config.experimental[flag]
+    }
+  })
+  
+  // S'assurer qu'on ne garde que optimizePackageImports (le seul flag stable qu'on utilise)
+  const safeFlags = {
+    optimizePackageImports: nextConfig.experimental?.optimizePackageImports || ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-toast'],
+  }
+  
+  // Remplacer complètement experimental par seulement les flags sûrs
+  // Cela écrase TOUT ce que next-intl pourrait avoir ajouté
+  config.experimental = { ...safeFlags }
+  
+  return config
+}
+
 // Appliquer le plugin next-intl
 let config = withNextIntl(nextConfig)
 
-// Forcer la désactivation de TOUS les flags expérimentaux incompatibles avec Next.js 15.5.12 stable
-// next-intl peut essayer d'activer ces flags automatiquement, on les supprime explicitement
-if (config.experimental) {
-  // Supprimer tous les flags qui nécessitent Next.js canary
-  delete config.experimental.cacheComponents
-  delete config.experimental.dynamicIO
-  delete config.experimental.ppr
-  delete config.experimental.reactCompiler
-  // serverActions est stable dans Next.js 15, mais on le supprime si présent pour éviter les conflits
-  delete config.experimental.serverActions
-} else {
-  config.experimental = {}
+// Nettoyer TOUS les flags expérimentaux incompatibles APRÈS l'application du plugin
+// next-intl 4.8.3 peut activer cacheComponents automatiquement, on le supprime de force
+config = cleanExperimentalFlags(config)
+
+// Wrapper final pour s'assurer que la config est toujours propre quand Next.js la lit
+// Cela garantit que même si next-intl modifie la config après, elle sera nettoyée
+const finalConfig = {
+  ...config,
+  experimental: {
+    optimizePackageImports: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-toast'],
+  }
 }
 
-export default config
+export default finalConfig
