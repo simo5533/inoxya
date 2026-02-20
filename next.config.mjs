@@ -265,4 +265,17 @@ const nextConfig = {
 
 // Sentry auto-instruments via sentry.client.config.ts and sentry.server.config.ts
 // No need for withSentryConfig wrapper in Next.js 15
-export default withNextIntl(nextConfig)
+
+// Appliquer le plugin next-intl et désactiver explicitement les flags expérimentaux incompatibles
+const config = withNextIntl(nextConfig)
+
+// Forcer la désactivation des flags expérimentaux incompatibles avec Next.js 15.5.12
+if (config.experimental) {
+  // Supprimer cacheComponents et dynamicIO s'ils sont présents
+  delete config.experimental.cacheComponents
+  delete config.experimental.dynamicIO
+} else {
+  config.experimental = {}
+}
+
+export default config
