@@ -48,22 +48,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Pushed to GitHub!" -ForegroundColor Green
 
-# Step 5 - Deploy to Vercel
-Write-Host "`nStep 5: Deploying to Vercel..." -ForegroundColor Yellow
-
-# Check if Vercel CLI is installed
-$vercelInstalled = Get-Command vercel -ErrorAction SilentlyContinue
-if (-not $vercelInstalled) {
-    Write-Host "Installing Vercel CLI..." -ForegroundColor Yellow
-    npm install -g vercel
-}
-
-vercel --prod
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "`nDEPLOYMENT SUCCESSFUL!" -ForegroundColor Green
-    Write-Host "Your site is live on Vercel!" -ForegroundColor Cyan
-} else {
-    Write-Host "`nVercel deployment failed" -ForegroundColor Red
-    Write-Host "Check Vercel dashboard for details" -ForegroundColor Yellow
-}
+# Step 5 - Instructions for Vercel deployment
+Write-Host "`nStep 5: Vercel Deployment" -ForegroundColor Yellow
+Write-Host "================================" -ForegroundColor Yellow
+Write-Host "Code pushed to GitHub successfully!" -ForegroundColor Green
+Write-Host "`nNext steps:" -ForegroundColor Cyan
+Write-Host "1. Go to: https://vercel.com/dashboard" -ForegroundColor White
+Write-Host "2. Your project should auto-deploy from GitHub" -ForegroundColor White
+Write-Host "   OR click 'Redeploy' on the latest deployment" -ForegroundColor White
+Write-Host "`nNote: CLI deployment requires team access." -ForegroundColor Gray
+Write-Host "Dashboard deployment is recommended and automatic!" -ForegroundColor Gray
