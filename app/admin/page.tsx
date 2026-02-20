@@ -4,10 +4,13 @@ import AdminDashboard from "@/components/admin/AdminDashboard"
 import RoleGuard from "@/components/admin/RoleGuard"
 
 export default async function AdminPage() {
+  // Le layout admin vérifie déjà l'authentification avec requireAdmin()
+  // On peut directement afficher le dashboard
   const user = await getCurrentUser()
   
-  if (!user) {
-    redirect("/login")
+  // Double vérification de sécurité (le layout a déjà vérifié)
+  if (!user || user.role !== 'admin') {
+    redirect("/fr/login?redirect=/admin")
   }
 
   return (

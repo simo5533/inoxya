@@ -91,12 +91,17 @@ async function HomePage({
   let featuredProducts: any[] = []
   try {
     // Timeout de 5 secondes pour éviter les blocages infinis
+     
+    // Timeout de 10 secondes pour éviter les blocages (augmenté de 5s à 10s)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const timeoutPromise = new Promise<any[]>((resolve) => {
       setTimeout(() => {
-        console.warn('[HomePage] Timeout récupération produits vedettes (5s)')
+        // Only log timeout in development mode
+        if (process.env['NODE_ENV'] === 'development') {
+          console.warn('[HomePage] Timeout récupération produits vedettes (10s)')
+        }
         resolve([])
-      }, 5000)
+      }, 10000)
     })
     
     const dbPromise = getBijouxVedettes(9).then((products) => {
@@ -157,12 +162,15 @@ async function HomePage({
   // Récupérer les catégories avec gestion d'erreur et timeout
   let categories: Category[] = []
   try {
-    // Timeout de 3 secondes pour éviter les blocages
+    // Timeout de 8 secondes pour éviter les blocages (augmenté de 3s à 8s)
     const categoriesTimeout = new Promise<Category[]>((resolve) => {
       setTimeout(() => {
-        console.warn('[HomePage] Timeout récupération catégories (3s)')
+        // Only log timeout in development mode
+        if (process.env['NODE_ENV'] === 'development') {
+          console.warn('[HomePage] Timeout récupération catégories (8s)')
+        }
         resolve([])
-      }, 3000)
+      }, 8000)
     })
     
     const categoriesPromise = getAllCategories().then((cats) => {

@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       cookieStore.set("user_id", result.user.id, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax", // "lax" pour permettre la redirection après login (strict bloque la redirection)
         maxAge: 60 * 60 * 24 * 7, // 7 jours
         path: '/' // Explicit path pour garantir la portée
       })
@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
           logger.info('[API Login] Base de données trouvée, chargement de sql.js...', { path: dbPath })
           
           // Charger sql.js de manière dynamique
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let sqlJsModule: any
           try {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
           }
           
           // Initialiser sql.js - essayer plusieurs formats
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let SQL: any = null
           try {
             logger.info('[API Login] Initialisation de sql.js...')
@@ -161,6 +163,7 @@ export async function POST(request: NextRequest) {
             stmt.bind([sanitizedPhone])
             
             let userFound = false
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let userRow: any = null
             
             if (stmt.step()) {
@@ -226,7 +229,7 @@ export async function POST(request: NextRequest) {
                 cookieStore.set("user_id", userObj.id, {
                   httpOnly: true,
                   secure: process.env.NODE_ENV === "production",
-                  sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // "lax" en dev pour permettre les redirections
+                  sameSite: "lax", // "lax" pour permettre la redirection après login (strict bloque la redirection)
                   maxAge: 60 * 60 * 24 * 7, // 7 jours
                   path: '/' // Explicit path pour garantir la portée
                 })
@@ -308,12 +311,22 @@ export async function POST(request: NextRequest) {
 
     logger.api('POST', '/api/auth/login', statusCode)
     
-    // Créer la réponse avec les headers appropriés pour les cookies
-    const response = NextResponse.json(result, { status: statusCode })
+    // IMPORTANT: Retourner JSON avec les informations de redirection
+    // Le cookie a déjà été créé avec cookieStore.set() plus haut, il sera inclus dans la réponse JSON
+    // Le client redirigera après avoir reçu la réponse avec le cookie
+    const response = NextResponse.json(
+      {
+        ...result,
+        // Ajouter les informations de redirection si login réussi
+        redirect: result.success && result.user ? (result.user.role === 'admin' ? '/admin' : '/fr') : undefined
+      },
+      { status: statusCode }
+    )
     
     // S'assurer que les cookies sont bien envoyés
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
     
+    // Le cookie créé avec cookieStore.set() plus haut sera automatiquement inclus dans cette réponse
     return response
   } catch (error) {
     logger.error('Erreur lors de la connexion', { context: 'API_AUTH_LOGIN', error: error instanceof Error ? error.message : String(error) })

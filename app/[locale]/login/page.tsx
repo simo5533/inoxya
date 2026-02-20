@@ -25,6 +25,7 @@ interface AuthResponse {
     last_name?: string
     role: 'user' | 'moderator' | 'admin'
   }
+  redirect?: string
 }
 
 export default function LoginPage() {
@@ -80,6 +81,7 @@ export default function LoginPage() {
           phone: normalizedPhone,
           password: password,
         }),
+        credentials: 'include', // IMPORTANT: Inclure les cookies dans la requête et la réponse
       })
 
       if (!response.ok) {
@@ -87,14 +89,42 @@ export default function LoginPage() {
         throw new Error(errorData.error || (locale === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur lors de la connexion'))
       }
 
-      const result: AuthResponse = await response.json()
+      // Récupérer le résultat JSON
+      const result: AuthResponse & { redirect?: string } = await response.json()
 
       if (result.success && result.user) {
-        // Rediriger selon le rôle
+        // IMPORTANT: Le cookie est maintenant disponible dans le navigateur
+        // Vérifier que le cookie est disponible avant de rediriger
         if (result.user.role === 'admin') {
-          window.location.replace("/admin")
+          // Admin: vérifier le cookie puis rediriger vers /admin
+          const verifyAndRedirect = async () => {
+            try {
+              // Vérifier que le cookie est disponible en appelant /api/auth/me
+              const checkResponse = await fetch('/api/auth/me', {
+                credentials: 'include'
+              })
+              const checkData = await checkResponse.json()
+              
+              if (checkData.user && checkData.user.role === 'admin') {
+                // Cookie disponible, rediriger immédiatement
+                window.location.replace("/admin")
+              } else {
+                // Cookie pas encore disponible, réessayer après 200ms
+                setTimeout(verifyAndRedirect, 200)
+              }
+            } catch {
+              // En cas d'erreur, réessayer après 200ms
+              setTimeout(verifyAndRedirect, 200)
+            }
+          }
+          
+          // Démarrer la vérification après 300ms pour laisser le temps au cookie d'être propagé
+          setTimeout(verifyAndRedirect, 300)
         } else {
-          window.location.replace(`/${locale}/profile`)
+          // Client: rediriger vers la page d'accueil
+          setTimeout(() => {
+            window.location.replace(result.redirect || `/${locale}`)
+          }, 300)
         }
       } else {
         setError(result.error || (locale === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur lors de la connexion'))

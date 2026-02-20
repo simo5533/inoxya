@@ -18,6 +18,24 @@ export async function loginUser(phone: string, password: string) {
       ? 'admin_phone' 
       : phone.replace(/[\s\-\.]/g, '').trim()
     
+    // IMPORTANT: S'assurer que la DB est initialisée avant de chercher l'utilisateur
+    const { forceConnection, initSqlJsAsync } = await import('./sqlite')
+    let isConnected = forceConnection()
+    if (!isConnected) {
+      // Essayer d'initialiser sql.js si better-sqlite3 n'est pas disponible
+      isConnected = await initSqlJsAsync()
+      if (isConnected) {
+        isConnected = forceConnection()
+      }
+    }
+    
+    if (!isConnected) {
+      if (process.env['NODE_ENV'] === 'development') {
+        console.log('[loginUser] ❌ Impossible de se connecter à la base de données')
+      }
+      return { success: false, error: "Erreur de connexion à la base de données" }
+    }
+    
     // Utiliser getUserByPhone qui gère automatiquement better-sqlite3 et sql.js
     const user = getUserByPhone(normalizedPhone)
     
@@ -38,14 +56,8 @@ export async function loginUser(phone: string, password: string) {
       return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
     }
 
-    const cookieStore = await cookies()
-    cookieStore.set("user_id", user.id, {
-      httpOnly: true,
-      secure: process.env['NODE_ENV'] === "production",
-      sameSite: process.env['NODE_ENV'] === "production" ? "strict" : "lax", // "lax" en dev pour permettre les redirections
-      maxAge: 60 * 60 * 24 * 7, // 7 jours
-      path: '/' // Explicit path pour garantir la portée
-    })
+    // NOTE: Le cookie sera créé dans l'API route (app/api/auth/login/route.ts)
+    // pour éviter les problèmes de timing et garantir qu'il est inclus dans la réponse HTTP
 
     return {
       success: true,

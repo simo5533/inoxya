@@ -37,7 +37,8 @@ export async function requireAdmin(): Promise<AdminUser> {
       if (process.env.NODE_ENV === 'development') {
         console.log('[requireAdmin] Utilisateur non admin:', { userId: user.id, role: user.role })
       }
-      redirect('/fr/profile?error=unauthorized')
+      // Rediriger les clients vers la page d'accueil (pas vers profile qui n'existe pas)
+      redirect('/fr')
     }
     
     return user as AdminUser

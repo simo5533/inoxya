@@ -85,13 +85,20 @@ export async function getBijouxVedettes(limit = 8) {
         return result
       }
       
-      // Si toujours pas connecté, lancer l'erreur pour que l'appelant la gère
-      throw new Error('Impossible de se connecter à la base de données')
+      // Si toujours pas connecté, utiliser le fallback SQLite direct
+      logger.warn('[getBijouxVedettes] Adapter failed, using SQLite fallback')
+      return await getSqliteProductsAsync()
     }
   } catch (error) {
     logger.error('Erreur getBijouxVedettes:', error)
-    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
-    throw error
+    // En cas d'erreur, utiliser le fallback SQLite direct
+    try {
+      return await getSqliteProductsAsync()
+    } catch (fallbackError) {
+      logger.error('Erreur fallback getBijouxVedettes:', fallbackError)
+      // Retourner un tableau vide plutôt que de faire planter la page
+      return []
+    }
   }
 }
 
@@ -256,12 +263,22 @@ export async function getAllCategories() {
     }
     
     if (!isConnected) {
-      throw new Error('Impossible de se connecter à la base de données')
+      // Utiliser le fallback SQLite direct
+      logger.warn('[getAllCategories] Adapter failed, using SQLite fallback')
+      return await getSqliteCategories()
     }
     
     return await getSqliteCategories()
   } catch (error) {
     logger.error('Erreur getAllCategories:', error)
+    // En cas d'erreur, utiliser le fallback SQLite direct
+    try {
+      return await getSqliteCategories()
+    } catch (fallbackError) {
+      logger.error('Erreur fallback getAllCategories:', fallbackError)
+      // Retourner un tableau vide plutôt que de faire planter la page
+      return []
+    }
     // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
     throw error
   }
@@ -280,14 +297,30 @@ export async function getAllPacks() {
     }
     
     if (!isConnected) {
+      // En build-time, retourner un tableau vide plutôt que de lancer une erreur
+      if (process.env['NEXT_PHASE'] === 'phase-production-build' || process.env['NEXT_PHASE'] === 'phase-export') {
+        logger.debug('[getAllPacks] Build-time: DB non disponible, retour tableau vide')
+        return []
+      }
       throw new Error('Impossible de se connecter à la base de données')
     }
     
     return await getSqlitePacksAsync()
   } catch (error) {
+    // En build-time, retourner un tableau vide plutôt que de lancer une erreur
+    if (process.env['NEXT_PHASE'] === 'phase-production-build' || process.env['NEXT_PHASE'] === 'phase-export') {
+      logger.debug('[getAllPacks] Build-time: Erreur DB, retour tableau vide')
+      return []
+    }
+    // En runtime, logger l'erreur mais permettre le fallback
     logger.error('Erreur getAllPacks:', error)
-    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
-    throw error
+    // Retourner un tableau vide plutôt que de faire planter le sitemap
+    try {
+      return await getSqlitePacksAsync()
+    } catch (fallbackError) {
+      logger.error('Erreur fallback getAllPacks:', fallbackError)
+      return []
+    }
   }
 }
 

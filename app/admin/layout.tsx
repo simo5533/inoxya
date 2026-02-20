@@ -26,7 +26,8 @@ async function AdminLayout({
   } catch (error) {
     // Logger pour diagnostic
     logger.error('[AdminLayout] Erreur requireAdmin', error)
-    redirect('/login?redirect=/admin')
+    // Rediriger vers la page de login avec locale par défaut
+    redirect('/fr/login?redirect=/admin')
   }
 
   return (

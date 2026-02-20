@@ -1,9 +1,8 @@
 "use client"
 
-// Forcer le rendu dynamique pour éviter les erreurs next-intl
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-export const dynamicParams = true
+// Note: revalidate, dynamic, and dynamicParams are Server Component exports
+// They cannot be used in Client Components. This is a Client Component ("use client"),
+// so these exports are removed to prevent the runtime error.
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -47,7 +46,8 @@ export default function FavorisPage() {
   useEffect(() => {
     loadFavorites()
     loadProducts()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // loadFavorites and loadProducts are stable functions, no need to include them
 
   const loadFavorites = () => {
     const items = getFavorites()

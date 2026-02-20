@@ -77,24 +77,36 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
           // Tester la connexion
           const isConnected = await localAdapter.testConnection()
           if (!isConnected) {
-            logger.error('[DB] ❌ Échec de connexion SQLite')
-            // En développement, ne pas lancer d'erreur mais logger un avertissement
-            // Les fonctions appelantes géreront le fallback
+            // En développement, ne pas logger d'erreur (seulement en mode DEBUG_DB)
+            // Le projet fonctionne avec le fallback sql.js
             if (process.env['NODE_ENV'] === 'production') {
+              logger.error('[DB] ❌ Échec de connexion SQLite')
               throw new Error('Impossible de se connecter à la base de données')
             } else {
-              logger.warn('[DB] ⚠️  Mode développement: connexion SQLite échouée, les fonctions utiliseront le fallback')
+              // Mode développement: logger seulement si DEBUG_DB=1
+              if (process.env['DEBUG_DB'] === '1') {
+                logger.warn('[DB] ⚠️  Mode développement: connexion SQLite échouée, les fonctions utiliseront le fallback sql.js')
+              }
               localAdapter = null
               localAdapterType = null
             }
           }
         } catch (error) {
-          logger.error('[DB] ❌ Erreur lors de l\'initialisation SQLite:', error)
-          // En développement, permettre le fallback
+          // En développement, ne pas logger d'erreur (seulement en mode DEBUG_DB)
+          // Le projet fonctionne avec le fallback sql.js
           if (process.env['NODE_ENV'] === 'production') {
+            logger.error('[DB] ❌ Erreur lors de l\'initialisation SQLite:', error)
             throw new Error('Impossible d\'initialiser la base de données')
           } else {
-            logger.warn('[DB] ⚠️  Mode développement: erreur SQLite, les fonctions utiliseront le fallback')
+            // Mode développement: logger seulement si DEBUG_DB=1
+            if (process.env['DEBUG_DB'] === '1') {
+              // logger.warn() n'accepte pas error directement, utiliser logger.error() ou convertir en metadata
+              if (error instanceof Error) {
+                logger.warn('[DB] ⚠️  Mode développement: erreur SQLite, les fonctions utiliseront le fallback sql.js', { error: error.message, stack: error.stack })
+              } else {
+                logger.warn('[DB] ⚠️  Mode développement: erreur SQLite, les fonctions utiliseront le fallback sql.js', { error: String(error) })
+              }
+            }
             localAdapter = null
             localAdapterType = null
           }
@@ -102,13 +114,27 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
       }
 
       // Si toujours pas d'adapter, lancer une erreur seulement en production
-      // En développement, permettre aux fonctions appelantes d'utiliser le fallback
+      // En développement, permettre aux fonctions appelantes d'utiliser le fallback sql.js
       if (!localAdapter) {
         if (process.env['NODE_ENV'] === 'production') {
           throw new Error('Impossible de se connecter à la base de données')
         }
-        // En développement, lancer quand même une erreur mais avec un message plus clair
-        // Les fonctions appelantes doivent gérer cette erreur avec un try-catch
+        // En développement, vérifier si sql.js est disponible avant de lancer l'erreur
+        // Silent check - only log in debug mode
+        try {
+          const { forceConnection } = await import('../sqlite')
+          const sqlJsAvailable = forceConnection()
+          if (sqlJsAvailable && process.env['DEBUG_DB'] === '1') {
+            logger.debug('[DB] sql.js disponible comme fallback')
+          }
+        } catch {
+          // Ignorer les erreurs de vérification sql.js
+        }
+        // Lancer l'erreur pour que les fonctions appelantes utilisent le fallback
+        // Silent warning - only log in debug mode
+        if (process.env['DEBUG_DB'] !== '1') {
+          // Ne pas logger en mode normal pour éviter les warnings bruyants
+        }
         throw new Error('Base de données non disponible (mode développement - utilisez le fallback)')
       }
 

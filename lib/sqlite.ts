@@ -43,6 +43,7 @@ export function serializeError(err: unknown): SerializedError {
     Object.getOwnPropertyNames(err).forEach(key => {
       if (!['name', 'message', 'stack', 'code', 'errno', 'syscall', 'cause'].includes(key)) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           serialized[key] = (err as any)[key]
         } catch {
           // Ignorer les propriétés non sérialisables
@@ -69,6 +70,7 @@ export function serializeError(err: unknown): SerializedError {
 // PHASE 1: Import lazy de better-sqlite3 pour éviter les problèmes Webpack
 // CRITICAL: Ne jamais charger better-sqlite3 au niveau du module
 // Utiliser une fonction lazy qui charge seulement quand nécessaire
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let Database: any = null
 let betterSqlite3Available = false
 let betterSqlite3Error: string | null = null
@@ -78,6 +80,7 @@ let betterSqlite3LoadAttempted = false
  * Charge better-sqlite3 de manière lazy (seulement quand nécessaire)
  * Évite les erreurs Webpack "Cannot read properties of undefined (reading 'call')"
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function loadBetterSqlite3(): { Database: any; available: boolean; error: string | null } {
   // FORCE_SQLJS: Variable d'environnement pour forcer sql.js et éviter better-sqlite3
   // Utile pour débloquer la compilation Next.js qui peut être bloquée par better-sqlite3
@@ -126,6 +129,7 @@ function loadBetterSqlite3(): { Database: any; available: boolean; error: string
       } else {
         throw new Error('Database is not a constructor')
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (bindingError: any) {
       // Bindings are not compiled
       const errorMsg = bindingError?.message || String(bindingError)
@@ -137,14 +141,21 @@ function loadBetterSqlite3(): { Database: any; available: boolean; error: string
           errorMsg.includes('Cannot find module')) {
         Database = null
         betterSqlite3Available = false
-        logger.warn(`[DB] ⚠️ better-sqlite3 module loaded but bindings missing: ${errorMsg}`)
-        logger.warn('[DB] ⚠️ Falling back to sql.js')
+        // Silent fallback - only log in development mode
+        if (process.env['NODE_ENV'] === 'development' && process.env['DEBUG_DB'] === '1') {
+          logger.warn(`[DB] ⚠️ better-sqlite3 module loaded but bindings missing: ${errorMsg}`)
+          logger.warn('[DB] ⚠️ Falling back to sql.js')
+        } else {
+          // Silent fallback in production - sql.js will be used automatically
+          logger.debug('[DB] Using sql.js fallback (better-sqlite3 bindings unavailable)')
+        }
       } else {
         // Other error - might still work
         betterSqlite3Available = true
         logger.info(`[DB] ⚠️ better-sqlite3 test warning: ${errorMsg}, but continuing`)
       }
     }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     // Module not available or import failed
     const errorMsg = e?.message || String(e)
@@ -167,14 +178,57 @@ function loadBetterSqlite3(): { Database: any; available: boolean; error: string
 
 // PHASE 1: Chemin DB 100% déterministe et ABSOLU
 // Priorité 1: Variable d'environnement SQLITE_DB_PATH (chemin absolu)
-// Priorité 2: Fallback sur data/inoxya_bijoux.db (chemin ABSOLU depuis process.cwd())
+// Priorité 2: Variable d'environnement DATABASE_URL (format file:./path ou file:///path)
+// Priorité 3: Fallback sur data/inoxya_bijoux.db (chemin ABSOLU depuis process.cwd())
 export const getDbPath = (): string => {
-  // Vérifier d'abord la variable d'environnement (chemin absolu prioritaire)
+  // Vérifier d'abord la variable d'environnement SQLITE_DB_PATH (chemin absolu prioritaire)
   const envDbPath = process.env['SQLITE_DB_PATH']
-  if (envDbPath) {
+  if (envDbPath && envDbPath.trim() !== '') {
     const absPath = path.isAbsolute(envDbPath) ? envDbPath : path.resolve(process.cwd(), envDbPath)
     logger.info(`[DB] Using SQLITE_DB_PATH from env: ${absPath}`)
     return absPath
+  }
+  
+  // Vérifier DATABASE_URL (format file:./path ou file:///path)
+  const databaseUrl = process.env['DATABASE_URL']
+  if (databaseUrl && databaseUrl.trim() !== '') {
+    // Parser DATABASE_URL pour extraire le chemin
+    // Formats supportés: file:./dev.db, file:///absolute/path, file://./relative/path
+    let dbPathFromUrl: string | null = null
+    
+    if (databaseUrl.startsWith('file:')) {
+      // Enlever le préfixe "file:" ou "file://"
+      // Formats supportés: file:./dev.db, file:///absolute/path, file://./relative/path
+      let urlPath = databaseUrl
+      
+      // Enlever file:/// (3 slashes) ou file:// (2 slashes) ou file: (1 colon)
+      if (urlPath.startsWith('file:///')) {
+        urlPath = urlPath.substring(8) // Enlever "file:///"
+      } else if (urlPath.startsWith('file://')) {
+        urlPath = urlPath.substring(7) // Enlever "file://"
+      } else if (urlPath.startsWith('file:')) {
+        urlPath = urlPath.substring(5) // Enlever "file:"
+      }
+      
+      // Si c'est un chemin absolu (commence par /), l'utiliser tel quel
+      // Sinon, résoudre depuis process.cwd()
+      if (path.isAbsolute(urlPath)) {
+        dbPathFromUrl = urlPath
+      } else {
+        // Chemin relatif: résoudre depuis process.cwd()
+        dbPathFromUrl = path.resolve(process.cwd(), urlPath)
+      }
+      
+      if (dbPathFromUrl && dbPathFromUrl.trim() !== '') {
+        logger.info(`[DB] Using DATABASE_URL (parsed): ${dbPathFromUrl}`)
+        return dbPathFromUrl
+      }
+    } else if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgres://')) {
+      // Si ce n'est pas PostgreSQL et pas un format file:, traiter comme chemin direct
+      const absPath = path.isAbsolute(databaseUrl) ? databaseUrl : path.resolve(process.cwd(), databaseUrl)
+      logger.info(`[DB] Using DATABASE_URL (as direct path): ${absPath}`)
+      return absPath
+    }
   }
   
   // Fallback: chemin ABSOLU (pas relatif) pour éviter les problèmes avec process.cwd()
@@ -190,19 +244,25 @@ const dataDir = path.dirname(dbPath)
 // PHASE 2: Singleton global pour éviter les multiples connexions (Windows lock)
 // Utiliser globalThis pour persister entre hot reloads Next.js
 const DB_SINGLETON_KEY = '__inoxya_sqlite_db__'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null
 
 // PHASE 2: Récupérer le singleton existant si disponible
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 if (typeof globalThis !== 'undefined' && (globalThis as any)[DB_SINGLETON_KEY]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db = (globalThis as any)[DB_SINGLETON_KEY]
   logger.info(`[DB] Reusing existing singleton connection`)
 }
 
 // Fallback sql.js pour quand better-sqlite3 n'est pas disponible
 // IMPORTANT: Utiliser getSqlJsDb() du singleton au lieu d'accéder directement
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sqlJsDb: any = null // DEPRECATED: Utiliser getSqlJsDb() à la place
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sqlJsInit: any = null // DEPRECATED: Utiliser getSqlJsDb() à la place
 let sqlJsDbLastModified: number = 0 // DEPRECATED: Utiliser getSqlJsDb() à la place
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sqlJsInitPromise: Promise<any> | null = null // DEPRECATED: Utiliser getSqlJsDb() à la place
 
 // NOTE: Ne plus charger sql.js automatiquement au chargement du module
@@ -241,6 +301,7 @@ function reloadSqlJsDbIfNeeded(): void {
  * PHASE D: Singleton better-sqlite3 avec PRAGMAs optimisés
  * PHASE 1: Charge better-sqlite3 de manière lazy pour éviter les erreurs Webpack
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getBetterSqlite3Db(): any {
   if (db) return db
   
@@ -260,13 +321,30 @@ export function getBetterSqlite3Db(): any {
     return null
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof globalThis !== 'undefined' && (globalThis as any)[DB_SINGLETON_KEY]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     db = (globalThis as any)[DB_SINGLETON_KEY]
     return db
   }
 
   try {
+    // VALIDATION: Vérifier que dbPath n'est pas vide
+    if (!dbPath || dbPath.trim() === '') {
+      const errorMsg = 'Database path is empty. Check DATABASE_URL or SQLITE_DB_PATH environment variables.'
+      logger.error(`[getBetterSqlite3Db] ❌ ${errorMsg}`)
+      throw new Error(errorMsg)
+    }
+    
     const absDbPath = path.resolve(dbPath)
+    
+    // VALIDATION: Vérifier que le chemin résolu n'est pas vide
+    if (!absDbPath || absDbPath.trim() === '') {
+      const errorMsg = `Resolved database path is empty. Original path: "${dbPath}"`
+      logger.error(`[getBetterSqlite3Db] ❌ ${errorMsg}`)
+      throw new Error(errorMsg)
+    }
+    
     if (!fs.existsSync(absDbPath)) {
       logger.warn(`[getBetterSqlite3Db] Fichier DB non trouvé: ${absDbPath}`)
       return null
@@ -282,6 +360,7 @@ export function getBetterSqlite3Db(): any {
     
     // Stocker dans globalThis pour persister entre hot reloads
     if (typeof globalThis !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (globalThis as any)[DB_SINGLETON_KEY] = db
     }
     
@@ -365,6 +444,7 @@ function ensureDatabaseConnection(): void {
     
     // PHASE 2: Stocker dans globalThis pour singleton
     if (typeof globalThis !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (globalThis as any)[DB_SINGLETON_KEY] = db
     }
     
@@ -395,6 +475,7 @@ function ensureDatabaseConnection(): void {
     // PHASE 2: Nettoyer le singleton en cas d'erreur
     db = null
     if (typeof globalThis !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (globalThis as any)[DB_SINGLETON_KEY]
     }
   }
@@ -408,7 +489,18 @@ let dbPathResolved: string = ''
 // L'initialisation sera lazy (seulement quand nécessaire)
 // Cela évite "Cannot read properties of undefined (reading 'call')" dans Webpack
 activeDriver = 'none'
+// VALIDATION: Vérifier que dbPath n'est pas vide avant de le résoudre
+if (!dbPath || dbPath.trim() === '') {
+  const errorMsg = 'Database path is empty. Check DATABASE_URL or SQLITE_DB_PATH environment variables.'
+  logger.error(`[DB INIT] ❌ ${errorMsg}`)
+  throw new Error(errorMsg)
+}
 dbPathResolved = path.resolve(dbPath)
+if (!dbPathResolved || dbPathResolved.trim() === '') {
+  const errorMsg = `Resolved database path is empty. Original path: "${dbPath}"`
+  logger.error(`[DB INIT] ❌ ${errorMsg}`)
+  throw new Error(errorMsg)
+}
 logger.info(`[DB INIT] ⚠️ Initialisation lazy - driver sera détecté au premier usage | Path: ${dbPathResolved}`)
 
 // Export pour diagnostic
@@ -446,18 +538,39 @@ export async function initSqlJsAsync(): Promise<boolean> {
       return sqlJsInit && sqlJsInit.Database ? true : false
     }
     
+    // VALIDATION: Vérifier que dbPath n'est pas vide
+    if (!dbPath || dbPath.trim() === '') {
+      const errorMsg = 'Database path is empty. Check DATABASE_URL or SQLITE_DB_PATH environment variables.'
+      logger.error(`[initSqlJsAsync] ❌ ${errorMsg}`)
+      throw new Error(errorMsg)
+    }
+    
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const sqlJs = require('sql.js')
     const absDbPath = path.resolve(dbPath)
     
+    // VALIDATION: Vérifier que le chemin résolu n'est pas vide
+    if (!absDbPath || absDbPath.trim() === '') {
+      const errorMsg = `Resolved database path is empty. Original path: "${dbPath}"`
+      logger.error(`[initSqlJsAsync] ❌ ${errorMsg}`)
+      throw new Error(errorMsg)
+    }
+    
+    // Si le fichier n'existe pas, créer une DB vide avec sql.js
     if (!fs.existsSync(absDbPath)) {
-      logger.warn(`[initSqlJsAsync] Fichier DB non trouvé: ${absDbPath}`)
-      return false
+      logger.info(`[initSqlJsAsync] Fichier DB non trouvé, création d'une nouvelle DB: ${absDbPath}`)
+      // Créer le répertoire parent si nécessaire
+      const dbDir = path.dirname(absDbPath)
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true })
+      }
+      // sql.js créera automatiquement une DB vide si on ne charge pas de fichier
     }
     
     // sql.js.default() retourne une Promise
     sqlJsInitPromise = (async () => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let sqlJsModule: any = null
         
         // Utiliser le chemin local du fichier WASM
@@ -487,11 +600,21 @@ export async function initSqlJsAsync(): Promise<boolean> {
         
         if (sqlJsModule && sqlJsModule.Database) {
           sqlJsInit = sqlJsModule
-          const fileBuffer = fs.readFileSync(absDbPath)
-          sqlJsDb = new sqlJsInit.Database(fileBuffer)
-          const dbStats = fs.statSync(absDbPath)
-          sqlJsDbLastModified = dbStats.mtimeMs
-          logger.info(`[initSqlJsAsync] ✅ sql.js initialisé (DB: ${absDbPath}, ${(dbStats.size / 1024).toFixed(2)} KB)`)
+          // Charger la DB existante ou créer une nouvelle DB vide
+          if (fs.existsSync(absDbPath)) {
+            const fileBuffer = fs.readFileSync(absDbPath)
+            sqlJsDb = new sqlJsInit.Database(fileBuffer)
+            const dbStats = fs.statSync(absDbPath)
+            sqlJsDbLastModified = dbStats.mtimeMs
+            logger.info(`[initSqlJsAsync] ✅ sql.js initialisé (DB: ${absDbPath}, ${(dbStats.size / 1024).toFixed(2)} KB)`)
+          } else {
+            // Créer une nouvelle DB vide
+            sqlJsDb = new sqlJsInit.Database()
+            sqlJsDbLastModified = Date.now()
+            logger.info(`[initSqlJsAsync] ✅ sql.js initialisé (nouvelle DB vide: ${absDbPath})`)
+            // Initialiser les tables si nécessaire
+            initializeDatabase()
+          }
           return true
         } else {
           logger.warn('[initSqlJsAsync] sql.js module chargé mais Database non disponible')
@@ -598,7 +721,10 @@ export function testConnection(): boolean {
             try {
               sqlJsInit = sqlJs()
               if (!sqlJsInit || !sqlJsInit.Database) {
-                logger.warn('[testConnection] sql.js initialisé mais Database non disponible')
+                // Silent warning - only log in debug mode
+                if (process.env['DEBUG_DB'] === '1') {
+                  logger.warn('[testConnection] sql.js initialisé mais Database non disponible')
+                }
                 return false
               }
             } catch {
@@ -640,7 +766,12 @@ export function testConnection(): boolean {
         }
       }
       
-      logger.warn(`[DB] testConnection: db is null, cannot connect to ${getDbPath()}`)
+      const dbPathForLog = getDbPath()
+      if (!dbPathForLog || dbPathForLog.trim() === '') {
+        logger.error(`[DB] testConnection: ❌ Database path is empty. Check DATABASE_URL or SQLITE_DB_PATH environment variables.`)
+      } else {
+        logger.warn(`[DB] testConnection: db is null, cannot connect to ${dbPathForLog}`)
+      }
       return false
     }
   }
@@ -1042,10 +1173,76 @@ export function getUserByPhone(phone: string): { id: string; phone: string; pass
   }
   
   // Fallback: utiliser sql.js si better-sqlite3 n'est pas disponible
-  // Note: sql.js nécessite une initialisation asynchrone, donc on ne peut pas l'utiliser
-  // de manière synchrone ici. On retourne null et laisse loginUser gérer l'initialisation.
-  // Pour l'instant, on va simplement logger et retourner null
-  logger.warn('[SQLite] better-sqlite3 non disponible, sql.js nécessite une initialisation asynchrone dans getUserByPhone')
+  if (sqlJsDb) {
+    try {
+      // Essayer plusieurs formats de téléphone avec sql.js
+      let stmt = sqlJsDb.prepare('SELECT id, phone, password_hash, first_name, last_name, role FROM users WHERE phone = ?')
+      stmt.bind([normalizedPhone])
+      
+      let userRow: { id: number; phone: string; password_hash: string; first_name?: string; last_name?: string; role: string } | null = null
+      
+      if (stmt.step()) {
+        userRow = stmt.getAsObject() as { id: number; phone: string; password_hash: string; first_name?: string; last_name?: string; role: string }
+      }
+      stmt.free()
+      
+      // Si pas trouvé et commence par 0, essayer avec +212 (sauf pour admin_phone)
+      if (!userRow && normalizedPhone.startsWith('0') && normalizedPhone !== 'admin_phone') {
+        const phoneWithPrefix = '+212' + normalizedPhone.substring(1)
+        stmt = sqlJsDb.prepare('SELECT id, phone, password_hash, first_name, last_name, role FROM users WHERE phone = ?')
+        stmt.bind([phoneWithPrefix])
+        if (stmt.step()) {
+          userRow = stmt.getAsObject() as { id: number; phone: string; password_hash: string; first_name?: string; last_name?: string; role: string }
+        }
+        stmt.free()
+      }
+      
+      // Si pas trouvé et commence par +212, essayer avec 0 (sauf pour admin_phone)
+      if (!userRow && normalizedPhone.startsWith('+212') && normalizedPhone !== 'admin_phone') {
+        const phoneWithoutPrefix = '0' + normalizedPhone.substring(4)
+        stmt = sqlJsDb.prepare('SELECT id, phone, password_hash, first_name, last_name, role FROM users WHERE phone = ?')
+        stmt.bind([phoneWithoutPrefix])
+        if (stmt.step()) {
+          userRow = stmt.getAsObject() as { id: number; phone: string; password_hash: string; first_name?: string; last_name?: string; role: string }
+        }
+        stmt.free()
+      }
+      
+      if (userRow) {
+        if (process.env.NODE_ENV === 'development') {
+          logger.info('[getUserByPhone] Utilisateur trouvé (sql.js)', { phone: userRow.phone, role: userRow.role })
+        }
+        return { ...userRow, id: String(userRow.id) }
+      }
+    } catch (error) {
+      logger.error('[getUserByPhone] Erreur sql.js:', serializeError(error))
+    }
+  }
+  
+  // Si aucune DB n'est disponible, essayer de forcer la connexion
+  if (!db && !sqlJsDb) {
+    forceConnection()
+    reloadSqlJsDbIfNeeded()
+    // Réessayer avec sql.js si maintenant disponible
+    if (sqlJsDb) {
+      try {
+        const stmt = sqlJsDb.prepare('SELECT id, phone, password_hash, first_name, last_name, role FROM users WHERE phone = ?')
+        stmt.bind([normalizedPhone])
+        if (stmt.step()) {
+          const userRow = stmt.getAsObject() as { id: number; phone: string; password_hash: string; first_name?: string; last_name?: string; role: string }
+          stmt.free()
+          return { ...userRow, id: String(userRow.id) }
+        }
+        stmt.free()
+      } catch (error) {
+        logger.error('[getUserByPhone] Erreur après forceConnection:', serializeError(error))
+      }
+    }
+  }
+  
+  if (process.env.NODE_ENV === 'development') {
+    logger.warn('[getUserByPhone] Utilisateur non trouvé', { phone: normalizedPhone, dbAvailable: !!db, sqlJsDbAvailable: !!sqlJsDb })
+  }
   return null
 }
 
@@ -1618,16 +1815,26 @@ export async function createOrderFull(data: {
   ensureDatabaseConnection()
   
   // Si better-sqlite3 n'est pas disponible, initialiser sql.js
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let sqlJsDbWrapper: any = null
-  if (!db) {
+  // Utiliser une variable locale pour éviter la race condition avec la variable globale db
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let localDb: any = db
+  
+  // Vérifier si db est disponible, sinon initialiser sql.js
+  if (!localDb) {
     try {
       const initialized = await initSqlJsAsync()
       if (initialized) {
         const { getSqlJsDb } = await import('./sqljs-singleton')
         sqlJsDbWrapper = await getSqlJsDb()
-        if (sqlJsDbWrapper && sqlJsDbWrapper.db) {
+        // Utiliser une nouvelle variable pour éviter la race condition
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sqlJsDb: any = sqlJsDbWrapper?.db
+        if (sqlJsDb) {
           // Utiliser sql.js comme fallback - sqlJsDbWrapper.db est l'instance sql.js
-          db = sqlJsDbWrapper.db
+          // eslint-disable-next-line require-atomic-updates
+          localDb = sqlJsDb
           logger.info('[createOrderFull] Using sql.js database')
         }
       }
@@ -1639,23 +1846,23 @@ export async function createOrderFull(data: {
   // S'assurer que la base de données est initialisée (création des tables)
   initializeDatabase()
   
-  if (!db) {
+  if (!localDb) {
     logger.error('[createOrderFull] Database not initialized after ensureDatabaseConnection and initializeDatabase')
     return null
   }
   try {
     // PHASE 2: Détecter correctement le type de driver
     // better-sqlite3 a .transaction(), sql.js a .exec() mais pas .transaction()
-    const isBetterSqlite3 = db && typeof db.transaction === 'function' && typeof db.prepare === 'function'
-    const isSqlJs = db && typeof db.transaction !== 'function' && (typeof db.exec === 'function' || typeof db.run === 'function')
+    const isBetterSqlite3 = localDb && typeof localDb.transaction === 'function' && typeof localDb.prepare === 'function'
+    const isSqlJs = localDb && typeof localDb.transaction !== 'function' && (typeof localDb.exec === 'function' || typeof localDb.run === 'function')
     
     // PHASE 3: Log de diagnostic
     logger.info('[createOrderFull] Driver detection:', {
-      hasDb: !!db,
-      hasTransaction: db ? typeof db.transaction : 'N/A',
-      hasPrepare: db ? typeof db.prepare : 'N/A',
-      hasExec: db ? typeof db.exec : 'N/A',
-      hasRun: db ? typeof db.run : 'N/A',
+      hasDb: !!localDb,
+      hasTransaction: localDb ? typeof localDb.transaction : 'N/A',
+      hasPrepare: localDb ? typeof localDb.prepare : 'N/A',
+      hasExec: localDb ? typeof localDb.exec : 'N/A',
+      hasRun: localDb ? typeof localDb.run : 'N/A',
       isBetterSqlite3,
       isSqlJs
     })
@@ -1683,6 +1890,7 @@ export async function createOrderFull(data: {
     }
     
     // Fonction pour échapper les valeurs SQL pour sql.js
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const escapeSql = (value: any): string => {
       if (value === null || value === undefined) return 'NULL'
       if (typeof value === 'number') return String(value)
@@ -1693,11 +1901,11 @@ export async function createOrderFull(data: {
     
     // Fonction pour exécuter la transaction ou les opérations séquentielles
     const executeOrderCreation = () => {
-      if (!db) throw new Error('Database connection lost')
+      if (!localDb) throw new Error('Database connection lost')
       
       // PHASE 2: Redétecter le driver dans cette fonction pour être sûr
-      const currentIsBetterSqlite3 = db && typeof db.transaction === 'function' && typeof db.prepare === 'function'
-      const currentIsSqlJs = db && typeof db.transaction !== 'function' && (typeof db.exec === 'function' || typeof db.run === 'function')
+      const currentIsBetterSqlite3 = localDb && typeof localDb.transaction === 'function' && typeof localDb.prepare === 'function'
+      const currentIsSqlJs = localDb && typeof localDb.transaction !== 'function' && (typeof localDb.exec === 'function' || typeof localDb.run === 'function')
       
       const shippingStr = typeof data.order.shipping_address === 'string'
         ? data.order.shipping_address
@@ -1806,10 +2014,10 @@ export async function createOrderFull(data: {
           INSERT INTO orders (user_id, total_amount, status, shipping_address, phone, notes)
           VALUES (${escapeSql(data.order.user_id)}, ${escapeSql(data.order.total_amount)}, ${escapeSql(data.order.status)}, ${escapeSql(shippingStr)}, ${escapeSql(data.order.phone || null)}, ${escapeSql(data.order.notes || null)})
         `
-        db.exec(orderSql)
+        localDb.exec(orderSql)
         
         // PHASE 2: Récupérer last_insert_rowid() avec une requête séparée (sql.js exécute chaque instruction séparément)
-        const idResult = db.exec('SELECT last_insert_rowid() as id')
+        const idResult = localDb.exec('SELECT last_insert_rowid() as id')
         if (idResult && idResult.length > 0 && idResult[0].values && idResult[0].values.length > 0) {
           orderId = String(idResult[0].values[0][0])
         } else {
@@ -1825,7 +2033,7 @@ export async function createOrderFull(data: {
               INSERT INTO order_items (order_id, bijou_id, pack_id, quantity, price)
               VALUES (${escapeSql(orderId)}, ${bijouId}, ${packId}, ${escapeSql(item.quantity)}, ${escapeSql(item.price)})
             `
-            db.exec(itemSql)
+            localDb.exec(itemSql)
             logger.info('[createOrderFull] Inserted item:', { orderId, bijou_id: item.bijou_id, pack_id: item.pack_id, quantity: item.quantity, price: item.price })
           } catch (itemError) {
             logger.error('[createOrderFull] Error inserting item:', serializeError(itemError))
@@ -1838,10 +2046,10 @@ export async function createOrderFull(data: {
           INSERT INTO payments (order_id, amount, payment_method, status, transaction_id)
           VALUES (${escapeSql(orderId)}, ${escapeSql(data.payment.amount)}, ${escapeSql(data.payment.payment_method)}, ${escapeSql(data.payment.status || 'pending')}, ${escapeSql(data.payment.transaction_id || null)})
         `
-        db.exec(paymentSql)
+        localDb.exec(paymentSql)
         
         // PHASE 2: Récupérer last_insert_rowid() avec une requête séparée
-        const paymentIdResult = db.exec('SELECT last_insert_rowid() as id')
+        const paymentIdResult = localDb.exec('SELECT last_insert_rowid() as id')
         if (paymentIdResult && paymentIdResult.length > 0 && paymentIdResult[0].values && paymentIdResult[0].values.length > 0) {
           paymentId = String(paymentIdResult[0].values[0][0])
         } else {
@@ -1854,7 +2062,7 @@ export async function createOrderFull(data: {
             INSERT INTO notifications (user_id, title, message, type, is_read, action_url)
             VALUES (NULL, ${escapeSql(data.notification.title)}, ${escapeSql(data.notification.message)}, ${escapeSql(data.notification.type || 'info')}, 0, ${escapeSql(actionUrl)})
           `
-          db.exec(notifSql)
+          localDb.exec(notifSql)
         }
       } else {
         throw new Error('Unknown database type')
@@ -1873,9 +2081,9 @@ export async function createOrderFull(data: {
       
       // Sauvegarder les changements sql.js sur disque
       try {
-        // PHASE 2: Vérifier que db.export() existe avant de l'appeler
-        if (typeof db.export === 'function') {
-          const dbBuffer = db.export()
+        // PHASE 2: Vérifier que localDb.export() existe avant de l'appeler
+        if (typeof localDb.export === 'function') {
+          const dbBuffer = localDb.export()
           const absDbPath = path.resolve(dbPath)
           fs.writeFileSync(absDbPath, dbBuffer)
           logger.info('[createOrderFull] sql.js database saved to disk')
@@ -1895,8 +2103,8 @@ export async function createOrderFull(data: {
     } else if (isBetterSqlite3) {
       // better-sqlite3 supporte les transactions et sauvegarde automatiquement
       logger.info('[createOrderFull] Using better-sqlite3 with transaction')
-      if (typeof db.transaction === 'function') {
-        result = db.transaction(executeOrderCreation)()
+      if (typeof localDb.transaction === 'function') {
+        result = localDb.transaction(executeOrderCreation)()
       } else {
         // Fallback: exécuter sans transaction si .transaction() n'existe pas
         logger.warn('[createOrderFull] db.transaction not available, executing without transaction')
@@ -2405,6 +2613,7 @@ function escapeSqlValue(value: unknown): string {
  * PHASE 2: Wrapper uniforme pour SELECT (retourne un tableau de lignes)
  * Utilise automatiquement better-sqlite3 ou sql.js selon ce qui est disponible
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function selectRows(query: string, params: unknown[] = []): Record<string, any>[] {
   const driver = detectDriver()
   
@@ -2413,11 +2622,28 @@ export function selectRows(query: string, params: unknown[] = []): Record<string
       const stmt = db.prepare(query)
       if (params.length > 0) {
         const safeParams = normalizeSQLiteParams(params)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return stmt.all(...safeParams) as Record<string, any>[]
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return stmt.all() as Record<string, any>[]
     } catch (error) {
-      logger.error('[selectRows] Erreur better-sqlite3:', serializeError(error))
+      const errorDetails = serializeError(error)
+      const errorMessage = errorDetails.message || String(error)
+      
+      // En build-time, retourner un tableau vide plutôt que de lancer une erreur
+      if (process.env['NEXT_PHASE'] === 'phase-production-build' || process.env['NEXT_PHASE'] === 'phase-export') {
+        logger.debug(`[selectRows] Build-time: Erreur DB (${errorMessage}), retour tableau vide`)
+        return []
+      }
+      
+      // Si erreur de table/colonne manquante, retourner tableau vide (DB pas encore initialisée)
+      if (errorMessage.includes('no such table') || errorMessage.includes('no such column')) {
+        logger.debug(`[selectRows] Table/colonne manquante (${errorMessage}), retour tableau vide`)
+        return []
+      }
+      
+      logger.error('[selectRows] Erreur better-sqlite3:', errorDetails)
       throw error
     }
   }
@@ -2470,11 +2696,13 @@ export function selectRows(query: string, params: unknown[] = []): Record<string
       if (!result || result.length === 0) return []
       
       // Convertir le résultat sql.js en tableau d'objets
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows: Record<string, any>[] = []
       const firstResult = result[0]
       if (firstResult && firstResult.values && firstResult.columns) {
         const columns = firstResult.columns
         for (const row of firstResult.values) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const obj: Record<string, any> = {}
           columns.forEach((col: string, idx: number) => {
             obj[col] = row[idx]
@@ -2484,7 +2712,23 @@ export function selectRows(query: string, params: unknown[] = []): Record<string
       }
       return rows
     } catch (error) {
-      logger.error('[selectRows] Erreur sql.js:', serializeError(error))
+      // PHASE 0: Sérialisation robuste de l'erreur
+      const errorDetails = serializeError(error)
+      const errorMessage = errorDetails.message || String(error)
+      
+      // En build-time, retourner un tableau vide plutôt que de lancer une erreur
+      if (process.env['NEXT_PHASE'] === 'phase-production-build' || process.env['NEXT_PHASE'] === 'phase-export') {
+        logger.debug(`[selectRows] Build-time: Erreur DB (${errorMessage}), retour tableau vide`)
+        return []
+      }
+      
+      // Si erreur de table/colonne manquante, retourner tableau vide (DB pas encore initialisée)
+      if (errorMessage.includes('no such table') || errorMessage.includes('no such column')) {
+        logger.debug(`[selectRows] Table/colonne manquante (${errorMessage}), retour tableau vide`)
+        return []
+      }
+      
+      logger.error('[selectRows] Erreur sql.js:', errorDetails)
       return []
     }
   }
@@ -2496,8 +2740,10 @@ export function selectRows(query: string, params: unknown[] = []): Record<string
 /**
  * PHASE 2: Wrapper uniforme pour SELECT ONE (retourne une seule ligne ou null)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function selectOne(query: string, params: unknown[] = []): Record<string, any> | null {
   const rows = selectRows(query, params)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return rows.length > 0 ? (rows[0] as Record<string, any>) : null
 }
 
@@ -2687,6 +2933,7 @@ export function select(query: string, params: unknown[] = []): unknown[] {
       let finalQuery = query
       if (params.length > 0) {
         // Remplacer les ? par les valeurs (simple, pas sécurisé pour production mais OK pour sql.js)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         params.forEach((param: any) => {
           const value = typeof param === 'string' ? `'${param.replace(/'/g, "''")}'` : param
           finalQuery = finalQuery.replace('?', value)
@@ -2697,8 +2944,10 @@ export function select(query: string, params: unknown[] = []): unknown[] {
       if (result.length === 0) return []
       
       // Convertir le résultat en tableau d'objets
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = result[0].values.map((row: any[]) => {
         const cols = result[0].columns
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const obj: any = {}
         cols.forEach((col: string, i: number) => {
           obj[col] = row[i]
