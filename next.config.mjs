@@ -1,11 +1,15 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
+import createNextIntlPlugin from 'next-intl/plugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Plugin next-intl - utilise i18n/request.ts par défaut
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const baseConfig = {
   outputFileTracingRoot: __dirname,
   images: {
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
@@ -27,15 +31,19 @@ const nextConfig = {
   },
 }
 
-// FORCER la suppression de TOUS les flags experimental
-// Même si next-intl ou d'autres plugins essaient de les ajouter
-const cleanConfig = (config) => {
-  // Supprimer complètement l'objet experimental
+// Fonction pour supprimer tous les flags experimental
+// Utile si next-intl ou d'autres plugins tentent d'ajouter des flags experimental
+function removeExperimentalFlags(config) {
+  if (!config || typeof config !== 'object') {
+    return config
+  }
+
+  // Supprimer l'objet experimental complet
   if (config.experimental) {
     delete config.experimental
   }
-  
-  // Double vérification : supprimer chaque flag individuellement
+
+  // Supprimer les flags experimental individuels (au cas où)
   const experimentalFlags = [
     'cacheComponents',
     'dynamicIO',
@@ -44,29 +52,35 @@ const cleanConfig = (config) => {
     'serverActions',
     'optimizePackageImports',
   ]
-  
-  if (config.experimental) {
-    experimentalFlags.forEach(flag => {
-      if (config.experimental[flag] !== undefined) {
-        delete config.experimental[flag]
-      }
-    })
-    
-    // Si l'objet est vide, le supprimer complètement
-    if (Object.keys(config.experimental).length === 0) {
-      delete config.experimental
+
+  experimentalFlags.forEach(flag => {
+    if (config[flag] !== undefined) {
+      delete config[flag]
     }
-  }
-  
+  })
+
+  // Garantir que experimental n'existe plus
+  delete config.experimental
+
   return config
 }
 
-// Nettoyer la config avant export
-const finalConfig = cleanConfig(nextConfig)
+// Wrapper pour nettoyer la config après application du plugin next-intl
+function createCleanConfig(config) {
+  // Si c'est une fonction (cas où next-intl retourne une fonction)
+  if (typeof config === 'function') {
+    return function nextConfigWrapper(phase, { defaultConfig }) {
+      const result = config(phase, { defaultConfig })
+      return removeExperimentalFlags(result)
+    }
+  }
 
-// Garantir qu'aucun experimental n'existe
-if (finalConfig.experimental) {
-  delete finalConfig.experimental
+  // Si c'est un objet, le nettoyer directement
+  return removeExperimentalFlags(config)
 }
+
+// Appliquer le plugin next-intl et nettoyer la config
+const configWithNextIntl = withNextIntl(baseConfig)
+const finalConfig = createCleanConfig(configWithNextIntl)
 
 export default finalConfig
