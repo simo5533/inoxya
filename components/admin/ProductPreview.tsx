@@ -49,7 +49,7 @@ export default function ProductPreview({ product }: ProductPreviewProps) {
           <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100 mb-4">
             {images[selectedImage] ? (
               <Image
-                src={images[selectedImage]}
+                src={images[selectedImage] || '/placeholder.svg'}
                 alt={product.name || 'Produit'}
                 fill
                 className="object-cover"
@@ -182,8 +182,8 @@ export default function ProductPreview({ product }: ProductPreviewProps) {
               <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100 mb-3">
                 {images[0] ? (
                   <Image
-                    src={images[0]}
-                    alt={product.name}
+                    src={images[0] || '/placeholder.svg'}
+                    alt={product.name || 'Produit'}
                     fill
                     className="object-cover"
                   />

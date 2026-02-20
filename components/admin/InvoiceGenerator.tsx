@@ -293,8 +293,8 @@ export default function InvoiceGenerator({ order, onClose }: InvoiceGeneratorPro
                         <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                           {item.bijoux?.image_url ? (
                             <Image 
-                              src={item.bijoux.image_url} 
-                              alt={item.bijoux.name}
+                              src={item.bijoux.image_url || '/placeholder.svg'} 
+                              alt={item.bijoux.name || 'Product'}
                               width={48}
                               height={48}
                               className="w-12 h-12 rounded-lg object-cover"
