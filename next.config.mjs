@@ -39,7 +39,23 @@ const nextConfig = {
 // Appliquer next-intl
 let config = withNextIntl(nextConfig)
 
-// SUPPRIMER COMPLÈTEMENT experimental - next-intl ne doit PAS l'ajouter
+// SUPPRIMER AGGRESSIVEMENT tous les flags experimental problématiques
+// next-intl peut les ajouter, il faut les supprimer explicitement
+if (config.experimental) {
+  // Supprimer les flags spécifiques qui causent des erreurs
+  delete config.experimental.cacheComponents
+  delete config.experimental.dynamicIO
+  delete config.experimental.ppr
+  delete config.experimental.reactCompiler
+  delete config.experimental.serverActions
+  
+  // Si l'objet experimental est vide, le supprimer complètement
+  if (Object.keys(config.experimental).length === 0) {
+    delete config.experimental
+  }
+}
+
+// Double vérification : supprimer experimental complètement si présent
 if (config.experimental) {
   delete config.experimental
 }
