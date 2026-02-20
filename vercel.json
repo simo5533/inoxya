@@ -1,5 +1,4 @@
 {
-  "name": "inoxya-bijoux",
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
