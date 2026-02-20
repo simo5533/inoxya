@@ -35,8 +35,6 @@ const nextConfig = {
   experimental: {
     // Optimiser la compilation en développement
     optimizePackageImports: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-toast'],
-    // Désactiver cacheComponents (nécessite Next.js canary, nous utilisons 15.5.12 stable)
-    cacheComponents: false,
   },
   // Optimisations de production
   // swcMinify est activé par défaut dans Next.js 15+
