@@ -51,21 +51,23 @@ export default function ImageUpload({
       setUploading(true)
       const uploadedUrls: string[] = []
 
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i]
-        if (!file || !file.type.startsWith('image/')) continue
+      // Filtrer les fichiers valides
+      const validFiles = filesToUpload.filter((file) => {
+        if (!file || !file.type.startsWith('image/')) return false
+        if (file.size > 10 * 1024 * 1024) {
+          toast({
+            title: "Fichier trop volumineux",
+            description: `${file.name} dépasse 10MB`,
+            variant: "destructive"
+          })
+          return false
+        }
+        return true
+      })
 
+      // Uploader tous les fichiers en parallèle avec Promise.all
+      const uploadPromises = validFiles.map(async (file, i) => {
         try {
-          // Vérifier la taille (10MB max)
-          if (file.size > 10 * 1024 * 1024) {
-            toast({
-              title: "Fichier trop volumineux",
-              description: `${file.name} dépasse 10MB`,
-              variant: "destructive"
-            })
-            continue
-          }
-
           const formData = new FormData()
           formData.append('file', file)
           formData.append('productId', productId)
@@ -91,13 +93,14 @@ export default function ImageUpload({
           }
 
           const data = await response.json()
-          uploadedUrls.push(data.imageUrl)
           setUploadProgress(prev => ({ ...prev, [i]: 100 }))
-
+          
           toast({
             title: "Image uploadée",
             description: `${file.name} a été uploadé avec succès`,
           })
+          
+          return data.imageUrl
         } catch (error: unknown) {
           logger.error('Erreur upload:', error)
           const errorMessage = error instanceof Error ? error.message : 'Impossible d\'uploader l\'image'
@@ -106,8 +109,14 @@ export default function ImageUpload({
             description: errorMessage,
             variant: "destructive"
           })
+          return null
         }
-      }
+      })
+
+      // Attendre tous les uploads
+      const results = await Promise.all(uploadPromises)
+      const successfulUploads = results.filter((url): url is string => url !== null)
+      uploadedUrls.push(...successfulUploads)
 
       setUploading(false)
       setUploadProgress({}) // Réinitialiser le progrès

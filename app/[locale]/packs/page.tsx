@@ -69,7 +69,7 @@ export default function PacksPage() {
           },
         })
         
-        let data: any = null
+        let data: unknown = null
         
         // Parser la réponse JSON
         try {
@@ -100,12 +100,14 @@ export default function PacksPage() {
         }
         
         // Vérifier si c'est une erreur (objet avec propriété 'error')
-        if (data && typeof data === 'object' && 'error' in data) {
-          logger.warn('API /api/packs a retourné une erreur:', data.error || data.message)
+        if (data && typeof data === 'object' && data !== null && 'error' in data) {
+          const errorData = data as Record<string, unknown>
+          const errorMsg = errorData['error'] || errorData['message']
+          logger.warn('API /api/packs a retourné une erreur:', { error: errorMsg })
           // PHASE 5: Afficher un message d'erreur explicite
           toast({
             title: "Erreur",
-            description: data.message || data.error || "Impossible de charger les packs",
+            description: (errorData['message'] as string) || (errorData['error'] as string) || "Impossible de charger les packs",
             variant: "destructive",
           })
           setPacks([])
@@ -114,30 +116,33 @@ export default function PacksPage() {
         }
         
         // S'assurer que data est un tableau
-        let packsArray: any[] = []
+        let packsArray: unknown[] = []
         if (Array.isArray(data)) {
           packsArray = data
-        } else if (data && typeof data === 'object' && Array.isArray(data.packs)) {
+        } else if (data && typeof data === 'object' && data !== null && 'packs' in data && Array.isArray((data as { packs: unknown[] }).packs)) {
           // Si l'API retourne { packs: [...] }
-          packsArray = data.packs
+          packsArray = (data as { packs: unknown[] }).packs
         } else {
           logger.warn('API /api/packs a retourné un format inattendu:', { dataType: typeof data, data })
           packsArray = []
         }
         
         // Transformer les packs pour correspondre à l'interface Pack
-        const transformedPacks: Pack[] = packsArray.map((pack: any) => ({
-          id: pack.id?.toString() || `pack-${Math.random()}`,
-          name: pack.name || 'Pack sans nom',
-          name_ar: pack.name_ar || '',
-          description: pack.description || '',
-          price: pack.price || 0,
-          original_price: pack.original_price,
-          image_url: pack.image_url || '/placeholder.svg',
-          items_count: pack.composition?.length || 0,
-          category: pack.category || 'general',
-          is_featured: pack.is_featured || false
-        }))
+        const transformedPacks: Pack[] = packsArray.map((pack: unknown) => {
+          const p = pack as Record<string, unknown>
+          return {
+            id: (p['id'] as string | number | undefined)?.toString() || `pack-${Math.random()}`,
+            name: (p['name'] as string) || 'Pack sans nom',
+            name_ar: (p['name_ar'] as string) || '',
+            description: (p['description'] as string) || '',
+            price: (p['price'] as number) || 0,
+            original_price: p['original_price'] as number | undefined,
+            image_url: (p['image_url'] as string) || '/placeholder.svg',
+            items_count: Array.isArray(p['composition']) ? p['composition'].length : 0,
+            category: (p['category'] as string) || 'general',
+            is_featured: (p['is_featured'] as boolean) || false
+          }
+        })
         
         setPacks(transformedPacks)
       } catch (error) {

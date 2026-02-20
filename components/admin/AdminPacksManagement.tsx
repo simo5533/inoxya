@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -44,7 +44,7 @@ export default function AdminPacksManagement() {
     is_featured: false
   })
 
-  const fetchPacks = async () => {
+  const fetchPacks = useCallback(async () => {
     try {
       setLoading(true)
       const res = await fetch('/api/admin/packs', { cache: 'no-store' })
@@ -65,11 +65,11 @@ export default function AdminPacksManagement() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [router])
 
   useEffect(() => {
     fetchPacks()
-  }, [])
+  }, [fetchPacks])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-MA', {
