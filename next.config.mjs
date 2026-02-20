@@ -32,8 +32,10 @@ const nextConfig = {
     tsconfigPath: './tsconfig.json',
   },
   // OPTIMISATION: Compilation plus rapide en dev
+  // NOTE: Ne pas utiliser cacheComponents, dynamicIO, ppr, reactCompiler, ou serverActions
+  // Ces flags nécessitent Next.js canary et ne sont pas disponibles en stable
   experimental: {
-    // Optimiser la compilation en développement
+    // Optimiser la compilation en développement - flags stables uniquement
     optimizePackageImports: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-toast'],
   },
   // Optimisations de production
@@ -266,14 +268,19 @@ const nextConfig = {
 // Sentry auto-instruments via sentry.client.config.ts and sentry.server.config.ts
 // No need for withSentryConfig wrapper in Next.js 15
 
-// Appliquer le plugin next-intl et désactiver explicitement les flags expérimentaux incompatibles
-const config = withNextIntl(nextConfig)
+// Appliquer le plugin next-intl
+let config = withNextIntl(nextConfig)
 
-// Forcer la désactivation des flags expérimentaux incompatibles avec Next.js 15.5.12
+// Forcer la désactivation de TOUS les flags expérimentaux incompatibles avec Next.js 15.5.12 stable
+// next-intl peut essayer d'activer ces flags automatiquement, on les supprime explicitement
 if (config.experimental) {
-  // Supprimer cacheComponents et dynamicIO s'ils sont présents
+  // Supprimer tous les flags qui nécessitent Next.js canary
   delete config.experimental.cacheComponents
   delete config.experimental.dynamicIO
+  delete config.experimental.ppr
+  delete config.experimental.reactCompiler
+  // serverActions est stable dans Next.js 15, mais on le supprime si présent pour éviter les conflits
+  delete config.experimental.serverActions
 } else {
   config.experimental = {}
 }
