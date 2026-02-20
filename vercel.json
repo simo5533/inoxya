@@ -2,9 +2,10 @@
   "name": "inoxya-bijoux",
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "installCommand": "npm ci",
+  "installCommand": "npm ci --force",
   "devCommand": "npm run dev",
   "outputDirectory": ".next",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD .",
   "headers": [
     {
       "source": "/(.*)",
