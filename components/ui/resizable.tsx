@@ -1,5 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 "use client"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { GripVertical } from "lucide-react"
 // Composant optionnel - dépendance react-resizable-panels non installée
 // Pour l'utiliser, installer: npm install react-resizable-panels
@@ -14,6 +18,8 @@ try {
   }
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { cn } from "@/lib/utils"
 
 const ResizablePanelGroup = ({
@@ -54,3 +60,4 @@ const ResizableHandle = ({
 )
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle }
+

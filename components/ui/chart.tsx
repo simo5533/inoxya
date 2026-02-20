@@ -1,5 +1,8 @@
 "use client"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import * as React from "react"
 // Composant optionnel - dépendance recharts non installée
 // Pour l'utiliser, installer: npm install recharts

@@ -49,7 +49,7 @@ export default function CheckoutPage() {
       return
     }
     setCartItems(items)
-  }, [router])
+  }, [router, locale])
 
   // Récupérer le token CSRF au chargement
   useEffect(() => {

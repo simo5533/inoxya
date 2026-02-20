@@ -9,6 +9,8 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Fix warning: Multiple lockfiles detected
+  outputFileTracingRoot: __dirname,
   images: {
     remotePatterns: [
       {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Upload, X, Plus, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -208,10 +209,11 @@ export default function ImageUpload({
             <Card key={index} className="relative group">
               <CardContent className="p-2">
                 <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100">
-                  <img
+                  <Image
                     src={image}
                     alt={`Image ${index + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                   
                   {/* Bouton de suppression */}

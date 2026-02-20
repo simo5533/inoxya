@@ -431,9 +431,11 @@ export default function AdminPacksManagement() {
                       </div>
                       {formData.image_url && (
                         <div className="mt-2 flex items-center gap-3">
-                          <img
+                          <Image
                             src={formData.image_url}
                             alt="Aperçu"
+                            width={56}
+                            height={56}
                             className="h-14 w-14 object-cover rounded border"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
                           />

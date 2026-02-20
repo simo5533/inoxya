@@ -78,10 +78,11 @@ export default function ProductPreview({ product }: ProductPreviewProps) {
                     selectedImage === index ? 'ring-2 ring-orange-500' : ''
                   }`}
                 >
-                  <img
+                  <Image
                     src={image}
                     alt={`${product.name} - Vue ${index + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </button>
               ))}
@@ -180,10 +181,11 @@ export default function ProductPreview({ product }: ProductPreviewProps) {
             <CardContent className="p-4">
               <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100 mb-3">
                 {images[0] ? (
-                  <img
+                  <Image
                     src={images[0]}
                     alt={product.name}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">

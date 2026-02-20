@@ -1,5 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 "use client"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as React from "react"
 // Composant optionnel - dépendance @radix-ui/react-hover-card non installée
 // Pour l'utiliser, installer: npm install @radix-ui/react-hover-card
@@ -14,6 +18,8 @@ try {
   }
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { cn } from "@/lib/utils"
 
 const HoverCard = HoverCardPrimitive.Root
@@ -38,3 +44,4 @@ const HoverCardContent = React.forwardRef<
 HoverCardContent.displayName = HoverCardPrimitive.Content.displayName
 
 export { HoverCard, HoverCardTrigger, HoverCardContent }
+

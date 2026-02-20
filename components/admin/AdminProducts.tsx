@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -194,9 +195,11 @@ export default function AdminProducts() {
                         <div className="flex items-center space-x-3">
                           <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                             {bijou.image_url ? (
-                              <img 
+                              <Image 
                                 src={bijou.image_url} 
                                 alt={bijou.name}
+                                width={56}
+                                height={56}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).style.display = 'none'

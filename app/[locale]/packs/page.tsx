@@ -150,7 +150,7 @@ export default function PacksPage() {
     }
     
     fetchPacks()
-  }, [])
+  }, [toast])
 
   const addToFavorites = (pack: Pack) => {
     try {

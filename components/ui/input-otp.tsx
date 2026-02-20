@@ -1,5 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 "use client"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as React from "react"
 // Composant optionnel - dépendance input-otp non installée
 // Pour l'utiliser, installer: npm install input-otp
@@ -13,8 +17,12 @@ try {
   OTPInput = React.forwardRef((props: any, ref: any) => <input ref={ref} {...props} />)
   OTPInputContext = React.createContext({ slots: [] })
 }
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { Dot } from "lucide-react"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { cn } from "@/lib/utils"
 
 const InputOTP = React.forwardRef<
@@ -80,3 +88,4 @@ const InputOTPSeparator = React.forwardRef<
 InputOTPSeparator.displayName = "InputOTPSeparator"
 
 export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator }
+

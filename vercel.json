@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
+  "outputDirectory": ".next",
   "headers": [
     {
       "source": "/(.*)",
