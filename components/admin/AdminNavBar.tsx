@@ -48,11 +48,13 @@ function AdminNavBar() {
     
     try {
       setIsLoggingOut(true)
-      
-      // Appeler l'API de déconnexion
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {}
+      const csrfToken = csrfData.csrfToken ?? ''
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
+        headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
       })
       
       // Attendre un peu pour que le cookie soit supprimé

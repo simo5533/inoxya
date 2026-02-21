@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { select, execute, executeQuery, testConnection, initializeDatabase, detectDriver } from '@/lib/sqlite'
+import { getBijouById } from '@/lib/database'
+import { getDatabaseAdapter } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { sanitizeInput, validateNumericId, requireCSRF } from '@/lib/security'
-import { normalizeImageUrl } from '@/lib/image-path'
 import type { DatabaseProduct } from '@/lib/types'
 import { updateProductSchema } from '@/lib/validations'
 import { z } from 'zod'
+import { select, execute, executeQuery, testConnection, initializeDatabase, detectDriver } from '@/lib/sqlite'
+import type { Product } from '@/lib/db/types'
 
 type ProductRow = DatabaseProduct & { images?: string | string[] | null }
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // GET - Récupérer un produit par ID
 export async function GET(
@@ -31,6 +34,55 @@ export async function GET(
     
     logger.db(`Récupération produit ${id}`, true)
 
+    // PRIORITÉ 1: Utiliser getBijouById qui détecte automatiquement Supabase/Postgres/SQLite
+    try {
+      const product = await getBijouById(id)
+      if (product) {
+        // Parser les images
+        let imagesArray: string[] = []
+        if (product.images) {
+          if (Array.isArray(product.images)) {
+            imagesArray = product.images
+          } else if (typeof product.images === 'string') {
+            try {
+              imagesArray = JSON.parse(product.images)
+            } catch {
+              imagesArray = [product.images]
+            }
+          }
+        }
+        
+        // Retourner image_url brute pour que l'admin puisse afficher et ré-enregistrer les chemins locaux (C:\...)
+        const rawImageUrl = product.image_url || (product as { main_image?: string }).main_image || null
+        const responseProduct = {
+          id: Number(product.id) || 0,
+          name: product.name,
+          name_ar: product.name_ar || null,
+          description: product.description || null,
+          price: product.price,
+          original_price: product.original_price || null,
+          category: product.category_id || (product as { category?: string }).category || 'Général',
+          stock: (product as { stock?: number }).stock || 0,
+          is_active: product.is_available !== false,
+          image_url: rawImageUrl,
+          main_image: rawImageUrl,
+          images: imagesArray,
+          created_at: product.created_at || new Date().toISOString(),
+          updated_at: (product as { updated_at?: string }).updated_at || new Date().toISOString()
+        }
+        
+        logger.db(`Produit ${id} récupéré via adapter`, true)
+        return NextResponse.json(responseProduct)
+      }
+    } catch (adapterError) {
+      if (adapterError instanceof Error) {
+        logger.warn('[GET /api/products/[id]] Adapter failed, fallback to SQLite:', { error: adapterError.message })
+      } else {
+        logger.warn('[GET /api/products/[id]] Adapter failed, fallback to SQLite:', { error: String(adapterError) })
+      }
+    }
+
+    // FALLBACK: SQLite direct si adapter échoue
     const isConnected = testConnection()
     if (!isConnected) {
       logger.warn('Connexion SQLite indisponible')
@@ -40,10 +92,7 @@ export async function GET(
       )
     }
 
-    // Initialiser la base de données si nécessaire
     initializeDatabase()
-
-    // Récupérer le produit par ID
     const products = select('SELECT * FROM products WHERE id = ?', [id]) as ProductRow[]
     
     if (products.length === 0) {
@@ -73,9 +122,7 @@ export async function GET(
       imagesArray = product.images
     }
     
-    // Production: normaliser les chemins d'images (éviter chemins absolus Windows)
-    const imageUrlNorm = normalizeImageUrl(product.image_url || null)
-    const imagesNorm = imagesArray.map((img) => normalizeImageUrl(img))
+    const rawImageUrl = product.image_url || null
     const responseProduct = {
       id: product.id,
       name: product.name,
@@ -86,14 +133,14 @@ export async function GET(
       category: product.category,
       stock: product.stock,
       is_active: product.is_active,
-      image_url: imageUrlNorm,
-      main_image: imageUrlNorm,
-      images: imagesNorm,
+      image_url: rawImageUrl,
+      main_image: rawImageUrl,
+      images: imagesArray,
       created_at: product.created_at,
       updated_at: product.updated_at
     }
     
-    logger.db(`Produit ${id} récupéré`, true)
+    logger.db(`Produit ${id} récupéré via SQLite fallback`, true)
     return NextResponse.json(responseProduct)
   } catch (error) {
     logger.error('Erreur API produits', error)
@@ -157,25 +204,83 @@ export async function PUT(
       )
     }
 
-    // Récupérer le produit existant pour les valeurs par défaut
-    const existingProducts = select('SELECT * FROM products WHERE id = ?', [id]) as ProductRow[]
-    if (existingProducts.length === 0) {
+    // Récupérer le produit existant (adapter ou SQLite - même source que GET)
+    const existingFromAdapter = await getBijouById(id)
+    if (!existingFromAdapter) {
       return NextResponse.json(
         { error: 'Produit non trouvé' },
         { status: 404 }
       )
     }
-    const existingProduct = existingProducts[0]!
-    
-    // SÉCURITÉ: Sanitization des entrées utilisateur (après validation Zod)
+
+    const existingProduct = existingFromAdapter as Product & { category?: string; images?: string | string[]; image_url?: string }
+    const existingCategory = existingProduct.category || (existingProduct as { category_id?: string }).category_id || 'Général'
+    const existingImages = existingProduct.images
+
+    // SÉCURITÉ: Sanitization
     const sanitizedName = validatedData.name ? sanitizeInput(validatedData.name) : existingProduct.name
     const sanitizedNameAr = validatedData.name_ar !== undefined ? (validatedData.name_ar ? sanitizeInput(validatedData.name_ar) : null) : existingProduct.name_ar
     const sanitizedDescription = validatedData.description ? sanitizeInput(validatedData.description) : existingProduct.description
-    const sanitizedCategory = validatedData.category ? sanitizeInput(validatedData.category) : existingProduct.category
+    const sanitizedCategory = validatedData.category ? sanitizeInput(validatedData.category) : existingCategory
+
+    const finalImageUrl = validatedData.main_image ?? validatedData.image_url ?? existingProduct.image_url ?? existingProduct.main_image ?? null
+    const imagesForPayload = validatedData.images && validatedData.images.length > 0
+      ? validatedData.images
+      : (Array.isArray(existingImages) ? existingImages : typeof existingImages === 'string' ? (() => { try { return JSON.parse(existingImages) } catch { return [] } })() : [])
 
     logger.db(`Modification produit ${id}`, true)
 
-    // Tester la connexion et initialiser la base si nécessaire
+    // PRIORITÉ 1: Mise à jour via l'adapter (Supabase / etc.)
+    try {
+      const adapter = await getDatabaseAdapter()
+      if (typeof adapter.updateProduct === 'function') {
+        const updatePayload: Partial<Product> & { images?: string } = {
+          name: sanitizedName,
+          name_ar: sanitizedNameAr ?? undefined,
+          description: sanitizedDescription,
+          price: validatedData.price ?? existingProduct.price,
+          original_price: validatedData.original_price ?? existingProduct.original_price ?? undefined,
+          category: sanitizedCategory,
+          category_id: sanitizedCategory,
+          stock: validatedData.stock ?? existingProduct.stock ?? 0,
+          is_active: validatedData.is_active !== undefined ? validatedData.is_active : (existingProduct.is_active ?? existingProduct.is_available !== false),
+          image_url: finalImageUrl ?? undefined,
+          main_image: finalImageUrl ?? undefined,
+          images: imagesForPayload.length > 0 ? JSON.stringify(imagesForPayload) : undefined,
+        }
+        const updated = await adapter.updateProduct(id, updatePayload)
+        if (updated) {
+          const productAfter = await getBijouById(id)
+          if (productAfter) {
+            const imgUrl = (productAfter as { image_url?: string }).image_url || (productAfter as { main_image?: string }).main_image || null
+            const imgs = (productAfter as { images?: string[] | string }).images
+            const imagesArray = Array.isArray(imgs) ? imgs : (typeof imgs === 'string' ? (() => { try { return JSON.parse(imgs) } catch { return [] } })() : [])
+            logger.db(`Produit ${id} modifié via adapter`, true)
+            return NextResponse.json({
+              id: productAfter.id,
+              name: productAfter.name,
+              price: productAfter.price,
+              main_image: imgUrl,
+              images: imagesArray
+            })
+          }
+        }
+        // Adapter utilisé mais updateProduct a échoué → ne pas basculer sur SQLite (données dans Supabase)
+        logger.warn('[PUT /api/products/[id]] Adapter updateProduct a échoué (retour false)')
+        return NextResponse.json(
+          { error: 'La modification du produit a échoué. Veuillez réessayer.' },
+          { status: 500 }
+        )
+      }
+    } catch (adapterError) {
+      if (adapterError instanceof Error) {
+        logger.warn('[PUT /api/products/[id]] Adapter failed, fallback SQLite:', { error: adapterError.message })
+      } else {
+        logger.warn('[PUT /api/products/[id]] Adapter failed, fallback SQLite:', { error: String(adapterError) })
+      }
+    }
+
+    // FALLBACK: SQLite (uniquement si l'adapter a levé une exception, pas si update a retourné false)
     const isConnected = testConnection()
     if (!isConnected) {
       logger.warn('Connexion SQLite indisponible')
@@ -184,11 +289,23 @@ export async function PUT(
         { status: 503 }
       )
     }
-
-    // Initialiser la base de données si nécessaire
     initializeDatabase()
 
-    // RÈGLE MÉTIER: Vérifier que la catégorie existe en base (si catégorie fournie)
+    const existingProducts = select('SELECT * FROM products WHERE id = ?', [id]) as ProductRow[]
+    if (existingProducts.length === 0) {
+      return NextResponse.json(
+        { error: 'Produit non trouvé' },
+        { status: 404 }
+      )
+    }
+    const existingRow = existingProducts[0]
+    if (!existingRow) {
+      return NextResponse.json(
+        { error: 'Produit non trouvé' },
+        { status: 404 }
+      )
+    }
+
     if (validatedData.category) {
       const catRows = select('SELECT id FROM categories WHERE name = ? OR slug = ?', [sanitizedCategory, sanitizedCategory]) as { id: number }[]
       if (!catRows || catRows.length === 0) {
@@ -199,29 +316,24 @@ export async function PUT(
       }
     }
 
-    // Utiliser main_image si fourni, sinon image_url, sinon valeur existante
-    const finalImageUrl = validatedData.main_image || validatedData.image_url || existingProduct.image_url || null
-    
-    // Préparer les images secondaires (convertir array en JSON string si nécessaire)
-    const imagesJson = validatedData.images && validatedData.images.length > 0
-      ? JSON.stringify(validatedData.images)
-      : (existingProduct.images ? (typeof existingProduct.images === 'string' ? existingProduct.images : JSON.stringify(existingProduct.images)) : null)
+    const imagesJson = imagesForPayload.length > 0
+      ? JSON.stringify(imagesForPayload)
+      : (existingRow.images ? (typeof existingRow.images === 'string' ? existingRow.images : JSON.stringify(existingRow.images)) : null)
 
-    // SÉCURITÉ: Mettre à jour le produit avec données sanitizées (utiliser valeurs existantes si non fournies)
     const updateResult = execute(`
       UPDATE products 
       SET name = ?, name_ar = ?, description = ?, price = ?, original_price = ?, 
           category = ?, stock = ?, is_active = ?, image_url = ?, images = ?, updated_at = ?
       WHERE id = ?
     `, [
-      sanitizedName ?? existingProduct.name,
-      sanitizedNameAr ?? existingProduct.name_ar,
-      sanitizedDescription ?? existingProduct.description,
-      validatedData.price ?? existingProduct.price,
-      validatedData.original_price ?? existingProduct.original_price,
-      sanitizedCategory ?? existingProduct.category,
-      validatedData.stock ?? existingProduct.stock,
-      validatedData.is_active !== undefined ? Boolean(validatedData.is_active) : existingProduct.is_active,
+      sanitizedName ?? existingRow.name,
+      sanitizedNameAr ?? existingRow.name_ar,
+      sanitizedDescription ?? existingRow.description,
+      validatedData.price ?? existingRow.price,
+      validatedData.original_price ?? existingRow.original_price,
+      sanitizedCategory ?? existingRow.category,
+      validatedData.stock ?? existingRow.stock,
+      validatedData.is_active !== undefined ? Boolean(validatedData.is_active) : existingRow.is_active,
       finalImageUrl,
       imagesJson,
       new Date().toISOString(),
@@ -234,7 +346,6 @@ export async function PUT(
       )
     }
 
-    // Récupérer le produit modifié
     const products = select('SELECT * FROM products WHERE id = ?', [id]) as ProductRow[]
     const product = products[0]
     if (!product) {
@@ -243,8 +354,6 @@ export async function PUT(
         { status: 404 }
       )
     }
-    
-    // Parser les images JSON
     let imagesArray: string[] = []
     if (product.images && typeof product.images === 'string') {
       try {
@@ -255,18 +364,14 @@ export async function PUT(
     } else if (Array.isArray(product.images)) {
       imagesArray = product.images
     }
-    
-    // Retourner avec main_image et images[] (structure exacte demandée)
-    const responseProduct = {
+    logger.db(`Produit ${id} modifié via SQLite`, true)
+    return NextResponse.json({
       id: product.id,
       name: product.name,
       price: product.price,
       main_image: product.image_url || null,
       images: imagesArray
-    }
-
-    logger.db(`Produit ${id} modifié`, true)
-    return NextResponse.json(responseProduct)
+    })
   } catch (error) {
     logger.error('Erreur API produits', error)
     return NextResponse.json(
@@ -311,6 +416,26 @@ export async function DELETE(
     
     logger.db(`Suppression produit ${id}`, true)
 
+    // PRIORITÉ 1: Utiliser l'adapter (Supabase/Postgres) si disponible
+    try {
+      const adapter = await getDatabaseAdapter()
+      const deleted = await adapter.deleteProduct(id)
+      if (deleted) {
+        logger.db(`Produit ${id} supprimé via adapter`, true)
+        return NextResponse.json(
+          { message: 'Produit supprimé avec succès' },
+          { status: 200 }
+        )
+      }
+    } catch (adapterError) {
+      if (adapterError instanceof Error) {
+        logger.warn('[DELETE /api/products/[id]] Adapter failed, fallback to SQLite:', { error: adapterError.message })
+      } else {
+        logger.warn('[DELETE /api/products/[id]] Adapter failed, fallback to SQLite:', { error: String(adapterError) })
+      }
+    }
+
+    // FALLBACK: SQLite
     const isConnected = testConnection()
     if (!isConnected) {
       logger.warn('Connexion SQLite indisponible')

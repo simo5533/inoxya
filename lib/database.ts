@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs'
 import { getDatabaseAdapter } from './db'
 import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
+import { getPackById } from './pack-management'
 
 // Import SQLite direct pour fallback et compatibilité
 import {
@@ -104,25 +105,78 @@ export async function getBijouxVedettes(limit = 8) {
 
 export async function getAllBijoux(categorySlug?: string) {
   try {
-    // S'assurer que sql.js est initialisé si better-sqlite3 n'est pas disponible
-    const { forceConnection, initSqlJsAsync } = await import('./sqlite')
-    
-    // Forcer la connexion d'abord
-    let isConnected = forceConnection()
-    
-    // Si forceConnection() retourne false, essayer initSqlJsAsync()
-    if (!isConnected) {
-      isConnected = await initSqlJsAsync()
-      // Réessayer forceConnection après initSqlJsAsync
-      if (isConnected) {
-        isConnected = forceConnection()
+    // PRIORITÉ 1: Utiliser l'adapter DB (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const products = await adapter.getProducts(categorySlug)
+      const activeProducts = products.filter((p) => p.is_available === true)
+      
+      return activeProducts.map((product) => {
+        // Convertir images en tableau si nécessaire
+        let imagesArray: string[] = []
+        if (product.images) {
+          if (Array.isArray(product.images)) {
+            imagesArray = product.images
+          } else if (typeof product.images === 'string' && product.images.trim() !== '' && product.images !== '[]') {
+            try {
+              const parsed = JSON.parse(product.images)
+              imagesArray = Array.isArray(parsed) ? parsed : []
+            } catch {
+              imagesArray = []
+            }
+          }
+        }
+        
+        // Déterminer l'image principale
+        const mainImage = product.main_image 
+          || product.image_url 
+          || (imagesArray.length > 0 ? imagesArray[0] : null)
+          || '/placeholder.svg'
+        
+        // Normaliser l'image principale
+        const normalizedImage = mainImage && mainImage !== '/placeholder.svg' 
+          ? (mainImage.startsWith('http') || mainImage.startsWith('/') ? mainImage : `/${mainImage}`)
+          : '/placeholder.svg'
+        
+        return {
+          id: String(product.id || ''),
+          name: product.name || 'Produit sans nom',
+          name_ar: product.name_ar,
+          description: product.description,
+          price: Number(product.price) || 0,
+          original_price: product.original_price ? Number(product.original_price) : undefined,
+          image_url: normalizedImage,
+          main_image: normalizedImage,
+          images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
+          is_available: product.is_available !== false,
+          is_featured: Boolean(product.is_featured),
+          category_id: product.category_id || product.category || 'Général',
+          created_at: product.created_at || new Date().toISOString(),
+        }
+      })
+    } catch (adapterError) {
+      // Fallback vers SQLite direct si adapter échoue
+      logger.warn('[getAllBijoux] Adapter failed, using SQLite fallback:', serializeError(adapterError))
+      
+      // S'assurer que sql.js est initialisé si better-sqlite3 n'est pas disponible
+      const { forceConnection, initSqlJsAsync } = await import('./sqlite')
+      
+      // Forcer la connexion d'abord
+      let isConnected = forceConnection()
+      
+      // Si forceConnection() retourne false, essayer initSqlJsAsync()
+      if (!isConnected) {
+        isConnected = await initSqlJsAsync()
+        // Réessayer forceConnection après initSqlJsAsync
+        if (isConnected) {
+          isConnected = forceConnection()
+        }
       }
-    }
-    
-    // Si un slug de catégorie est fourni, filtrer par catégorie
-    if (categorySlug) {
-      const dbValue = slugToDbValue(categorySlug)
-      if (dbValue) {
+      
+      // Si un slug de catégorie est fourni, filtrer par catégorie
+      if (categorySlug) {
+        const dbValue = slugToDbValue(categorySlug)
+        if (dbValue) {
         // Utiliser selectAsync pour filtrer par catégorie
         const { initializeDatabase } = await import('./sqlite')
         initializeDatabase()
@@ -162,20 +216,20 @@ export async function getAllBijoux(categorySlug?: string) {
           category_id: product.category_id || product.category || 'Général',
           created_at: product.created_at || new Date().toISOString(),
         }))
+        }
       }
-    }
-    
-    // Sinon, récupérer tous les produits (comportement par défaut)
-    // PHASE B: Utiliser la version asynchrone qui garantit l'initialisation sql.js
-    const products = await getSqliteProductsAsync()
-    // Filtrer les produits actifs
-    const activeProducts = products.filter((p) => {
-      const isActive = p.is_active === true || p.is_active === null || p.is_active === undefined
-      const isAvailable = p.is_available === true || (p.is_available === undefined && isActive)
-      return isActive && isAvailable
-    })
-    
-    return activeProducts.map((product) => {
+      
+      // Sinon, récupérer tous les produits (comportement par défaut)
+      // PHASE B: Utiliser la version asynchrone qui garantit l'initialisation sql.js
+      const products = await getSqliteProductsAsync()
+      // Filtrer les produits actifs
+      const activeProducts = products.filter((p) => {
+        const isActive = p.is_active === true || p.is_active === null || p.is_active === undefined
+        const isAvailable = p.is_available === true || (p.is_available === undefined && isActive)
+        return isActive && isAvailable
+      })
+      
+      return activeProducts.map((product) => {
       // Convertir images en tableau si nécessaire
       let imagesArray: string[] = []
       if (product.images) {
@@ -219,7 +273,8 @@ export async function getAllBijoux(categorySlug?: string) {
         category_id: product.category_id || product.category || 'Général',
         created_at: product.created_at || new Date().toISOString(),
       }
-    })
+      })
+    }
   } catch (error) {
     logger.error('Erreur getAllBijoux:', error)
     // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
@@ -229,6 +284,20 @@ export async function getAllBijoux(categorySlug?: string) {
 
 export async function getBijouById(id: string) {
   try {
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const product = await adapter.getProductById(id)
+      if (product) {
+        logger.info(`[getBijouById] ✅ Produit ${id} récupéré via adapter`)
+        return product
+      }
+    } catch (adapterError) {
+      // Fallback vers SQLite si l'adapter échoue
+      logger.warn('[getBijouById] Adapter failed, using SQLite fallback:', serializeError(adapterError))
+    }
+    
+    // FALLBACK: SQLite direct
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     if (!isConnected) {
@@ -245,47 +314,73 @@ export async function getBijouById(id: string) {
       })
     }
     return await getSqliteProductByIdAsync(id)
-  } catch {
+  } catch (error) {
+    logger.error('Erreur getBijouById:', error)
     return null
   }
 }
 
 export async function getAllCategories() {
   try {
+    // PRIORITÉ 1: Utiliser l'adapter DB (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const categories = await adapter.getCategories()
+      return categories
+    } catch (adapterError) {
+      logger.warn('[getAllCategories] Adapter failed, using SQLite fallback:', serializeError(adapterError))
+    }
+
+    // FALLBACK: SQLite / sql.js
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
-    
     if (!isConnected) {
       isConnected = await initSqlJsAsync()
       if (isConnected) {
         isConnected = forceConnection()
       }
     }
-    
-    if (!isConnected) {
-      // Utiliser le fallback SQLite direct
-      logger.warn('[getAllCategories] Adapter failed, using SQLite fallback')
+    if (isConnected) {
       return await getSqliteCategories()
     }
-    
-    return await getSqliteCategories()
+    return []
   } catch (error) {
     logger.error('Erreur getAllCategories:', error)
-    // En cas d'erreur, utiliser le fallback SQLite direct
     try {
       return await getSqliteCategories()
     } catch (fallbackError) {
       logger.error('Erreur fallback getAllCategories:', fallbackError)
-      // Retourner un tableau vide plutôt que de faire planter la page
       return []
     }
-    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
-    throw error
   }
 }
 
 export async function getAllPacks() {
   try {
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const packs = await adapter.getPacks()
+      
+      if (packs && packs.length > 0) {
+        logger.info(`[getAllPacks] ${packs.length} pack(s) récupéré(s) via adapter`)
+        return packs.map(pack => ({
+          id: pack.id,
+          name: pack.name,
+          slug: pack.slug || pack.name.toLowerCase().replace(/\s+/g, '-'),
+          description: pack.description || '',
+          price: Number(pack.price),
+          image_url: pack.image_url || '/placeholder.svg',
+          is_featured: Boolean(pack.is_featured),
+        }))
+      }
+    } catch (adapterError) {
+      // Fallback vers SQLite si l'adapter échoue
+      const errorMsg = adapterError instanceof Error ? adapterError.message : String(adapterError)
+      logger.warn('[getAllPacks] Erreur adapter, fallback SQLite', { error: errorMsg })
+    }
+    
+    // FALLBACK: Utiliser SQLite directement
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     
@@ -358,8 +453,132 @@ export async function updateUserRole(userId: string, newRole: string) {
   return updateSqliteUserRole(userId, newRole)
 }
 
+async function getRecentOrdersWithDetails(adapter: import('./db/adapter').DatabaseAdapter, limit: number): Promise<{ id: string; total_amount: number; status: string; created_at: string; phone?: string; firstProductName?: string }[]> {
+  const orders = await adapter.getOrders()
+  const recent = orders.slice(0, limit)
+  return Promise.all(
+    recent.map(async (o) => {
+      const [order, items] = await Promise.all([
+        adapter.getOrderById(o.id),
+        adapter.getOrderItems(o.id)
+      ])
+      const first = items[0]
+      let firstProductName: string | undefined
+      if (first) {
+        const firstItem = first as { pack_id?: string; bijou_id?: string }
+        if (firstItem.pack_id) {
+          const pack = await getPackById(firstItem.pack_id)
+          firstProductName = pack?.name
+        } else if (firstItem.bijou_id) {
+          const product = await getBijouById(firstItem.bijou_id)
+          firstProductName = product?.name
+        }
+      }
+      return {
+        id: o.id,
+        total_amount: o.total_amount,
+        status: o.status,
+        created_at: o.created_at,
+        phone: (order as { phone?: string })?.phone ?? (order as { shipping_phone?: string })?.shipping_phone,
+        firstProductName
+      }
+    })
+  )
+}
+
+async function getTopSoldProductsFromAdapter(adapter: import('./db/adapter').DatabaseAdapter, limit: number): Promise<{ id: string; name: string; quantity: number; price: number; image_url?: string; is_pack?: boolean }[]> {
+  const orders = await adapter.getOrders()
+  const itemsPerOrder = await Promise.all(
+    orders.slice(0, 150).map((o) => adapter.getOrderItems(o.id))
+  )
+  const agg = new Map<string, { quantity: number; price: number; isPack: boolean }>()
+  for (const items of itemsPerOrder) {
+    for (const item of items) {
+      const row = item as { bijou_id?: string; pack_id?: string; quantity: number; price: number }
+      const key = row.pack_id ? `pack:${row.pack_id}` : `bijou:${row.bijou_id ?? ''}`
+      if (!key.endsWith(':') && row.quantity) {
+        const cur = agg.get(key) ?? { quantity: 0, price: row.price, isPack: !!row.pack_id }
+        cur.quantity += row.quantity
+        agg.set(key, cur)
+      }
+    }
+  }
+  const sorted = [...agg.entries()].sort((a, b) => b[1].quantity - a[1].quantity).slice(0, limit)
+  return Promise.all(
+    sorted.map(async ([key, val]) => {
+      const isPack = key.startsWith('pack:')
+      const id = key.replace(/^(pack|bijou):/, '')
+      if (isPack) {
+        const pack = await getPackById(id)
+        return { id, name: pack?.name ?? `Pack #${id}`, quantity: val.quantity, price: val.price, image_url: pack?.image_url, is_pack: true }
+      }
+      const product = await getBijouById(id)
+      return { id, name: product?.name ?? `Produit #${id}`, quantity: val.quantity, price: val.price, image_url: product?.image_url ?? product?.main_image, is_pack: false }
+    })
+  )
+}
+
 export async function getDashboardStats() {
-  return getSqliteDashboardStats()
+  try {
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const stats = await adapter.getDashboardStats()
+      
+      // Récupérer aussi les packs et catégories
+      const packs = await adapter.getPacks()
+      const categories = await adapter.getCategories()
+
+      let recentOrders: { id: string; total_amount: number; status: string; created_at: string; phone?: string; firstProductName?: string }[] = []
+      let topProducts: { id: string; name: string; quantity: number; price: number; image_url?: string; is_pack?: boolean }[] = []
+      try {
+        recentOrders = await getRecentOrdersWithDetails(adapter, 10)
+        topProducts = await getTopSoldProductsFromAdapter(adapter, 10)
+      } catch (e) {
+        logger.warn('[getDashboardStats] Erreur chargement commandes/produits récents:', serializeError(e))
+      }
+      
+      return {
+        totalBijoux: stats.totalProducts || 0,
+        totalPacks: packs.length || 0,
+        totalCategories: categories.length || 0,
+        totalUsers: stats.totalUsers || 0,
+        totalOrders: stats.totalOrders || 0,
+        totalRevenue: stats.totalRevenue || 0,
+        recentOrders,
+        topProducts,
+        userGrowth: []
+      }
+    } catch (adapterError) {
+      // Fallback vers SQLite si l'adapter échoue
+      if (adapterError instanceof Error) {
+        logger.warn('[getDashboardStats] Erreur adapter, fallback SQLite:', { error: adapterError.message })
+      } else {
+        logger.warn('[getDashboardStats] Erreur adapter, fallback SQLite:', { error: String(adapterError) })
+      }
+    }
+    
+    // FALLBACK: Utiliser SQLite directement
+    return getSqliteDashboardStats()
+  } catch (error) {
+    if (error instanceof Error) {
+      logger.error('Erreur getDashboardStats:', { error: error.message })
+    } else {
+      logger.error('Erreur getDashboardStats:', { error: String(error) })
+    }
+    // Retourner des stats vides plutôt que de faire planter le dashboard
+    return {
+      totalBijoux: 0,
+      totalPacks: 0,
+      totalCategories: 0,
+      totalUsers: 0,
+      totalOrders: 0,
+      totalRevenue: 0,
+      recentOrders: [],
+      topProducts: [],
+      userGrowth: []
+    }
+  }
 }
 
 export async function getAllOrders() {
@@ -374,29 +593,80 @@ export async function createOrder(orderData: {
   shipping_phone?: string
   shipping_name?: string
 }) {
-  return createSqliteOrder({
-    user_id: orderData.user_id,
-    total_amount: orderData.total,
-    status: orderData.status,
-    shipping_address: orderData.shipping_address,
-    phone: orderData.shipping_phone,
-    notes: orderData.shipping_name
-  })
+  try {
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const order = await adapter.createOrder({
+        user_id: orderData.user_id || null,
+        total_amount: orderData.total,
+        status: orderData.status,
+        shipping_address: orderData.shipping_address,
+        phone: orderData.shipping_phone,
+        notes: orderData.shipping_name
+      })
+      if (order) {
+        logger.info(`[createOrder] ✅ Commande créée via adapter: ${order.id}`)
+        return order
+      }
+    } catch (adapterError) {
+      logger.warn('[createOrder] Adapter failed, using SQLite fallback:', serializeError(adapterError))
+    }
+    
+    // FALLBACK: SQLite direct
+    return createSqliteOrder({
+      user_id: orderData.user_id,
+      total_amount: orderData.total,
+      status: orderData.status,
+      shipping_address: orderData.shipping_address,
+      phone: orderData.shipping_phone,
+      notes: orderData.shipping_name
+    })
+  } catch (error) {
+    logger.error('Erreur createOrder:', error)
+    throw error
+  }
 }
 
 export async function createOrderItem(itemData: {
   order_id: string
   product_id: string
+  bijou_id?: string
   quantity: number
   price: number
   product_name: string
 }) {
-  return createSqliteOrderItem({
-    order_id: itemData.order_id,
-    bijou_id: itemData.product_id,
-    quantity: itemData.quantity,
-    price: itemData.price
-  })
+  try {
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const orderItem = await adapter.createOrderItem({
+        order_id: itemData.order_id,
+        product_id: itemData.product_id,
+        bijou_id: itemData.bijou_id || itemData.product_id,
+        quantity: itemData.quantity,
+        price: itemData.price,
+        product_name: itemData.product_name
+      })
+      if (orderItem) {
+        logger.info(`[createOrderItem] ✅ Item créé via adapter: ${orderItem.id}`)
+        return orderItem
+      }
+    } catch (adapterError) {
+      logger.warn('[createOrderItem] Adapter failed, using SQLite fallback:', serializeError(adapterError))
+    }
+    
+    // FALLBACK: SQLite direct
+    return createSqliteOrderItem({
+      order_id: itemData.order_id,
+      bijou_id: itemData.product_id,
+      quantity: itemData.quantity,
+      price: itemData.price
+    })
+  } catch (error) {
+    logger.error('Erreur createOrderItem:', error)
+    throw error
+  }
 }
 
 export async function createOrderFull(orderData: {
@@ -413,26 +683,90 @@ export async function createOrderFull(orderData: {
     product_name: string
   }>
 }) {
-  return createSqliteOrderFull({
-    order: {
-      user_id: orderData.user_id,
-      total_amount: orderData.total,
-      status: orderData.status,
-      shipping_address: orderData.shipping_address,
-      phone: orderData.shipping_phone,
-      notes: orderData.shipping_name
-    },
-    items: orderData.items.map(item => ({
-      bijou_id: item.product_id,
-      quantity: item.quantity,
-      price: item.price
-    })),
-    payment: {
-      amount: orderData.total,
-      payment_method: 'cash',
-      status: 'pending'
+  try {
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      
+      // Créer la commande
+      const order = await adapter.createOrder({
+        user_id: orderData.user_id || null,
+        total_amount: orderData.total,
+        status: orderData.status,
+        shipping_address: orderData.shipping_address,
+        phone: orderData.shipping_phone,
+        notes: orderData.shipping_name
+      })
+      
+      if (!order) {
+        throw new Error('Échec de création de la commande')
+      }
+      
+      // Créer les items (en parallèle pour meilleure performance)
+      const orderItems: Array<{ id: string; order_id: string; bijou_id: string; quantity: number; price: number }> = []
+      const itemPromises = orderData.items.map(async (item) => {
+         
+        const orderItem = await adapter.createOrderItem({
+          order_id: order.id,
+          product_id: item.product_id,
+          bijou_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price,
+          product_name: item.product_name
+        })
+        if (orderItem) {
+          orderItems.push(orderItem)
+        }
+        return orderItem
+      })
+      await Promise.all(itemPromises)
+      
+      // Créer le paiement
+      const payment = await adapter.createPayment({
+        order_id: order.id,
+        amount: orderData.total,
+        payment_method: 'cash_on_delivery',
+        status: 'pending'
+      })
+      
+      logger.info(`[createOrderFull] ✅ Commande complète créée via adapter: ${order.id}`)
+      
+      return {
+        orderId: order.id,
+        paymentId: payment?.id || '',
+        order,
+        items: orderItems,
+        payment
+      }
+    } catch (adapterError) {
+      logger.warn('[createOrderFull] Adapter failed, using SQLite fallback:', serializeError(adapterError))
     }
-  })
+    
+    // FALLBACK: SQLite direct
+    return createSqliteOrderFull({
+      order: {
+        user_id: orderData.user_id,
+        total_amount: orderData.total,
+        status: orderData.status,
+        shipping_address: orderData.shipping_address,
+        phone: orderData.shipping_phone,
+        notes: orderData.shipping_name
+      },
+      items: orderData.items.map(item => ({
+        bijou_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      payment: {
+        amount: orderData.total,
+        payment_method: 'cash',
+        status: 'pending'
+      }
+    })
+  } catch (error) {
+    logger.error('Erreur createOrderFull:', error)
+    throw error
+  }
 }
 
 export async function getOrderById(orderId: string) {
@@ -504,7 +838,7 @@ export async function removeFromFavorites(userId: string, productId: string) {
 }
 
 export async function createNotification(notificationData: {
-  user_id: string
+  user_id?: string | null
   title: string
   message: string
   type?: string

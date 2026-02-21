@@ -70,3 +70,5 @@ VERIFICATION_*.md
 middleware.ts.*
 middleware.backup.ts
 *.old
+
+.vercel

@@ -178,12 +178,37 @@ DATABASE_URL=<URL PostgreSQL>
    - Aller sur [vercel.com/dashboard](https://vercel.com/dashboard)
    - Sélectionner votre projet
    - Settings → Environment Variables
-   - Ajouter toutes les variables requises
+   - Ajouter toutes les variables requises (voir [Variables pour Vercel](#variables-pour-vercel-redeploy) ci-dessous)
 
-5. **Configurer PostgreSQL:**
+5. **Configurer la base de données:**
    - ⚠️ **IMPORTANT:** SQLite ne fonctionne pas sur Vercel (système de fichiers éphémère)
-   - Utiliser Supabase, Railway ou une autre base PostgreSQL externe
-   - Configurer `DATABASE_URL` dans les variables d'environnement Vercel
+   - Utiliser **Supabase** (recommandé) ou **PostgreSQL** externe
+   - Supabase : définir `NEXT_PUBLIC_SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`
+   - Sinon : définir `DATABASE_URL` (postgresql://...)
+
+#### Redeploy (un clic)
+
+Une fois le projet connecté à Vercel et les variables configurées :
+
+1. **Build command** (par défaut) : `npm run build` — ne rien changer sauf besoin spécifique.
+2. **Variables d'environnement** : Vérifier que toutes sont définies (voir section ci-dessous).
+3. **Redeploy** : Deployments → menu (⋯) sur le dernier déploiement → **Redeploy**.
+4. Attendre la fin du build ; l’URL de preview ou de production sera mise à jour.
+
+#### Variables pour Vercel (Redeploy)
+
+À définir dans **Settings → Environment Variables** (Production + Preview si besoin) :
+
+| Variable | Obligatoire | Description |
+|----------|-------------|-------------|
+| `JWT_SECRET` | Oui | Clé secrète JWT, min. 32 caractères |
+| `NEXT_PUBLIC_SITE_URL` | Oui | URL du site (ex. `https://votresite.vercel.app`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Oui* | URL du projet Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Oui* | Clé "service role" Supabase |
+| `DATABASE_URL` | Oui** | URL PostgreSQL (si pas Supabase) |
+
+\* Si vous utilisez Supabase (recommandé sur Vercel).  
+\** Si vous n’utilisez pas Supabase, fournir une URL PostgreSQL (Railway, Neon, etc.).
 
 #### Avantages:
 - ✅ Support Next.js natif

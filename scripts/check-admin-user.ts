@@ -1,106 +1,81 @@
 /**
- * Script de diagnostic pour vérifier l'utilisateur admin dans la DB
- * Usage: npx tsx scripts/check-admin-user.ts [phone]
+ * Script pour vérifier l'utilisateur admin dans Supabase
  */
 
-import { forceConnection, initSqlJsAsync } from '../lib/sqlite'
+import { createClient } from '@supabase/supabase-js'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
 
-async function checkAdminUser(phone?: string) {
-  console.log('🔍 Vérification de l\'utilisateur admin...\n')
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
-  // Forcer la connexion
-  let connected = forceConnection()
-  if (!connected) {
-    console.log('⚠️ better-sqlite3 non disponible, tentative avec sql.js...')
-    connected = await initSqlJsAsync()
+const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
+const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY']
+
+async function checkAdminUser() {
+  console.log('🔍 Vérification de l\'utilisateur admin dans Supabase...\n')
+  console.log('='.repeat(60))
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Variables Supabase manquantes !')
+    console.error('   NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅' : '❌')
+    console.error('   SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅' : '❌')
+    process.exit(1)
   }
 
-  if (!connected) {
-    console.error('❌ Impossible de se connecter à la base de données')
-    return
-  }
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
-  const { selectRows } = await import('../lib/sqlite')
-  
   try {
-    // Récupérer tous les utilisateurs
-    const allUsers = selectRows('SELECT id, phone, role, first_name, last_name FROM users ORDER BY id', [])
-    
-    console.log(`📊 Total utilisateurs dans la DB: ${allUsers.length}\n`)
-    
-    if (allUsers.length === 0) {
-      console.log('⚠️ Aucun utilisateur trouvé dans la base de données!')
-      console.log('💡 Vous devez créer un utilisateur admin d\'abord.')
-      return
+    // Récupérer tous les utilisateurs admin
+    const { data: adminUsers, error: adminError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('role', 'admin')
+
+    if (adminError) {
+      console.error('❌ Erreur lors de la récupération des admins:', adminError.message)
+      process.exit(1)
     }
 
-    console.log('👥 Liste de tous les utilisateurs:')
-    console.log('─'.repeat(80))
-    allUsers.forEach((user: any) => {
-      const isAdmin = user.role === 'admin'
-      const marker = isAdmin ? '👑' : '👤'
-      console.log(`${marker} ID: ${user.id} | Téléphone: ${user.phone} | Rôle: ${user.role} | Nom: ${user.first_name || ''} ${user.last_name || ''}`)
+    console.log(`\n📋 Utilisateurs admin trouvés: ${adminUsers?.length || 0}\n`)
+
+    if (!adminUsers || adminUsers.length === 0) {
+      console.log('⚠️  Aucun utilisateur admin trouvé dans Supabase !')
+      console.log('\n💡 Pour créer un utilisateur admin:')
+      console.log('   1. Allez sur Supabase Dashboard → Table Editor → users')
+      console.log('   2. Cliquez sur "Insert row"')
+      console.log('   3. Remplissez:')
+      console.log('      - phone: Votre numéro (ex: 0612345678)')
+      console.log('      - password_hash: Hash bcrypt du mot de passe')
+      console.log('      - role: admin')
+      console.log('   4. Pour générer le hash, utilisez: npm run hash-password <password>')
+      process.exit(1)
+    }
+
+    // Afficher les admins
+    adminUsers.forEach((user, index) => {
+      console.log(`${index + 1}. ${user.phone || 'N/A'}`)
+      console.log(`   ID: ${user.id}`)
+      console.log(`   Nom: ${user.first_name || ''} ${user.last_name || ''}`)
+      console.log(`   Rôle: ${user.role}`)
+      console.log(`   Créé: ${user.created_at || 'N/A'}\n`)
     })
-    console.log('─'.repeat(80))
-    console.log()
 
-    // Vérifier les admins
-    const admins = allUsers.filter((u: any) => u.role === 'admin')
-    console.log(`👑 Utilisateurs admin: ${admins.length}`)
-    if (admins.length > 0) {
-      admins.forEach((admin: any) => {
-        console.log(`   - ${admin.phone} (ID: ${admin.id})`)
-      })
-    } else {
-      console.log('   ⚠️ Aucun utilisateur admin trouvé!')
-    }
-    console.log()
+    // Vérifier les numéros de téléphone
+    console.log('📱 Numéros de téléphone admin:')
+    adminUsers.forEach((user) => {
+      const phone = user.phone || 'N/A'
+      console.log(`   - ${phone}`)
+    })
 
-    // Si un téléphone est fourni, chercher cet utilisateur spécifique
-    if (phone) {
-      const normalizedPhone = phone.replace(/[\s\-\.]/g, '').trim()
-      console.log(`🔍 Recherche de l'utilisateur avec le téléphone: ${normalizedPhone}`)
-      
-      // Essayer plusieurs formats
-      const formats = [
-        normalizedPhone,
-        normalizedPhone.startsWith('0') ? '+212' + normalizedPhone.substring(1) : null,
-        normalizedPhone.startsWith('+212') ? '0' + normalizedPhone.substring(4) : null,
-      ].filter(Boolean) as string[]
+    console.log('\n✅ Utilisateurs admin trouvés !')
+    console.log('\n💡 Pour vous connecter:')
+    console.log('   - Utilisez le numéro de téléphone affiché ci-dessus')
+    console.log('   - Le mot de passe doit correspondre au hash stocké dans Supabase')
 
-      console.log(`   Formats à tester: ${formats.join(', ')}`)
-      
-      for (const format of formats) {
-        const users = selectRows('SELECT id, phone, role, first_name, last_name FROM users WHERE phone = ?', [format])
-        if (users && users.length > 0) {
-          const foundUser = users[0] as any
-          console.log(`   ✅ Trouvé avec le format: ${format}`)
-          console.log(`      ID: ${foundUser.id}`)
-          console.log(`      Téléphone en DB: ${foundUser.phone}`)
-          console.log(`      Rôle: ${foundUser.role}`)
-          console.log(`      Nom: ${foundUser.first_name || ''} ${foundUser.last_name || ''}`)
-          console.log(`      ${foundUser.role === 'admin' ? '✅ C\'est un admin!' : '❌ Ce n\'est PAS un admin'}`)
-          return
-        }
-      }
-      
-      console.log(`   ❌ Aucun utilisateur trouvé avec ce téléphone (formats testés: ${formats.join(', ')})`)
-    }
   } catch (error) {
-    console.error('❌ Erreur:', error)
+    console.error('❌ Erreur:', error instanceof Error ? error.message : String(error))
+    process.exit(1)
   }
 }
 
-// Récupérer le téléphone depuis les arguments
-const phone = process.argv[2]
-
-checkAdminUser(phone)
-  .then(() => {
-    console.log('\n✅ Diagnostic terminé')
-    process.exit(0)
-  })
-  .catch((error) => {
-    console.error('❌ Erreur:', error)
-    process.exit(1)
-  })
-
+checkAdminUser().catch(console.error)

@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { getOrderById } from '@/lib/database'
 import { getCurrentUser } from '@/lib/auth'
+import { requireCSRF } from '@/lib/security'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    const csrfCheck = await requireCSRF(request)
+    if (!csrfCheck.valid) return csrfCheck.error
+
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })

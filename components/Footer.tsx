@@ -325,7 +325,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-[#0F1625]">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-300">
-            <p className="text-center md:text-left">
+            <p className="text-center md:text-left" suppressHydrationWarning>
               © {new Date().getFullYear()} INOXYA BIJOUX. Tous droits réservés.
             </p>
             <div className="flex items-center gap-4 flex-wrap justify-center">

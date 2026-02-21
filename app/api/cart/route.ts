@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       const userName = user ? (user.first_name || user.phone || 'Utilisateur') : 'Visiteur'
       
       await createNotification({
-        user_id: '', // Notification globale pour tous les admins
+        user_id: null,
         title: 'Produit ajouté au panier',
         message: `${productName} (x${quantity}) a été ajouté au panier par ${userName}`,
         type: 'info',
@@ -134,7 +134,7 @@ export async function PUT(request: NextRequest) {
       const userName = user ? (user.first_name || user.phone || 'Utilisateur') : 'Visiteur'
       
       await createNotification({
-        user_id: '',
+        user_id: null,
         title: 'Panier modifié',
         message: `Quantité de "${productName}" mise à jour: ${quantity} par ${userName}`,
         type: 'info',
@@ -190,7 +190,7 @@ export async function DELETE(request: NextRequest) {
       const userName = user ? (user.first_name || user.phone || 'Utilisateur') : 'Visiteur'
       
       await createNotification({
-        user_id: '',
+        user_id: null,
         title: 'Produit retiré du panier',
         message: `"${productName}" a été retiré du panier par ${userName}`,
         type: 'info',

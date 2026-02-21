@@ -1,8 +1,5 @@
 "use client"
 
-// Forcer le rendu dynamique pour éviter les erreurs next-intl
-export const dynamic = 'force-dynamic'
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"

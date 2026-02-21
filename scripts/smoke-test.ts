@@ -48,10 +48,39 @@ async function testEndpoint(endpoint: string, method: string = 'GET'): Promise<S
   }
 }
 
+async function checkServerReachable(): Promise<boolean> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000)
+    await fetch(`${SMOKE_TEST_BASE_URL}/api/health`, { signal: controller.signal })
+    clearTimeout(timeout)
+    return true
+  } catch {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 3000)
+      await fetch(`${SMOKE_TEST_BASE_URL}/`, { signal: controller.signal })
+      clearTimeout(timeout)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
 async function runSmokeTest() {
   console.log('🧪 SMOKE TEST - Vérification rapide des APIs\n')
   console.log('='.repeat(60) + '\n')
   console.log(`🌐 URL de base: ${SMOKE_TEST_BASE_URL}\n`)
+
+  const serverUp = await checkServerReachable()
+  if (!serverUp) {
+    console.log('❌ Le serveur ne répond pas à ' + SMOKE_TEST_BASE_URL + '\n')
+    console.log('   Lancez d\'abord le serveur dans un autre terminal:\n')
+    console.log('   npm run dev\n')
+    console.log('   Puis relancez: npm run smoke:test\n')
+    process.exit(1)
+  }
 
   // Tests des APIs publiques
   console.log('📡 Test des APIs publiques...\n')

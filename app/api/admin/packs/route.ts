@@ -76,17 +76,19 @@ export async function POST(request: NextRequest) {
     const sanitizedSlug = sanitizeInput(validatedData.slug)
     const sanitizedDescription = sanitizeInput(validatedData.description || '')
 
-    // Vérifier que les bijoux de la composition existent
+    // Vérifier que les bijoux de la composition existent (en parallèle)
     const composition = validatedData.composition || []
     if (composition.length > 0) {
-      for (const item of composition) {
-        const product = await getBijouById(String(item.bijou_id))
-        if (!product) {
-          return NextResponse.json(
-            { error: `Produit avec l'ID "${item.bijou_id}" inexistant.` },
-            { status: 400 }
-          )
-        }
+      const products = await Promise.all(
+        composition.map((item) => getBijouById(String(item.bijou_id)))
+      )
+      const missingIndex = products.findIndex((p) => !p)
+      if (missingIndex !== -1) {
+        const missingId = composition[missingIndex]?.bijou_id ?? '?'
+        return NextResponse.json(
+          { error: `Produit avec l'ID "${missingId}" inexistant.` },
+          { status: 400 }
+        )
       }
     }
 
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
     // Notification admin
     try {
       await createNotification({
-        user_id: '',
+        user_id: null,
         title: 'Nouveau pack créé',
         message: `Pack "${sanitizedName}" créé par ${user.first_name || user.phone}`,
         type: 'success',

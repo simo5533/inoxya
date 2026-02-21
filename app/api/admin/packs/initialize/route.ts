@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
+import { requireCSRF } from '@/lib/security'
 import { getAllPacks } from '@/lib/database'
 import { createPack, updatePack, deletePack } from '@/lib/pack-management'
 import { logger } from '@/lib/logger'
@@ -136,18 +137,22 @@ async function copyImageToPublic(sourcePath: string, targetFileName: string): Pr
 async function clearExistingPacks() {
   try {
     const allPacks = await getAllPacks()
+    const results = await Promise.allSettled(
+      allPacks.map((pack) => deletePack(String(pack.id)))
+    )
     let deletedCount = 0
-    
-    for (const pack of allPacks) {
-      try {
-        await deletePack(String(pack.id))
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
         deletedCount++
-        logger.info(`🗑️ Pack supprimé: ${pack.name} (${pack.id})`)
-      } catch (error) {
-        logger.error(`Erreur lors de la suppression du pack ${pack.id}:`, { error: error instanceof Error ? error.message : String(error) })
+        const pack = allPacks[index]
+        if (pack) logger.info(`🗑️ Pack supprimé: ${pack.name} (${pack.id})`)
+      } else {
+        const pack = allPacks[index]
+        if (pack) {
+          logger.error(`Erreur lors de la suppression du pack ${pack.id}:`, { error: result.reason instanceof Error ? result.reason.message : String(result.reason) })
+        }
       }
-    }
-    
+    })
     logger.info(`✅ ${deletedCount} pack(s) supprimé(s)`)
     return deletedCount
   } catch (error) {
@@ -183,6 +188,9 @@ export async function POST(_request: NextRequest) {
 
   const initializePromise = (async () => {
     try {
+      const csrfCheck = await requireCSRF(_request)
+      if (!csrfCheck.valid) return csrfCheck.error
+
       // Vérifier les permissions ADMIN
       const adminUser = await requireAdmin()
       
@@ -195,95 +203,75 @@ export async function POST(_request: NextRequest) {
     // Étape 2: Copier les images vers public/images/packs/
     logger.info('📋 Étape 2: Copie des images...')
     const sourceDir = path.join('C:', 'Users', 'hassa', 'Desktop', 'pack inoxya')
-    const imagePaths: string[] = []
-    
-    for (const pack of OFFICIAL_PACKS) {
-      try {
-        // Gérer les noms de fichiers avec espaces
-        const sourceFileName = pack.main_image.trim()
-        const sourcePath = path.join(sourceDir, sourceFileName)
-        
-        // Vérifier que le fichier existe
-        await fs.access(sourcePath)
-        
-        // Générer un nom de fichier unique basé sur le slug
-        const slug = generateSlug(pack.name)
-        const ext = path.extname(sourceFileName) || '.jpg'
-        const targetFileName = `${slug}${ext}`
-        
-        // Copier l'image
-        const imageUrl = await copyImageToPublic(sourcePath, targetFileName)
-        imagePaths.push(imageUrl)
-        logger.info(`✅ Image copiée pour ${pack.name}: ${targetFileName}`)
-      } catch (error) {
-        logger.warn(`⚠️ Image non trouvée pour ${pack.name}: ${pack.main_image}`, { error: error instanceof Error ? error.message : String(error) })
-        // Utiliser un placeholder si l'image n'existe pas
-        imagePaths.push('/images/placeholder-pack.jpg')
-      }
-    }
-    
+    const imagePaths = await Promise.all(
+      OFFICIAL_PACKS.map(async (pack) => {
+        try {
+          const sourceFileName = pack.main_image.trim()
+          const sourcePath = path.join(sourceDir, sourceFileName)
+          await fs.access(sourcePath)
+          const slug = generateSlug(pack.name)
+          const ext = path.extname(sourceFileName) || '.jpg'
+          const targetFileName = `${slug}${ext}`
+          const imageUrl = await copyImageToPublic(sourcePath, targetFileName)
+          logger.info(`✅ Image copiée pour ${pack.name}: ${targetFileName}`)
+          return imageUrl
+        } catch (error) {
+          logger.warn(`⚠️ Image non trouvée pour ${pack.name}: ${pack.main_image}`, { error: error instanceof Error ? error.message : String(error) })
+          return '/images/placeholder-pack.jpg'
+        }
+      })
+    )
+
     // Étape 3: Insérer les 14 packs officiels
     logger.info('📋 Étape 3: Insertion des 14 packs officiels...')
-    const insertedPacks = []
-    
-    for (let i = 0; i < OFFICIAL_PACKS.length; i++) {
-      const packData = OFFICIAL_PACKS[i]
-      if (!packData) continue // Sécurité TypeScript
-      
-      const imageUrl = imagePaths[i] || ''
-      
-      try {
-        const slug = generateSlug(packData.name)
-        
-        // Créer le pack avec price = current_price
-        // Note: original_price sera géré via updatePack si la table le supporte
-        const newPackId = await createPack({
-          name: packData.name,
-          slug: slug,
-          description: `Pack officiel INOXYA - ${packData.name}. Prix original: ${packData.original_price} MAD, Prix actuel: ${packData.current_price} MAD.`,
-          price: packData.current_price,
-          original_price: packData.original_price,
-          image_url: imageUrl,
-          images: [],
-          category: 'general',
-          tags: [],
-          is_featured: true,
-          is_active: true,
-          stock_quantity: 100,
-          min_items: 1,
-          max_items: 5,
-          discount: { type: 'percentage', value: 0 },
-          composition: [],
-          rating: 4.5,
-          reviews_count: 0
-        })
-        const newPack = newPackId ? { id: newPackId } : null
-        
-        // Si le pack a été créé et qu'on a un original_price différent, essayer de le mettre à jour
-        if (newPack && packData.original_price !== packData.current_price) {
-          try {
-            // Vérifier si la table supporte original_price
-            // Si oui, on peut faire un UPDATE
-            await updatePack(newPack.id, {
-              // On met original_price dans la description si la colonne n'existe pas
-              description: `Pack officiel INOXYA - ${packData.name}. Prix original: ${packData.original_price} MAD, Prix actuel: ${packData.current_price} MAD.`
-            })
-          } catch {
-            // Ignorer si original_price n'est pas supporté
-            logger.debug(`original_price non supporté pour ${packData.name}`)
+    const insertResults = await Promise.all(
+      OFFICIAL_PACKS.map(async (packData, i) => {
+        const imageUrl = imagePaths[i] ?? ''
+        try {
+          const slug = generateSlug(packData.name)
+          const newPackId = await createPack({
+            name: packData.name,
+            slug: slug,
+            description: `Pack officiel INOXYA - ${packData.name}. Prix original: ${packData.original_price} MAD, Prix actuel: ${packData.current_price} MAD.`,
+            price: packData.current_price,
+            original_price: packData.original_price,
+            image_url: imageUrl,
+            images: [],
+            category: 'general',
+            tags: [],
+            is_featured: true,
+            is_active: true,
+            stock_quantity: 100,
+            min_items: 1,
+            max_items: 5,
+            discount: { type: 'percentage', value: 0 },
+            composition: [],
+            rating: 4.5,
+            reviews_count: 0
+          })
+          const newPack = newPackId ? { id: newPackId } : null
+          if (newPack && packData.original_price !== packData.current_price) {
+            try {
+              await updatePack(newPack.id, {
+                description: `Pack officiel INOXYA - ${packData.name}. Prix original: ${packData.original_price} MAD, Prix actuel: ${packData.current_price} MAD.`
+              })
+            } catch {
+              logger.debug(`original_price non supporté pour ${packData.name}`)
+            }
           }
-        }
-        
-        if (newPack && newPack.id) {
-          insertedPacks.push({ id: newPack.id, name: packData.name })
-          logger.info(`✅ Pack créé avec succès: ${packData.name} (ID: ${newPack.id})`)
-        } else {
+          if (newPack?.id) {
+            logger.info(`✅ Pack créé avec succès: ${packData.name} (ID: ${newPack.id})`)
+            return { id: newPack.id, name: packData.name }
+          }
           logger.error(`❌ Échec de création du pack: ${packData.name}`)
+          return null
+        } catch (error) {
+          logger.error(`❌ Erreur lors de la création du pack ${packData.name}:`, error)
+          return null
         }
-      } catch (error) {
-        logger.error(`❌ Erreur lors de la création du pack ${packData.name}:`, error)
-      }
-    }
+      })
+    )
+    const insertedPacks = insertResults.filter((p): p is { id: string; name: string } => p !== null)
     
       logger.info(`✅ Initialisation terminée: ${insertedPacks.length} pack(s) créé(s)`)
       

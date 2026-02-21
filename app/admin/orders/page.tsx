@@ -88,13 +88,13 @@ export default function AdminOrdersPage() {
       
       if (!res.ok) {
         let errorMessage = 'Mise à jour échouée'
-        let errorData: any = null
+        let errorData: { error?: string; message?: string; details?: string | string[] } | null = null
         
         try {
           const text = await res.text()
           console.log('[updateStatus] Réponse texte:', text)
           if (text) {
-            errorData = JSON.parse(text)
+            errorData = JSON.parse(text) as { error?: string; message?: string; details?: string | string[] }
             errorMessage = errorData?.error || errorData?.message || `Erreur ${res.status}: ${res.statusText}`
           }
         } catch (parseError) {

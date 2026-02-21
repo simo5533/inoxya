@@ -29,6 +29,7 @@ interface PackVerification {
   }
   imageExists: boolean
   imagePath?: string
+  imagePathType?: 'web' | 'relative' | 'local'
   imageError?: string
   isValid: boolean
 }
@@ -205,12 +206,16 @@ export default function VerifyPacksPage() {
                       <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                         {verification.imageExists && verification.pack.image_url ? (
                           <Image
-                            src={verification.pack.image_url}
+                            src={
+                              verification.imagePathType === 'local'
+                                ? `/api/admin/serve-local-image?path=${encodeURIComponent(verification.pack.image_url)}`
+                                : verification.pack.image_url
+                            }
                             alt={verification.pack.name}
                             fill
                             className="object-cover"
+                            unoptimized={verification.imagePathType === 'local'}
                             onError={(e) => {
-                              // Si l'image ne charge pas, afficher un placeholder
                               e.currentTarget.src = '/images/placeholder-pack.jpg'
                             }}
                           />

@@ -3,6 +3,8 @@ import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { initializeDatabase, execute } from '@/lib/sqlite'
 import { logger } from '@/lib/logger'
+import { requireCSRF } from '@/lib/security'
+import { requireAdminApi } from '@/lib/admin-auth'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -27,24 +29,35 @@ function detectCategory(name: string): string {
   return 'Bagues'
 }
 
-export async function POST(_request: NextRequest) {
-  // TIMEOUT: Route longue, timeout de 60 secondes
-  const timeoutMs = 60000 // 60 secondes
-  const timeoutPromise = new Promise<NextResponse>((resolve) => {
-    setTimeout(() => {
-      logger.error('[POST /api/admin/import-products] Timeout après 60 secondes')
-      resolve(NextResponse.json(
-        { error: 'Import timeout: opération trop longue. Veuillez réessayer avec moins de fichiers.' },
-        { status: 504 }
-      ))
-    }, timeoutMs)
-  })
+export async function POST(request: NextRequest) {
+  try {
+    // SÉCURITÉ: Validation CSRF
+    const csrfCheck = await requireCSRF(request)
+    if (!csrfCheck.valid) {
+      return csrfCheck.error
+    }
 
-  const importPromise = (async () => {
-    try {
-      logger.info('[POST /api/admin/import-products] Début de l\'import')
-      // Initialiser la base de données
-      initializeDatabase()
+    // SÉCURITÉ: Vérifier les permissions admin
+    const auth = await requireAdminApi()
+    if ('error' in auth) return auth.error
+
+    // TIMEOUT: Route longue, timeout de 60 secondes
+    const timeoutMs = 60000 // 60 secondes
+    const timeoutPromise = new Promise<NextResponse>((resolve) => {
+      setTimeout(() => {
+        logger.error('[POST /api/admin/import-products] Timeout après 60 secondes')
+        resolve(NextResponse.json(
+          { error: 'Import timeout: opération trop longue. Veuillez réessayer avec moins de fichiers.' },
+          { status: 504 }
+        ))
+      }, timeoutMs)
+    })
+
+    const importPromise = (async () => {
+      try {
+        logger.info('[POST /api/admin/import-products] Début de l\'import')
+        // Initialiser la base de données
+        initializeDatabase()
 
     // Scanner les produits
     if (!existsSync(productsDir)) {
@@ -74,7 +87,9 @@ export async function POST(_request: NextRequest) {
         })
       }
 
-      const product = productsMap.get(baseName)!
+      const product = productsMap.get(baseName)
+      if (!product) return
+      
       if (type === 'main') {
         product.main = imagePath
       } else if (type.startsWith('secondary')) {
@@ -117,7 +132,7 @@ export async function POST(_request: NextRequest) {
         ])
 
         added++
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Erreur pour ${product.name}:`, error)
         errors++
       }
@@ -155,7 +170,7 @@ export async function POST(_request: NextRequest) {
                 new Date().toISOString()
               ])
               packsAdded++
-            } catch (error: any) {
+            } catch (error: unknown) {
               console.error(`Erreur pour pack ${name}:`, error)
             }
           }
@@ -185,7 +200,7 @@ export async function POST(_request: NextRequest) {
                 new Date().toISOString()
               ])
               packsAdded++
-            } catch (error: any) {
+            } catch (error: unknown) {
               console.error(`Erreur pour pack ${name}:`, error)
             }
           }
@@ -200,7 +215,7 @@ export async function POST(_request: NextRequest) {
         products: { added, errors, total: products.length },
         packs: { added: packsAdded }
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('[POST /api/admin/import-products] Erreur lors de l\'import:', error)
       return NextResponse.json(
         { error: 'Erreur lors de l\'import', details: error instanceof Error ? error.message : String(error) },
@@ -209,7 +224,14 @@ export async function POST(_request: NextRequest) {
     }
   })()
 
-  // Race entre l'import et le timeout
-  return Promise.race([importPromise, timeoutPromise])
+    // Race entre l'import et le timeout
+    return await Promise.race([importPromise, timeoutPromise])
+  } catch (error) {
+    logger.error('[POST /api/admin/import-products] Erreur:', error)
+    return NextResponse.json(
+      { error: 'Erreur lors de l\'import' },
+      { status: 500 }
+    )
+  }
 }
 

@@ -14,6 +14,7 @@
   },
   "header": {
     "freeShipping": "Livraison gratuite dès 200 MAD • Bijoux en acier inoxydable • Retour gratuit 30 jours",
+    "searchPlaceholder": "Rechercher un produit...",
     "navigation": {
       "jewelry": "Bijoux",
       "collections": "Collections",
@@ -147,6 +148,10 @@
     "shippingInfo": "Informations de livraison",
     "paymentMethod": "Méthode de paiement",
     "placeOrder": "Passer la commande",
+    "orderConfirmed": "Commande confirmée !",
+    "orderNumber": "Numéro de commande",
+    "contactWithin24h": "Nous vous contacterons sous 24 h pour confirmer votre commande.",
+    "backToHome": "Retour à l'accueil",
     "city": "Ville",
     "selectCity": "Sélectionnez votre ville",
     "address": "Adresse",
@@ -173,6 +178,7 @@
     "active": "Actif",
     "clearFilter": "Effacer le filtre",
     "allProducts": "Tous les produits",
+    "searchResultsFor": "Résultats pour « {query} »",
     "noProducts": "Aucun bijou disponible pour le moment",
     "noCategoryProducts": "Aucun bijou dans cette catégorie",
     "noCategoryProductsDesc": "Découvrez nos autres catégories de bijoux.",

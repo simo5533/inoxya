@@ -6,8 +6,6 @@ import { getAllPacks } from '@/lib/database'
 import { logger } from '@/lib/logger'
 import { sanitizeInput, requireCSRF } from '@/lib/security'
 import { getCurrentUser } from '@/lib/auth'
-import { getBetterSqlite3Db } from '@/lib/sqlite'
-import { getSqlJsDb } from '@/lib/sqljs-singleton'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -23,43 +21,29 @@ export async function GET(request: NextRequest) {
     const featured = searchParams.get('featured')
     const search = searchParams.get('search')
 
-    let packs: any[] = []
+    let packs: Array<{
+      id: string | number
+      name: string
+      slug?: string
+      description?: string
+      price: number
+      original_price?: number
+      image_url?: string
+      is_featured?: boolean
+      [key: string]: unknown
+    }> = []
     
-    // PHASE B: FORCER la connexion DB avec singleton
-    const betterSqlite3Db = getBetterSqlite3Db()
-    let isConnected = !!betterSqlite3Db
-    
-    // Si better-sqlite3 n'est pas disponible, utiliser sql.js singleton
-    if (!isConnected) {
-      try {
-        await getSqlJsDb()
-        isConnected = true
-      } catch (e) {
-        logger.error('[GET /api/packs] Erreur sql.js:', e instanceof Error ? e.message : String(e))
-        isConnected = false
-      }
-    }
-    
-    // Essayer de récupérer depuis la DB si disponible
+    // PRIORITÉ: Utiliser getAllPacks() qui utilise automatiquement l'adapter Supabase/Postgres/SQLite
+    let dbWasAccessible = false
     try {
-      if (isConnected) {
-        packs = await getAllPacks()
-      }
+      packs = await getAllPacks()
+      dbWasAccessible = true
+      logger.info(`[GET /api/packs] ${packs.length} pack(s) récupéré(s) via adapter`)
     } catch (dbError) {
       const errorDetails = dbError instanceof Error ? dbError.message : String(dbError)
       logger.error('[GET /api/packs] Erreur DB:', { error: errorDetails })
-      isConnected = false
+      dbWasAccessible = false
     }
-    
-    // FALLBACK: UNIQUEMENT si explicitement activé via ENABLE_FALLBACK=1
-    // En production, fallback JAMAIS activé (même avec ENABLE_FALLBACK=1)
-    const dbWasAccessible = isConnected
-    const isProduction = process.env['NODE_ENV'] === 'production'
-    const enableFallback = process.env['ENABLE_FALLBACK'] === '1'
-    
-    // PHASE C: Stopper les fallbacks silencieux
-    // Production: DB KO → 503 (jamais [])
-    // Dev: DB KO → 503 (sauf si ENABLE_FALLBACK=1 explicite)
     
     // Si DB n'était PAS accessible, on doit retourner 503
     if (!dbWasAccessible) {
@@ -73,20 +57,21 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // PROTECTION PRODUCTION: Vérification explicite pour garantir qu'aucun fallback ne s'exécute en production
-    if (isProduction) {
-      logger.info(`[GET /api/packs] Production mode: fallback désactivé (${packs.length} pack(s) depuis DB)`)
-      if (packs.length === 0) {
-        logger.warn(`[GET /api/packs] Production: Base de données vide (mais accessible)`)
-        // En production, DB vide mais accessible = retourner [] (pas d'erreur 503)
-        // C'est normal si la DB vient d'être créée et n'a pas encore de packs
-      }
+    // Si aucun pack trouvé mais DB accessible, logger pour diagnostic
+    if (packs.length === 0) {
+      logger.warn(`[GET /api/packs] Base de données accessible mais aucun pack trouvé`)
+      // Retourner un tableau vide plutôt qu'une erreur
+      // La page affichera "Aucun pack disponible"
+    } else {
+      logger.info(`[GET /api/packs] ${packs.length} pack(s) récupéré(s)`)
     }
     
     // Fallback activé UNIQUEMENT si:
     // - ENABLE_FALLBACK=1 (explicite)
     // - ET pas en production (vérification redondante pour sécurité)
     // - ET DB était accessible mais vide (pas si DB inaccessible)
+    const isProduction = process.env['NODE_ENV'] === 'production'
+    const enableFallback = process.env['ENABLE_FALLBACK'] === '1'
     if ((!packs || packs.length === 0) && enableFallback && !isProduction && dbWasAccessible) {
       logger.info(`📦 Base de données vide, utilisation du fallback depuis les images`)
       const { getFallbackPacks } = await import('@/lib/fallback-packs')
@@ -126,27 +111,30 @@ export async function GET(request: NextRequest) {
     }
     
     // Transformer les packs pour correspondre au format attendu
-    packs = packs.map(pack => {
+    const transformedPacks = packs.map(pack => {
       // Extraire original_price depuis la description si présent
       let original_price: number | undefined = undefined
-      if (pack.description) {
-        const originalPriceMatch = pack.description.match(/Prix original: (\d+)/)
-        if (originalPriceMatch) {
+      const packDescription = pack.description || ''
+      if (packDescription) {
+        const originalPriceMatch = packDescription.match(/Prix original: (\d+)/)
+        if (originalPriceMatch && originalPriceMatch[1]) {
           original_price = parseFloat(originalPriceMatch[1])
         }
       }
       
+      const composition = (pack as { composition?: unknown[] })['composition']
+      const itemsCount = Array.isArray(composition) && composition.length > 0 ? composition.length : 1
       return {
         id: pack.id,
         name: pack.name,
-        slug: pack.slug,
-        description: pack.description || '',
+        slug: pack.slug || pack.name.toLowerCase().replace(/\s+/g, '-'),
+        description: packDescription,
         price: pack.price,
         original_price: original_price,
         image_url: pack.image_url || '/placeholder.svg',
         images: [],
         category: 'general',
-        tags: [],
+        tags: [] as string[],
         is_featured: pack.is_featured || false,
         is_active: true,
         stock_quantity: 100,
@@ -156,33 +144,38 @@ export async function GET(request: NextRequest) {
           type: 'percentage',
           value: 0
         },
-        composition: [],
+        composition: composition || [],
+        items_count: itemsCount,
         rating: 4.5,
         reviews_count: 0,
-        created_at: pack.created_at,
-        updated_at: pack.created_at
+        created_at: (pack as { created_at?: string })['created_at'] || new Date().toISOString(),
+        updated_at: (pack as { created_at?: string })['created_at'] || new Date().toISOString()
       }
     })
 
     // Filtrer par catégorie
+    let filteredPacks = transformedPacks
     if (category && category !== 'all') {
-      packs = packs.filter(pack => pack.category === category)
+      filteredPacks = filteredPacks.filter(pack => (pack as { category?: string })['category'] === category)
     }
 
     // Filtrer les packs vedettes
     if (featured === 'true') {
-      packs = packs.filter(pack => pack.is_featured)
+      filteredPacks = filteredPacks.filter(pack => pack.is_featured)
     }
 
     // Recherche
     if (search) {
       const searchTerm = search.toLowerCase()
-      packs = packs.filter(pack => 
-        pack.name.toLowerCase().includes(searchTerm) ||
-        pack.description.toLowerCase().includes(searchTerm) ||
-        pack.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm))
-      )
+      filteredPacks = filteredPacks.filter(pack => {
+        const packDesc = pack.description || ''
+        return pack.name.toLowerCase().includes(searchTerm) ||
+          packDesc.toLowerCase().includes(searchTerm) ||
+          (pack.tags as string[]).some((tag: string) => tag.toLowerCase().includes(searchTerm))
+      })
     }
+    
+    packs = filteredPacks
 
     // PHASE D: Headers pour éviter le cache
     return NextResponse.json(packs, {
@@ -221,58 +214,44 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json()
     
-    // SÉCURITÉ: Validation des données requises
-    if (!body.name || !body.slug || !body.price) {
+    // SÉCURITÉ: Validation avec Zod
+    const { createPackSchema, validateWithSchema } = await import('@/lib/validations')
+    const validation = validateWithSchema(createPackSchema, body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Nom, slug et prix sont requis' },
+        { error: 'Données invalides', details: validation.errors },
         { status: 400 }
       )
     }
+    
+    const validatedData = validation.data
 
-    // SÉCURITÉ: Sanitization des entrées utilisateur
-    const sanitizedName = sanitizeInput(body.name)
-    const sanitizedSlug = sanitizeInput(body.slug)
-    const sanitizedDescription = body.description ? sanitizeInput(body.description) : ''
-    const sanitizedCategory = body.category ? sanitizeInput(body.category) : 'general'
+    // SÉCURITÉ: Sanitization des entrées utilisateur (après validation Zod)
+    const sanitizedName = sanitizeInput(validatedData.name)
+    const sanitizedSlug = sanitizeInput(validatedData.slug)
+    const sanitizedDescription = validatedData.description ? sanitizeInput(validatedData.description) : ''
+    const sanitizedCategory = 'general' // Par défaut pour les packs
 
-    // SÉCURITÉ: Validation des types et valeurs
-    const priceNum = parseFloat(body.price)
-    if (isNaN(priceNum) || priceNum <= 0) {
-      return NextResponse.json(
-        { error: 'Le prix doit être un nombre supérieur à 0' },
-        { status: 400 }
-      )
-    }
-
-    const originalPriceNum = body.original_price ? parseFloat(body.original_price) : undefined
-    if (originalPriceNum && (isNaN(originalPriceNum) || originalPriceNum <= 0 || originalPriceNum <= priceNum)) {
-      return NextResponse.json(
-        { error: 'Le prix original doit être supérieur au prix actuel' },
-        { status: 400 }
-      )
-    }
-
-    // Préparer les données du pack avec données sanitizées
+    // Préparer les données du pack avec données sanitizées (utiliser validatedData)
     const packData = {
       name: sanitizedName,
       slug: sanitizedSlug,
       description: sanitizedDescription,
-      price: priceNum,
-      original_price: originalPriceNum,
-      image_url: body.image_url || '',
-      images: Array.isArray(body.images) ? body.images : [],
+      price: validatedData.price,
+      image_url: validatedData.image_url,
+      images: Array.isArray(validatedData.composition) ? validatedData.composition.map(() => '') : [],
       category: sanitizedCategory,
-      tags: Array.isArray(body.tags) ? body.tags : [],
-      is_featured: Boolean(body.is_featured),
-      is_active: Boolean(body.is_active),
-      stock_quantity: parseInt(body.stock_quantity) || 100,
-      min_items: parseInt(body.min_items) || 1,
-      max_items: parseInt(body.max_items) || 5,
+      tags: [],
+      is_featured: validatedData.is_featured || false,
+      is_active: true,
+      stock_quantity: 100,
+      min_items: 1,
+      max_items: 5,
       discount: {
-        type: body.discount_type || 'percentage',
-        value: parseFloat(body.discount_value) || 0
+        type: 'percentage' as const,
+        value: 0
       },
-      composition: Array.isArray(body.composition) ? body.composition : [],
+      composition: [],
       rating: 4.5,
       reviews_count: 0
     }

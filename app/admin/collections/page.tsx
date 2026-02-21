@@ -63,11 +63,33 @@ export default function NouvelleCollectionPage() {
       return
     }
 
+    // Accepter : URL web, chemin relatif Next.js, ou chemin local (C:\, /Users/, etc.)
+    const imageUrl = formData.image_url.trim()
+    const isWebUrl = imageUrl.startsWith('http://') || imageUrl.startsWith('https://')
+    const isRelativePath = imageUrl.startsWith('/images/') || (imageUrl.startsWith('/') && !imageUrl.startsWith('//'))
+    const isLocalPath = imageUrl.includes('\\') || /^[A-Z]:\\/i.test(imageUrl) || imageUrl.startsWith('/home/') || imageUrl.startsWith('/Users/')
+    if (!isWebUrl && !isRelativePath && !isLocalPath) {
+      setErrors(prev => ({ ...prev, image_url: "Format invalide. Indiquez une URL web (https://...), un chemin relatif (/images/...) ou un chemin local (C:\\...)." }))
+      return
+    }
+
     setLoading(true)
     try {
+      // Récupérer le token CSRF
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) {
+        throw new Error('Impossible de récupérer le token CSRF')
+      }
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+
       const response = await fetch('/api/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include',
         body: JSON.stringify({
           name: formData.name,
           name_ar: formData.name_ar || null,
@@ -77,9 +99,11 @@ export default function NouvelleCollectionPage() {
           category: 'Bagues',
           stock: 1,
           is_active: true,
-          main_image: formData.image_url,
-          image_url: formData.image_url,
-          images: []
+          is_featured: formData.is_featured,
+          main_image: imageUrl,
+          image_url: imageUrl,
+          images: [],
+          create_pack: true
         })
       })
 
@@ -203,7 +227,7 @@ export default function NouvelleCollectionPage() {
                   id="image_url"
                   value={formData['image_url']}
                   onChange={(e) => handleInputChange("image_url", e.target.value)}
-                  placeholder="https://images.unsplash.com/photo-... ou /images/collections/image.jpg"
+                  placeholder="URL (https://...), chemin relatif (/images/...) ou chemin local (C:\...)"
                   className={errors['image_url'] ? "border-red-500" : ""}
                 />
                 {errors['image_url'] && <p className="text-sm text-red-500 mt-1">{errors['image_url']}</p>}

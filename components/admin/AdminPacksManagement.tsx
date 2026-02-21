@@ -78,6 +78,23 @@ export default function AdminPacksManagement() {
     }).format(amount)
   }
 
+  /** next/image n'accepte que / ou http(s). Pour un chemin local (C:\...), on utilise l'API de service ou un placeholder. */
+  const getSafeImageSrc = (url: string | undefined): string => {
+    if (!url || !url.trim()) return '/placeholder.svg'
+    const u = url.trim().replace(/^"|"$/g, '')
+    if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/')) return u
+    if (/^[A-Za-z]:\\/i.test(u) || u.includes('\\') || u.startsWith('/Users/') || u.startsWith('/home/')) {
+      return `/api/admin/serve-local-image?path=${encodeURIComponent(u)}`
+    }
+    return '/placeholder.svg'
+  }
+
+  const isLocalImageSrc = (url: string | undefined): boolean => {
+    if (!url || !url.trim()) return false
+    const u = url.trim().replace(/^"|"$/g, '')
+    return /^[A-Za-z]:\\/i.test(u) || u.includes('\\') || u.startsWith('/Users/') || u.startsWith('/home/')
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -131,6 +148,15 @@ export default function AdminPacksManagement() {
     setUploadingImage(true)
     setUploadError(null)
     try {
+      const csrfRes = await fetch("/api/csrf-token", { credentials: "include" })
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {}
+      const csrfToken = csrfData.csrfToken ?? ""
+      if (!csrfToken) {
+        setUploadError("Token CSRF invalide ou manquant")
+        setUploadingImage(false)
+        return
+      }
+
       const formDataUpload = new FormData()
       formDataUpload.append("file", file)
       formDataUpload.append("productName", productName)
@@ -139,6 +165,8 @@ export default function AdminPacksManagement() {
 
       const res = await fetch("/api/upload/product-image", {
         method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        credentials: "include",
         body: formDataUpload
       })
 
@@ -258,13 +286,16 @@ export default function AdminPacksManagement() {
           router.push('/profile')
           return
         }
-        throw new Error('Erreur lors de la suppression')
+        const errBody = await res.json().catch(() => ({}))
+        const message = (errBody as { error?: string }).error || `Erreur ${res.status}`
+        alert(message)
+        return
       }
 
       await fetchPacks()
     } catch (error) {
       logger.error("Erreur lors de la suppression:", error)
-      alert("Erreur lors de la suppression du pack")
+      alert(error instanceof Error ? error.message : "Erreur lors de la suppression du pack")
     }
   }
 
@@ -432,11 +463,12 @@ export default function AdminPacksManagement() {
                       {formData.image_url && (
                         <div className="mt-2 flex items-center gap-3">
                           <Image
-                            src={formData.image_url}
+                            src={getSafeImageSrc(formData.image_url)}
                             alt="Aperçu"
                             width={56}
                             height={56}
                             className="h-14 w-14 object-cover rounded border"
+                            unoptimized={isLocalImageSrc(formData.image_url)}
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
                           />
                           <p className="text-xs text-gray-500 truncate flex-1" title={formData.image_url}>
@@ -509,14 +541,13 @@ export default function AdminPacksManagement() {
               {pack.image_url ? (
                 <div className="aspect-video bg-gray-200 relative">
                   <Image
-                    src={pack.image_url}
+                    src={getSafeImageSrc(pack.image_url)}
                     alt={pack.name || 'Pack'}
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    onError={() => {
-                      // Gestion d'erreur gérée par Next.js Image
-                    }}
+                    unoptimized={isLocalImageSrc(pack.image_url)}
+                    onError={() => {}}
                   />
                   {pack.is_featured && (
                     <Badge className="absolute top-2 right-2 bg-orange-600">

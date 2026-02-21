@@ -7,13 +7,177 @@ import * as fs from 'fs'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Types pour l'analyse de la base de données
+interface DatabaseAnalysis {
+  timestamp: string
+  connection: {
+    status: boolean
+    method: string | null
+    error: string | null
+  }
+  database: {
+    path: string | null
+    exists: boolean
+    size: number
+  }
+  tables: {
+    list: string[]
+    structure: Record<string, Array<{
+      cid: number
+      name: string
+      type: string
+      notnull: number
+      dflt_value: unknown
+      pk: number
+    }>>
+    counts: Record<string, number>
+    problems: Array<{
+      table?: string
+      error: string
+    }>
+  }
+  products: {
+    total: number
+    active: number
+    inactive: number
+    list: Array<{
+      id: number | string
+      name: string
+      name_ar?: string | null
+      price: number
+      original_price?: number | null
+      category: string
+      stock: number
+      is_active: boolean
+      is_featured: boolean
+      image_url?: string | null
+      has_images: boolean
+      created_at?: string | null
+      created_by?: string | null
+    }>
+    problems: Array<{
+      product_id?: number | string
+      name?: string
+      problems?: string[]
+      error?: string
+    }>
+  }
+  packs: {
+    total: number
+    list: Array<{
+      id: number | string
+      name: string
+      slug: string
+      price: number
+      image_url?: string | null
+      is_featured: boolean
+      created_at?: string | null
+    }>
+    problems: Array<{
+      pack_id?: number | string
+      name?: string
+      problems?: string[]
+      error?: string
+    }>
+  }
+  categories: {
+    total: number
+    list: Array<{
+      id: number | string
+      name: string
+      slug: string
+      description?: string | null
+      image_url?: string | null
+    }>
+    problems: Array<{
+      category_id?: number | string
+      name?: string
+      problems?: string[]
+      error?: string
+    }>
+  }
+  integrity: {
+    foreignKeys: unknown[]
+    orphaned: Array<{
+      type: string
+      count: number
+      items: Array<{
+        id: number | string
+        name: string
+        category?: string
+      }>
+    }>
+    duplicates: Array<{
+      type: string
+      items: Array<{
+        slug: string
+        count: number
+      }>
+    }>
+  }
+  recommendations: string[]
+}
+
+interface TableRow {
+  name: string
+}
+
+interface ProductRow {
+  id: number | string
+  name: string
+  name_ar?: string | null
+  description?: string | null
+  price: number
+  original_price?: number | null
+  category?: string | null
+  stock?: number | null
+  is_active?: number | boolean
+  is_featured?: number | boolean
+  image_url?: string | null
+  images?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  created_by?: string | null
+}
+
+interface PackRow {
+  id: number | string
+  name: string
+  slug: string
+  description?: string | null
+  price: number
+  image_url?: string | null
+  is_featured?: number | boolean
+  created_at?: string | null
+}
+
+interface CategoryRow {
+  id: number | string
+  name: string
+  slug: string
+  description?: string | null
+  image_url?: string | null
+  created_at?: string | null
+}
+
+interface OrphanedProductRow {
+  id: number | string
+  name: string
+  category?: string | null
+}
+
+interface DuplicateSlugRow {
+  slug: string
+  count: number
+}
+
 /**
  * Analyse approfondie de la base de données SQLite
  * Détecte tous les problèmes et affiche les produits réels
  */
 export async function GET(_request: NextRequest) {
   try {
-    const analysis: any = {
+    const analysis: DatabaseAnalysis = {
       timestamp: new Date().toISOString(),
       connection: { status: false, method: null, error: null },
       database: { path: null, exists: false, size: 0 },
@@ -39,7 +203,9 @@ export async function GET(_request: NextRequest) {
     }
 
     // 2. Tester la connexion
-    let db: any = null
+    // Type union pour better-sqlite3 Database ou sql.js Database
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let db: any = null // better-sqlite3 Database ou sql.js Database - types incompatibles
     let useSqlJs = false
 
     // Essayer better-sqlite3 d'abord
@@ -61,11 +227,21 @@ export async function GET(_request: NextRequest) {
       try {
         const sqlJsDb = await getSqlJsDb()
         db = sqlJsDb.db
-        analysis.connection.status = true
-        analysis.connection.method = 'sql.js'
+        // Utiliser une copie pour éviter les race conditions
+        const updatedAnalysis = {
+          ...analysis,
+          connection: {
+            ...analysis.connection,
+            status: true,
+            method: 'sql.js'
+          }
+        }
+        analysis.connection.status = updatedAnalysis.connection.status
+        analysis.connection.method = updatedAnalysis.connection.method
         useSqlJs = true
       } catch (e) {
-        analysis.connection.error = e instanceof Error ? e.message : String(e)
+        const errorMessage = e instanceof Error ? e.message : String(e)
+        analysis.connection.error = errorMessage
         return NextResponse.json(analysis, { status: 200 })
       }
     }
@@ -81,7 +257,7 @@ export async function GET(_request: NextRequest) {
 
     // 3. Lister toutes les tables
     try {
-      let tablesResult: any[] = []
+      let tablesResult: TableRow[] = []
       
       if (useSqlJs) {
         const result = db.exec(`
@@ -91,7 +267,7 @@ export async function GET(_request: NextRequest) {
           ORDER BY name
         `)
         if (result.length > 0 && result[0].values) {
-          tablesResult = result[0].values.map((row: any[]) => ({ name: row[0] }))
+          tablesResult = (result[0].values as Array<Array<unknown>>).map((row) => ({ name: String(row[0]) }))
         }
       } else {
         tablesResult = db.prepare(`
@@ -99,30 +275,44 @@ export async function GET(_request: NextRequest) {
           FROM sqlite_master 
           WHERE type='table' AND name NOT LIKE 'sqlite_%'
           ORDER BY name
-        `).all() as { name: string }[]
+        `).all() as TableRow[]
       }
 
-      analysis.tables.list = tablesResult.map((t: any) => t.name)
+      analysis.tables.list = tablesResult.map((t) => t.name)
 
       // 4. Analyser la structure de chaque table
       for (const tableName of analysis.tables.list) {
         try {
-          let columnsResult: any[] = []
+          let columnsResult: Array<{
+            cid: number
+            name: string
+            type: string
+            notnull: number
+            dflt_value: unknown
+            pk: number
+          }> = []
           
           if (useSqlJs) {
             const result = db.exec(`PRAGMA table_info(${tableName})`)
             if (result.length > 0 && result[0].values) {
-              columnsResult = result[0].values.map((row: any[]) => ({
-                cid: row[0],
-                name: row[1],
-                type: row[2],
-                notnull: row[3],
+              columnsResult = (result[0].values as Array<Array<unknown>>).map((row) => ({
+                cid: Number(row[0]),
+                name: String(row[1]),
+                type: String(row[2]),
+                notnull: Number(row[3]),
                 dflt_value: row[4],
-                pk: row[5]
+                pk: Number(row[5])
               }))
             }
           } else {
-            columnsResult = db.prepare(`PRAGMA table_info(${tableName})`).all() as any[]
+            columnsResult = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{
+              cid: number
+              name: string
+              type: string
+              notnull: number
+              dflt_value: unknown
+              pk: number
+            }>
           }
 
           analysis.tables.structure[tableName] = columnsResult
@@ -155,7 +345,7 @@ export async function GET(_request: NextRequest) {
 
     // 5. Analyser les PRODUITS en détail
     try {
-      let productsResult: any[] = []
+      let productsResult: ProductRow[] = []
       
       if (useSqlJs) {
         const result = db.exec(`
@@ -166,13 +356,30 @@ export async function GET(_request: NextRequest) {
           ORDER BY id
         `)
         if (result.length > 0 && result[0].values) {
-          const columns = result[0].columns
-          productsResult = result[0].values.map((row: any[]) => {
-            const obj: any = {}
+          const columns = result[0].columns as string[]
+          productsResult = (result[0].values as Array<Array<unknown>>).map((row) => {
+            const obj: Record<string, unknown> = {}
             columns.forEach((col: string, i: number) => {
               obj[col] = row[i]
             })
-            return obj
+            // Conversion sécurisée vers ProductRow
+            return {
+              id: obj['id'] as number | string,
+              name: String(obj['name'] || ''),
+              name_ar: obj['name_ar'] as string | null | undefined,
+              description: obj['description'] as string | null | undefined,
+              price: Number(obj['price'] || 0),
+              original_price: obj['original_price'] as number | null | undefined,
+              category: obj['category'] as string | null | undefined,
+              stock: obj['stock'] as number | null | undefined,
+              is_active: obj['is_active'] as number | boolean | undefined,
+              is_featured: obj['is_featured'] as number | boolean | undefined,
+              image_url: obj['image_url'] as string | null | undefined,
+              images: obj['images'] as string | null | undefined,
+              created_at: obj['created_at'] as string | null | undefined,
+              updated_at: obj['updated_at'] as string | null | undefined,
+              created_by: obj['created_by'] as string | null | undefined
+            } as ProductRow
           })
         }
       } else {
@@ -182,15 +389,15 @@ export async function GET(_request: NextRequest) {
                  created_at, updated_at, created_by
           FROM products
           ORDER BY id
-        `).all() as any[]
+        `).all() as ProductRow[]
       }
 
       analysis.products.total = productsResult.length
-      analysis.products.active = productsResult.filter((p: any) => p.is_active === 1 || p.is_active === true).length
+      analysis.products.active = productsResult.filter((p) => p.is_active === 1 || p.is_active === true).length
       analysis.products.inactive = analysis.products.total - analysis.products.active
 
       // Détecter les problèmes dans les produits
-      productsResult.forEach((product: any) => {
+      productsResult.forEach((product) => {
         const problems: string[] = []
         
         if (!product.name || product.name.trim() === '') {
@@ -222,14 +429,14 @@ export async function GET(_request: NextRequest) {
       })
 
       // Liste complète des produits (limité à 1000 pour éviter les réponses trop lourdes)
-      analysis.products.list = productsResult.slice(0, 1000).map((p: any) => ({
+      analysis.products.list = productsResult.slice(0, 1000).map((p) => ({
         id: p.id,
         name: p.name,
         name_ar: p.name_ar,
         price: p.price,
         original_price: p.original_price,
-        category: p.category,
-        stock: p.stock,
+        category: p.category || '', // Convertir null/undefined en string vide
+        stock: p.stock || 0,
         is_active: Boolean(p.is_active),
         is_featured: Boolean(p.is_featured),
         image_url: p.image_url,
@@ -246,7 +453,7 @@ export async function GET(_request: NextRequest) {
 
     // 6. Analyser les PACKS
     try {
-      let packsResult: any[] = []
+      let packsResult: PackRow[] = []
       
       if (useSqlJs) {
         const result = db.exec(`
@@ -255,13 +462,23 @@ export async function GET(_request: NextRequest) {
           ORDER BY id
         `)
         if (result.length > 0 && result[0].values) {
-          const columns = result[0].columns
-          packsResult = result[0].values.map((row: any[]) => {
-            const obj: any = {}
+          const columns = result[0].columns as string[]
+          packsResult = (result[0].values as Array<Array<unknown>>).map((row) => {
+            const obj: Record<string, unknown> = {}
             columns.forEach((col: string, i: number) => {
               obj[col] = row[i]
             })
-            return obj
+            // Conversion sécurisée vers PackRow
+            return {
+              id: obj['id'] as number | string,
+              name: String(obj['name'] || ''),
+              slug: String(obj['slug'] || ''),
+              description: obj['description'] as string | null | undefined,
+              price: Number(obj['price'] || 0),
+              image_url: obj['image_url'] as string | null | undefined,
+              is_featured: obj['is_featured'] as number | boolean | undefined,
+              created_at: obj['created_at'] as string | null | undefined
+            } as PackRow
           })
         }
       } else {
@@ -269,13 +486,13 @@ export async function GET(_request: NextRequest) {
           SELECT id, name, slug, description, price, image_url, is_featured, created_at
           FROM packs
           ORDER BY id
-        `).all() as any[]
+        `).all() as PackRow[]
       }
 
       analysis.packs.total = packsResult.length
 
       // Détecter les problèmes dans les packs
-      packsResult.forEach((pack: any) => {
+      packsResult.forEach((pack) => {
         const problems: string[] = []
         
         if (!pack.name || pack.name.trim() === '') {
@@ -297,7 +514,7 @@ export async function GET(_request: NextRequest) {
         }
       })
 
-      analysis.packs.list = packsResult.map((p: any) => ({
+      analysis.packs.list = packsResult.map((p) => ({
         id: p.id,
         name: p.name,
         slug: p.slug,
@@ -315,7 +532,7 @@ export async function GET(_request: NextRequest) {
 
     // 7. Analyser les CATÉGORIES
     try {
-      let categoriesResult: any[] = []
+      let categoriesResult: CategoryRow[] = []
       
       if (useSqlJs) {
         const result = db.exec(`
@@ -324,13 +541,21 @@ export async function GET(_request: NextRequest) {
           ORDER BY name
         `)
         if (result.length > 0 && result[0].values) {
-          const columns = result[0].columns
-          categoriesResult = result[0].values.map((row: any[]) => {
-            const obj: any = {}
+          const columns = result[0].columns as string[]
+          categoriesResult = (result[0].values as Array<Array<unknown>>).map((row) => {
+            const obj: Record<string, unknown> = {}
             columns.forEach((col: string, i: number) => {
               obj[col] = row[i]
             })
-            return obj
+            // Conversion sécurisée vers CategoryRow
+            return {
+              id: obj['id'] as number | string,
+              name: String(obj['name'] || ''),
+              slug: String(obj['slug'] || ''),
+              description: obj['description'] as string | null | undefined,
+              image_url: obj['image_url'] as string | null | undefined,
+              created_at: obj['created_at'] as string | null | undefined
+            } as CategoryRow
           })
         }
       } else {
@@ -338,13 +563,13 @@ export async function GET(_request: NextRequest) {
           SELECT id, name, slug, description, image_url, created_at
           FROM categories
           ORDER BY name
-        `).all() as any[]
+        `).all() as CategoryRow[]
       }
 
       analysis.categories.total = categoriesResult.length
 
       // Détecter les problèmes dans les catégories
-      categoriesResult.forEach((cat: any) => {
+      categoriesResult.forEach((cat) => {
         const problems: string[] = []
         
         if (!cat.name || cat.name.trim() === '') {
@@ -363,7 +588,7 @@ export async function GET(_request: NextRequest) {
         }
       })
 
-      analysis.categories.list = categoriesResult.map((c: any) => ({
+      analysis.categories.list = categoriesResult.map((c) => ({
         id: c.id,
         name: c.name,
         slug: c.slug,
@@ -381,7 +606,7 @@ export async function GET(_request: NextRequest) {
     try {
       // Vérifier les produits avec catégories invalides
       if (analysis.tables.list.includes('products') && analysis.tables.list.includes('categories')) {
-        let orphanedProducts: any[] = []
+        let orphanedProducts: OrphanedProductRow[] = []
         
         if (useSqlJs) {
           const result = db.exec(`
@@ -391,13 +616,18 @@ export async function GET(_request: NextRequest) {
             WHERE c.id IS NULL AND p.category IS NOT NULL
           `)
           if (result.length > 0 && result[0].values) {
-            const columns = result[0].columns
-            orphanedProducts = result[0].values.map((row: any[]) => {
-              const obj: any = {}
+            const columns = result[0].columns as string[]
+            orphanedProducts = (result[0].values as Array<Array<unknown>>).map((row) => {
+              const obj: Record<string, unknown> = {}
               columns.forEach((col: string, i: number) => {
                 obj[col] = row[i]
               })
-              return obj
+              // Conversion sécurisée vers OrphanedProductRow
+              return {
+                id: obj['id'] as number | string,
+                name: String(obj['name'] || ''),
+                category: obj['category'] ? String(obj['category']) : undefined // Convertir null en undefined
+              } as OrphanedProductRow
             })
           }
         } else {
@@ -406,21 +636,25 @@ export async function GET(_request: NextRequest) {
             FROM products p
             LEFT JOIN categories c ON p.category = c.name OR p.category = c.slug
             WHERE c.id IS NULL AND p.category IS NOT NULL
-          `).all() as any[]
+          `).all() as OrphanedProductRow[]
         }
 
         if (orphanedProducts.length > 0) {
           analysis.integrity.orphaned.push({
             type: 'products_with_invalid_category',
             count: orphanedProducts.length,
-            items: orphanedProducts.slice(0, 10) // Limiter à 10 exemples
+            items: orphanedProducts.slice(0, 10).map(p => ({
+              id: p.id,
+              name: p.name,
+              category: p.category ?? undefined // Convertir null en undefined
+            }))
           })
         }
       }
 
       // Vérifier les doublons de slugs dans packs
       if (analysis.tables.list.includes('packs')) {
-        let duplicateSlugs: any[] = []
+        let duplicateSlugs: DuplicateSlugRow[] = []
         
         if (useSqlJs) {
           const result = db.exec(`
@@ -430,13 +664,17 @@ export async function GET(_request: NextRequest) {
             HAVING COUNT(*) > 1
           `)
           if (result.length > 0 && result[0].values) {
-            const columns = result[0].columns
-            duplicateSlugs = result[0].values.map((row: any[]) => {
-              const obj: any = {}
+            const columns = result[0].columns as string[]
+            duplicateSlugs = (result[0].values as Array<Array<unknown>>).map((row) => {
+              const obj: Record<string, unknown> = {}
               columns.forEach((col: string, i: number) => {
                 obj[col] = row[i]
               })
-              return obj
+              // Conversion sécurisée vers DuplicateSlugRow
+              return {
+                slug: String(obj['slug'] || ''),
+                count: Number(obj['count'] || 0)
+              } as DuplicateSlugRow
             })
           }
         } else {
@@ -445,7 +683,7 @@ export async function GET(_request: NextRequest) {
             FROM packs
             GROUP BY slug
             HAVING COUNT(*) > 1
-          `).all() as any[]
+          `).all() as DuplicateSlugRow[]
         }
 
         if (duplicateSlugs.length > 0) {

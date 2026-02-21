@@ -14,9 +14,6 @@ import { logger } from "@/lib/logger"
 import { addToFavorites as addToFavoritesLib } from "@/lib/cart-favorites"
 import { useTranslations, useLocale } from 'next-intl'
 
-// Force dynamic rendering to avoid build-time errors
-export const dynamic = 'force-dynamic'
-
 interface Pack {
   id: string
   name: string

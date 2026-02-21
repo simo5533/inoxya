@@ -1,9 +1,6 @@
 "use client"
 
-import { useState, useEffect, type FormEvent, type ChangeEvent } from "react"
-
-// Force dynamic rendering to avoid build-time errors
-export const dynamic = 'force-dynamic'
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,8 +12,32 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Save, Upload, Edit, X, Trash2 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { logger } from "@/lib/logger"
 import type { Product } from "@/lib/types"
+
+function getSafeImageSrc(url: string | undefined): string {
+  if (!url || !url.trim()) return '/placeholder.svg'
+  const u = url.trim().replace(/^"|"$/g, '')
+  if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/')) return u
+  if (/^[A-Za-z]:\\/i.test(u) || u.includes('\\') || u.startsWith('/Users/') || u.startsWith('/home/')) {
+    return `/api/admin/serve-local-image?path=${encodeURIComponent(u)}`
+  }
+  return '/placeholder.svg'
+}
+
+function isLocalImageSrc(url: string | undefined): boolean {
+  if (!url || !url.trim()) return false
+  const u = url.trim().replace(/^"|"$/g, '')
+  return /^[A-Za-z]:\\/i.test(u) || u.includes('\\') || u.startsWith('/Users/') || u.startsWith('/home/')
+}
+
+/** Utiliser unoptimized pour chemins locaux ou URLs API (éviter échec optimiseur Next) */
+function shouldUnoptimizePreview(url: string | undefined): boolean {
+  if (!url || !url.trim()) return false
+  const u = url.trim().replace(/^"|"$/g, '')
+  return isLocalImageSrc(url) || u.startsWith('/api/admin/serve-local-image')
+}
 
 interface ProductFormData {
   name: string
@@ -75,8 +96,10 @@ export default function ModifierProduitPage() {
   
   const [loading, setLoading] = useState(false)
   const [loadingProduct, setLoadingProduct] = useState(true)
+  const [uploadImageLoading, setUploadImageLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [product, setProduct] = useState<Product | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Charger le produit depuis l'API
   useEffect(() => {
@@ -141,6 +164,41 @@ export default function ModifierProduitPage() {
     }
   }
 
+  const handleImageFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith('image/')) return
+    e.target.value = ''
+    setUploadImageLoading(true)
+    setErrors((prev) => ({ ...prev, image_url: '' }))
+    try {
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) throw new Error('Token CSRF indisponible')
+      const { csrfToken } = await csrfRes.json()
+      const form = new FormData()
+      form.append('image', file)
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': csrfToken || '' },
+        body: form,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        handleInputChange('image_url', '')
+        setErrors((prev) => ({ ...prev, image_url: data.error || "Échec de l'upload" }))
+        return
+      }
+      if (data.url) {
+        handleInputChange('image_url', data.url)
+      }
+    } catch (err) {
+      handleInputChange('image_url', '')
+      setErrors((prev) => ({ ...prev, image_url: err instanceof Error ? err.message : "Erreur lors de l'upload" }))
+    } finally {
+      setUploadImageLoading(false)
+    }
+  }
+
   const handleTagToggle = (tag: string) => {
     const newTags = formData.images.includes(tag)
       ? formData.images.filter((t: string) => t !== tag)
@@ -169,9 +227,11 @@ export default function ModifierProduitPage() {
     }
 
     setLoading(true)
+    setErrors((prev) => ({ ...prev, submit: '' }))
     try {
-      // Récupérer le token CSRF
-      const csrfRes = await fetch('/api/csrf-token')
+      // Récupérer le token CSRF (credentials pour envoi des cookies de session)
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) throw new Error('Impossible de récupérer le token CSRF')
       const csrfData = await csrfRes.json()
       const csrfToken = csrfData.csrfToken
 
@@ -194,22 +254,27 @@ export default function ModifierProduitPage() {
         .filter(img => img && img.trim() !== '' && img.startsWith('http'))
       
       // Préparer les données du produit
-      // IMPORTANT: image_url doit être une URL valide ou null (pas une chaîne vide)
-      const imageUrl = formData.image_url && formData.image_url.trim() !== '' 
-        ? formData.image_url.trim() 
+      // Accepter URL complète, chemin relatif ou chemin local (Windows/Unix)
+      const rawImage = formData.image_url && formData.image_url.trim() !== '' 
+        ? formData.image_url.trim().replace(/^["']|["']$/g, '') 
         : null
       
-      // Validation: au moins une image principale est requise pour la modification
-      if (!imageUrl) {
-        throw new Error("Une image principale est requise. Veuillez télécharger ou fournir une URL d'image.")
+      if (!rawImage) {
+        throw new Error("Une image principale est requise. Veuillez télécharger ou fournir une URL ou un chemin d'image.")
       }
       
-      // Validation: l'URL doit être valide
-      try {
-        new URL(imageUrl)
-      } catch {
-        throw new Error("L'URL de l'image principale n'est pas valide. Veuillez fournir une URL complète (ex: https://...).")
+      // Validation: accepter URL (http/https), chemin relatif (/...) ou chemin local (C:\, /Users/, /home/)
+      const isHttpUrl = /^https?:\/\//i.test(rawImage)
+      const isRelativePath = rawImage.startsWith('/')
+      const isLocalPath = /^[A-Za-z]:[\\/]/.test(rawImage) || /^[\\/]/.test(rawImage) || rawImage.includes('\\') || /^\/Users\//.test(rawImage) || /^\/home\//.test(rawImage)
+      if (!isHttpUrl && !isRelativePath && !isLocalPath) {
+        try {
+          new URL(rawImage)
+        } catch {
+          throw new Error("L'image doit être une URL (https://...), un chemin relatif (/images/...) ou un chemin local (C:\\... ou /Users/...).")
+        }
       }
+      const imageUrl = rawImage
       
       const productData = {
         name: formData.name.trim(),
@@ -266,7 +331,8 @@ export default function ModifierProduitPage() {
         throw new Error(errorMessage)
       }
 
-      router.push("/admin/produits")
+      router.refresh()
+      router.push("/admin/produits?updated=1")
     } catch (error) {
       logger.error("Erreur lors de la modification:", error)
       setErrors({ submit: error instanceof Error ? error.message : "Erreur lors de la modification" })
@@ -287,10 +353,19 @@ export default function ModifierProduitPage() {
         throw new Error('ID produit invalide')
       }
 
+      // Récupérer le token CSRF
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) {
+        throw new Error('Impossible de récupérer le token CSRF')
+      }
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+
       const res = await fetch(`/api/products/${productId}`, {
         method: "DELETE",
         headers: { 
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
         credentials: 'include'
       })
@@ -542,13 +617,49 @@ export default function ModifierProduitPage() {
                         id="image_url"
                         value={formData['image_url']}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange("image_url", e.target.value)}
-                        placeholder="https://images.unsplash.com/photo-..."
+                        placeholder="https://... ou C:\Users\...\image.jpg — ou cliquez sur l'icône pour envoyer un fichier"
                         className={errors['image_url'] ? "border-red-500" : ""}
                       />
-                      <Button type="button" variant="outline" size="icon">
-                        <Upload className="w-4 h-4" />
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                        className="hidden"
+                        aria-hidden
+                        onChange={handleImageFileSelect}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        title="Envoyer une image depuis votre ordinateur"
+                        disabled={uploadImageLoading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploadImageLoading ? (
+                          <span className="text-xs">...</span>
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
                       </Button>
                     </div>
+                    {formData['image_url']?.trim() && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border">
+                          <Image
+                            src={getSafeImageSrc(formData['image_url'])}
+                            alt="Aperçu"
+                            fill
+                            className="object-cover"
+                            unoptimized={shouldUnoptimizePreview(formData['image_url'])}
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 truncate max-w-xs" title={formData['image_url']}>
+                          {formData['image_url']}
+                        </p>
+                      </div>
+                    )}
                     {errors['image_url'] && <p className="text-sm text-red-500 mt-1">{errors['image_url']}</p>}
                   </div>
                 </CardContent>

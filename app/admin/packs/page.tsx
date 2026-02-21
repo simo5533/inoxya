@@ -9,11 +9,11 @@ export default async function AdminPacksPage() {
   
   // Protection admin obligatoire
   if (!user) {
-    redirect("/login")
+    redirect("/fr/login?redirect=/admin/packs")
   }
 
   if (user.role !== 'admin') {
-    redirect("/profile")
+    redirect("/fr")
   }
 
   return (

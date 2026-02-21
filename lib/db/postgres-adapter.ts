@@ -333,16 +333,34 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   async createOrderItem(itemData: {
     order_id: string
-    bijou_id: string
+    bijou_id?: string
+    product_id?: string
     quantity: number
     price: number
-  }): Promise<boolean> {
+    product_name?: string
+  }): Promise<OrderItem | null> {
+    const bijou_id = itemData.bijou_id || itemData.product_id || ''
+    if (!bijou_id) {
+      return null
+    }
+    
     const result = await this.pool.query(
       `INSERT INTO order_items (order_id, bijou_id, quantity, price)
-       VALUES ($1, $2, $3, $4)`,
-      [itemData.order_id, itemData.bijou_id, itemData.quantity, itemData.price]
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [itemData.order_id, bijou_id, itemData.quantity, itemData.price]
     )
-    return (result.rowCount ?? 0) > 0
+    
+    if (result.rows.length === 0) return null
+    
+    const row = result.rows[0]
+    return {
+      id: String(row.id),
+      order_id: String(row.order_id),
+      bijou_id: String(row.bijou_id),
+      quantity: Number(row.quantity),
+      price: Number(row.price),
+    }
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {
@@ -511,9 +529,11 @@ export class PostgresAdapter implements DatabaseAdapter {
     let query = 'SELECT * FROM notifications'
     const params: (string | null)[] = []
 
-    if (userId) {
+    if (userId != null && userId !== '') {
       query += ' WHERE user_id = $1'
       params.push(userId)
+    } else {
+      query += ' WHERE user_id IS NULL'
     }
 
     query += ' ORDER BY created_at DESC'

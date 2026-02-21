@@ -87,8 +87,17 @@ async function HomePage({
   }
   
   // OPTIMISATION: Récupérer les bijoux vedettes avec timeout pour éviter les blocages
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let featuredProducts: any[] = []
+  // Type Product local pour cette page
+  type LocalProduct = {
+    id: string | number
+    name: string
+    price: number
+    image_url?: string | null
+    is_available?: boolean
+    is_featured?: boolean
+    [key: string]: unknown
+  }
+  let featuredProducts: LocalProduct[] = []
   try {
     // Timeout de 5 secondes pour éviter les blocages infinis
      
@@ -116,7 +125,16 @@ async function HomePage({
     })
     
     // Race entre la requête DB et le timeout
-    featuredProducts = await Promise.race([dbPromise, timeoutPromise])
+    const productsFromRace = await Promise.race([dbPromise, timeoutPromise])
+    // Convertir en LocalProduct[]
+    featuredProducts = productsFromRace.map((p): LocalProduct => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      image_url: p.image_url || p.main_image || undefined,
+      is_available: p.is_available !== false,
+      is_featured: p.is_featured || false
+    }))
   } catch (error) {
     // Logger l'erreur mais ne pas la propager pour éviter les redirections
     console.error('[HomePage] Erreur lors de la récupération des produits vedettes:', error)
@@ -232,17 +250,25 @@ async function HomePage({
   }
 
   // Récupérer tous les produits pour la section filtrée
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let allProducts: any[] = []
+  let allProducts: LocalProduct[] = []
   try {
-    allProducts = await getAllBijoux()
+    const productsFromDb = await getAllBijoux()
     // S'assurer que allProducts est toujours un tableau
-    if (!Array.isArray(allProducts)) {
+    if (!Array.isArray(productsFromDb)) {
       allProducts = []
+    } else {
+      // Convertir en LocalProduct[]
+      allProducts = productsFromDb.map((p): LocalProduct => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image_url: p.image_url || p.main_image || undefined,
+        is_available: p.is_available !== false,
+        is_featured: p.is_featured || false
+      }))
     }
     // Filtrer uniquement les produits disponibles
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    allProducts = allProducts.filter((p: any) => p.is_available === true)
+    allProducts = allProducts.filter((p) => p.is_available === true)
   } catch (error) {
     // Logger l'erreur mais ne pas la propager
     if (process.env.NODE_ENV === 'development') {

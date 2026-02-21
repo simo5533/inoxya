@@ -38,8 +38,15 @@ export async function POST(request: NextRequest) {
     const validation = validateWithSchema(registerSchema, body)
     if (!validation.success) {
       await recordFailedAttempt(`register_${clientIP}`)
+      // Améliorer le message d'erreur pour le mot de passe
+      const errorMessages = validation.errors.map(err => {
+        if (err.includes('mot de passe')) {
+          return 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (!@#$%^&*(),.?":{}|<>)'
+        }
+        return err
+      })
       return NextResponse.json(
-        { success: false, error: validation.errors.join(', ') },
+        { success: false, error: errorMessages.join('. ') },
         { status: 400 }
       )
     }
@@ -47,9 +54,11 @@ export async function POST(request: NextRequest) {
     const { phone, password, firstName, lastName } = validation.data
 
     // Sanitize inputs (après validation Zod)
+    // NOTE: phone est déjà normalisé par phoneSchema.transform()
     const sanitizedFirstName = firstName ? sanitizeInput(firstName) : ''
     const sanitizedLastName = lastName ? sanitizeInput(lastName) : ''
-    const sanitizedPhone = sanitizeInput(phone)
+    // Le phone est déjà normalisé par Zod (espaces/tirets supprimés)
+    const sanitizedPhone = phone.trim()
 
     // Appeler la fonction d'inscription - TOUJOURS avec role='user'
     const result = await registerUser(sanitizedPhone, password, sanitizedFirstName, sanitizedLastName, 'user')

@@ -61,13 +61,14 @@ export const revalidate = 0
 
 interface BijouxPageProps {
   params: Promise<{ locale: string }>
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<{ category?: string; search?: string }>
 }
 
 export default async function BijouxPage({ params, searchParams }: BijouxPageProps) {
   const { locale } = await params
   const searchParamsResolved = await searchParams
   const categorySlug = searchParamsResolved.category
+  const searchQuery = (searchParamsResolved.search || '').trim()
   const t = await getTranslations({ locale, namespace: 'bijoux' })
 
   // FORCER la connexion à la base de données
@@ -103,8 +104,35 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
     allBijoux = []
   }
   
+  // Filtrer par recherche (nom, name_ar) si paramètre search présent
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase()
+    allBijoux = allBijoux.filter((p: { name?: string; name_ar?: string | null }) =>
+      (typeof p.name === 'string' && p.name.toLowerCase().includes(q)) ||
+      (typeof p.name_ar === 'string' && p.name_ar.toLowerCase().includes(q))
+    )
+  }
+
   // Normaliser les produits pour s'assurer qu'ils ont le bon format pour ProductCard
-  allBijoux = allBijoux.map((product: any) => {
+  type Product = {
+    id: string | number
+    name: string
+    name_ar?: string | null | unknown
+    description?: string | null | unknown
+    price: number
+    original_price?: number | null | unknown
+    image_url?: string | null
+    main_image?: string | null | unknown
+    images?: string[] | string | null
+    is_available?: boolean
+    is_active?: boolean
+    is_featured?: boolean
+    category_id?: string | null | unknown
+    category?: string | null | unknown
+    created_at?: string | null | unknown
+    [key: string]: unknown
+  }
+  allBijoux = allBijoux.map((product: Product) => {
     // Convertir images en tableau si nécessaire
     let imagesArray: string[] = []
     if (product.images) {
@@ -121,23 +149,28 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
     }
     
     // Déterminer l'image principale (priorité: main_image > image_url > première image du tableau > placeholder)
-    const mainImage = product.main_image 
-      || product.image_url 
-      || (imagesArray.length > 0 ? imagesArray[0] : null)
-      || '/placeholder.svg'
+    const mainImageValue = product.main_image || product.image_url || (imagesArray.length > 0 ? imagesArray[0] : null) || '/placeholder.svg'
+    const mainImage = typeof mainImageValue === 'string' ? mainImageValue : (typeof product.image_url === 'string' ? product.image_url : '/placeholder.svg')
     
     // Normaliser l'image principale
     const normalizedImage = mainImage && mainImage !== '/placeholder.svg' 
       ? (mainImage.startsWith('http') || mainImage.startsWith('/') ? mainImage : `/${mainImage}`)
       : '/placeholder.svg'
     
+    // Convertir les valeurs unknown en types appropriés
+    const nameAr = typeof product.name_ar === 'string' ? product.name_ar : undefined
+    const description = typeof product.description === 'string' ? product.description : undefined
+    const categoryId = typeof product.category_id === 'string' ? product.category_id : (typeof product.category === 'string' ? product.category : 'Général')
+    const createdAt = typeof product.created_at === 'string' ? product.created_at : new Date().toISOString()
+    const originalPrice = typeof product.original_price === 'number' ? product.original_price : (typeof product.original_price === 'string' ? Number(product.original_price) : undefined)
+    
     return {
       id: String(product.id || ''),
       name: product.name || 'Produit sans nom',
-      name_ar: product.name_ar,
-      description: product.description,
+      name_ar: nameAr,
+      description: description,
       price: Number(product.price) || 0,
-      original_price: product.original_price ? Number(product.original_price) : undefined,
+      original_price: originalPrice,
       // Images - format unifié (string JSON pour compatibilité avec ProductCard)
       image_url: normalizedImage,
       main_image: normalizedImage,
@@ -147,15 +180,24 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
         ? Boolean(product.is_available) 
         : (product.is_active !== undefined ? Boolean(product.is_active) : true),
       is_featured: Boolean(product.is_featured),
-      category_id: product.category_id || product.category || 'Général',
-      created_at: product.created_at || new Date().toISOString(),
+      category_id: categoryId,
+      created_at: createdAt,
     }
   })
 
   // Récupérer les catégories avec gestion d'erreur
-  let categories: any[] = []
+  type Category = {
+    id: string | number
+    name: string
+    slug: string
+    description?: string
+    image_url?: string
+    coverImage?: string
+    [key: string]: unknown
+  }
+  let categories: Category[] = []
   try {
-    categories = await getAllCategories()
+    categories = (await getAllCategories()) as Category[]
   } catch (error) {
     logger.error('[BijouxPage] Erreur lors de la récupération des catégories:', error)
     categories = []
@@ -164,7 +206,7 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
   // Fallback: Si aucune catégorie n'est récupérée, utiliser le mapping CATEGORIES
   if (categories.length === 0) {
     categories = Object.entries(CATEGORIES).map(([slug, def]) => ({
-      id: slug,
+      id: String(slug), // S'assurer que id est une string
       name: def.label,
       slug: def.slug,
       description: def.subtitle,
@@ -174,7 +216,22 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
 
   // Enrichir les catégories avec leurs images de couverture
   // Gérer les erreurs silencieusement pour éviter que Promise.all échoue
-  let categoriesWithCoverImages = categories
+  type CategoryWithCoverImage = {
+    id: string
+    name: string
+    slug: string
+    description?: string
+    image_url?: string
+    coverImage?: string
+  }
+  let categoriesWithCoverImages: CategoryWithCoverImage[] = categories.map(cat => ({
+    id: String(cat.id),
+    name: cat.name,
+    slug: cat.slug,
+    description: typeof cat.description === 'string' ? cat.description : undefined,
+    image_url: typeof cat.image_url === 'string' ? cat.image_url : undefined
+  }))
+  
   if (categories.length > 0) {
     try {
       categoriesWithCoverImages = await Promise.all(
@@ -182,7 +239,11 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
           try {
             const coverImage = await getCategoryCoverImage(category.slug)
             return {
-              ...category,
+              id: String(category.id), // Convertir en string pour CategoryCard
+              name: category.name,
+              slug: category.slug,
+              description: typeof category.description === 'string' ? category.description : undefined,
+              image_url: typeof category.image_url === 'string' ? category.image_url : undefined,
               coverImage: coverImage || undefined
             }
           } catch (error) {
@@ -191,7 +252,11 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
               logger.warn(`[BijouxPage] Erreur lors de la récupération de l'image pour ${category.slug}:`, errorDetails)
             }
             return {
-              ...category,
+              id: String(category.id), // Convertir en string pour CategoryCard
+              name: category.name,
+              slug: category.slug,
+              description: typeof category.description === 'string' ? category.description : undefined,
+              image_url: typeof category.image_url === 'string' ? category.image_url : undefined,
               coverImage: undefined
             }
           }
@@ -199,14 +264,26 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
       )
       // S'assurer que categoriesWithCoverImages est toujours un tableau
       if (!Array.isArray(categoriesWithCoverImages)) {
-        categoriesWithCoverImages = categories
+        categoriesWithCoverImages = categories.map(cat => ({
+          id: String(cat.id),
+          name: cat.name,
+          slug: cat.slug,
+          description: typeof cat.description === 'string' ? cat.description : undefined,
+          image_url: typeof cat.image_url === 'string' ? cat.image_url : undefined
+        }))
       }
     } catch (error) {
       // En cas d'erreur globale, utiliser les catégories sans images
       if (process.env.NODE_ENV === 'development') {
         logger.error('[BijouxPage] Erreur lors de l\'enrichissement des catégories:', error)
       }
-      categoriesWithCoverImages = categories
+      categoriesWithCoverImages = categories.map(cat => ({
+        id: String(cat.id),
+        name: cat.name,
+        slug: cat.slug,
+        description: typeof cat.description === 'string' ? cat.description : undefined,
+        image_url: typeof cat.image_url === 'string' ? cat.image_url : undefined
+      }))
     }
   }
 
@@ -265,10 +342,24 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
         <div id="products-section">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {categoryName ? categoryName : t('allProducts')}
-              </h2>
-              {categorySlug && categoryName ? (
+              {searchQuery ? (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {t('searchResultsFor', { query: searchQuery })}
+                  </h2>
+                  <Link href={`/${locale}/bijoux${categorySlug ? `?category=${categorySlug}` : ''}`}>
+                    <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 cursor-pointer px-3 py-1.5 flex items-center">
+                      <X className={`w-3.5 h-3.5 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                      {t('clearFilter')}
+                    </Badge>
+                  </Link>
+                </>
+              ) : (
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {categoryName ? categoryName : t('allProducts')}
+                </h2>
+              )}
+              {!searchQuery && categorySlug && categoryName ? (
                 <Link href={`/${locale}/bijoux`}>
                   <Badge 
                     variant="outline" 

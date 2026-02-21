@@ -3,9 +3,10 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import bcrypt from "bcryptjs"
+import { getDatabaseAdapter } from "@/lib/db"
 import {
-  getUserByPhone,
-  getUserById,
+  getUserByPhone as getSqliteUserByPhone,
+  getUserById as getSqliteUserById,
   createUser as createSqliteUser,
   getAllUsers as getSqliteUsers,
 } from "@/lib/sqlite"
@@ -16,13 +17,49 @@ export async function loginUser(phone: string, password: string) {
     // SAUF pour admin_phone qui est un identifiant spécial
     const normalizedPhone = phone === 'admin_phone' 
       ? 'admin_phone' 
-      : phone.replace(/[\s\-\.]/g, '').trim()
+      : phone.trim().replace(/[\s\-\.]/g, '')
     
-    // IMPORTANT: S'assurer que la DB est initialisée avant de chercher l'utilisateur
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const user = await adapter.getUserByPhone(normalizedPhone)
+      
+      if (user && user.password_hash) {
+        const isValid = bcrypt.compareSync(password, user.password_hash)
+        if (isValid) {
+          return {
+            success: true,
+            user: {
+              id: user.id,
+              phone: user.phone,
+              first_name: user.first_name,
+              last_name: user.last_name,
+              role: user.role as "user" | "moderator" | "admin",
+            },
+          }
+        } else {
+          if (process.env['NODE_ENV'] === 'development') {
+            console.log('[loginUser] Mot de passe incorrect pour:', { phone: normalizedPhone, userId: user.id })
+          }
+          return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
+        }
+      } else if (!user) {
+        if (process.env['NODE_ENV'] === 'development') {
+          console.log('[loginUser] Utilisateur non trouvé:', { phone: normalizedPhone })
+        }
+        return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
+      }
+    } catch (adapterError) {
+      // Fallback vers SQLite si l'adapter échoue
+      if (process.env['NODE_ENV'] === 'development') {
+        console.log('[loginUser] Erreur adapter, fallback SQLite:', adapterError)
+      }
+    }
+    
+    // FALLBACK: Utiliser SQLite directement si l'adapter n'est pas disponible
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     if (!isConnected) {
-      // Essayer d'initialiser sql.js si better-sqlite3 n'est pas disponible
       isConnected = await initSqlJsAsync()
       if (isConnected) {
         isConnected = forceConnection()
@@ -36,11 +73,9 @@ export async function loginUser(phone: string, password: string) {
       return { success: false, error: "Erreur de connexion à la base de données" }
     }
     
-    // Utiliser getUserByPhone qui gère automatiquement better-sqlite3 et sql.js
-    const user = getUserByPhone(normalizedPhone)
+    const user = getSqliteUserByPhone(normalizedPhone)
     
     if (!user) {
-      // Logger pour diagnostic (dev uniquement)
       if (process.env['NODE_ENV'] === 'development') {
         console.log('[loginUser] Utilisateur non trouvé:', { phone: normalizedPhone })
       }
@@ -49,15 +84,11 @@ export async function loginUser(phone: string, password: string) {
 
     const isValid = bcrypt.compareSync(password, user.password_hash)
     if (!isValid) {
-      // Logger pour diagnostic (dev uniquement)
       if (process.env['NODE_ENV'] === 'development') {
         console.log('[loginUser] Mot de passe incorrect pour:', { phone: normalizedPhone, userId: user.id })
       }
       return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
     }
-
-    // NOTE: Le cookie sera créé dans l'API route (app/api/auth/login/route.ts)
-    // pour éviter les problèmes de timing et garantir qu'il est inclus dans la réponse HTTP
 
     return {
       success: true,
@@ -77,15 +108,82 @@ export async function loginUser(phone: string, password: string) {
 
 export async function registerUser(phone: string, password: string, firstName: string, lastName: string, role: string = "user") {
   try {
-    const existingUser = getUserByPhone(phone)
+    // Normaliser le téléphone (supprimer espaces, tirets, points)
+    // SAUF pour admin_phone qui est un identifiant spécial
+    const normalizedPhone = phone === 'admin_phone' 
+      ? 'admin_phone' 
+      : phone.trim().replace(/[\s\-\.]/g, '')
+    
+    // Hasher le mot de passe
+    const password_hash = await bcrypt.hash(password, 10)
+    
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const existingUser = await adapter.getUserByPhone(normalizedPhone)
+      if (existingUser) {
+        return { success: false, error: "Ce numéro de téléphone est déjà utilisé" }
+      }
+      
+      // Créer l'utilisateur via l'adapter
+      const newUser = await adapter.createUser({
+        phone: normalizedPhone,
+        password_hash,
+        first_name: firstName || undefined,
+        last_name: lastName || undefined,
+        role,
+      })
+
+      if (!newUser) {
+        return { success: false, error: "Erreur lors de la création du compte" }
+      }
+
+      const cookieStore = await cookies()
+      cookieStore.set("user_id", newUser.id, {
+        httpOnly: true,
+        secure: process.env['NODE_ENV'] === "production",
+        sameSite: "strict",
+        maxAge: 60 * 60 * 24 * 7, // 7 jours
+        path: '/' // Explicit path pour garantir la portée
+      })
+
+      return {
+        success: true,
+        user: {
+          id: newUser.id,
+          phone: newUser.phone,
+          first_name: newUser.first_name,
+          last_name: newUser.last_name,
+          role: newUser.role as "user" | "moderator" | "admin",
+        },
+      }
+    } catch (adapterError) {
+      // Si l'adapter a lancé une erreur métier (ex. numéro déjà utilisé), la renvoyer
+      if (adapterError instanceof Error) {
+        const msg = adapterError.message
+        if (msg.includes('déjà utilisé') || msg.includes('création du compte') || msg.includes('Erreur')) {
+          return { success: false, error: msg }
+        }
+      }
+      // Sinon fallback vers SQLite (ex. adapter non disponible)
+      if (process.env['NODE_ENV'] === 'development') {
+        console.log('[registerUser] Erreur adapter, fallback SQLite:', adapterError)
+      }
+    }
+
+    // FALLBACK: Utiliser SQLite directement si l'adapter n'est pas disponible
+    const existingUser = getSqliteUserByPhone(normalizedPhone)
     if (existingUser) {
       return { success: false, error: "Ce numéro de téléphone est déjà utilisé" }
     }
 
-    // createSqliteUser attend la clé "password_hash" mais reçoit le mot de passe en clair et le hache en interne (bcrypt)
+    // Hasher le mot de passe pour SQLite aussi
+    const password_hash_sqlite = await bcrypt.hash(password, 10)
+    
+    // createSqliteUser attend la clé "password_hash" avec le hash déjà fait
     const newUser = createSqliteUser({
-      phone,
-      password_hash: password,
+      phone: normalizedPhone,
+      password_hash: password_hash_sqlite,
       first_name: firstName,
       last_name: lastName,
       role,
@@ -116,7 +214,8 @@ export async function registerUser(phone: string, password: string, firstName: s
     }
   } catch (error) {
     console.error("Erreur d'inscription:", error)
-    return { success: false, error: "Erreur d'inscription" }
+    const message = error instanceof Error ? error.message : "Erreur d'inscription"
+    return { success: false, error: message }
   }
 }
 
@@ -126,6 +225,11 @@ export async function logoutUser() {
     cookieStore.delete("user_id")
     redirect("/")
   } catch (error) {
+    // Next.js redirect() lance une erreur spéciale NEXT_REDIRECT - ne pas la logger comme erreur
+    const err = error as { digest?: string }
+    if (err?.digest?.startsWith?.('NEXT_REDIRECT')) {
+      throw error
+    }
     console.error("Erreur de déconnexion:", error)
     redirect("/")
   }
@@ -147,7 +251,31 @@ export async function getCurrentUser() {
       console.log('[getCurrentUser] Cookie user_id trouvé:', userId)
     }
 
-    // S'assurer que la DB est initialisée avant de chercher l'utilisateur
+    // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
+    try {
+      const adapter = await getDatabaseAdapter()
+      const user = await adapter.getUserById(userId)
+      
+      if (user) {
+        if (process.env['NODE_ENV'] === 'development') {
+          console.log('[getCurrentUser] Utilisateur trouvé via adapter:', { id: user.id, phone: user.phone, role: user.role })
+        }
+        return {
+          id: user.id,
+          phone: user.phone,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          role: user.role as "user" | "moderator" | "admin",
+        }
+      }
+    } catch (adapterError) {
+      // Fallback vers SQLite si l'adapter échoue
+      if (process.env['NODE_ENV'] === 'development') {
+        console.log('[getCurrentUser] Erreur adapter, fallback SQLite:', adapterError)
+      }
+    }
+
+    // FALLBACK: Utiliser SQLite directement
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     if (!isConnected) {
@@ -161,7 +289,7 @@ export async function getCurrentUser() {
       return null
     }
     
-    const user = getUserById(userId)
+    const user = getSqliteUserById(userId)
     if (!user) {
       if (process.env['NODE_ENV'] === 'development') {
         console.log('[getCurrentUser] Utilisateur non trouvé avec ID:', userId)
@@ -172,10 +300,6 @@ export async function getCurrentUser() {
     if (process.env['NODE_ENV'] === 'development') {
       console.log('[getCurrentUser] Utilisateur trouvé:', { id: user.id, phone: user.phone, role: user.role })
     }
-
-    // NOTE: On ne peut PAS modifier les cookies dans getCurrentUser car il est appelé
-    // depuis des Server Components. Le renouvellement de cookie doit être fait dans
-    // une Server Action ou Route Handler séparée si nécessaire.
 
     return {
       id: user.id,

@@ -113,11 +113,20 @@ export default function AdminSettings({ user: _user }: AdminSettingsProps) {
     try {
       setSaving(true)
       setSaveStatus("idle")
-      
+
+      const csrfRes = await fetch("/api/csrf-token", { credentials: "include" })
+      if (!csrfRes.ok) {
+        setSaveStatus("error")
+        setTimeout(() => setSaveStatus("idle"), 3000)
+        return
+      }
+      const { csrfToken } = await csrfRes.json()
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken ?? ""
         },
         credentials: "include",
         body: JSON.stringify(settings)
@@ -129,12 +138,14 @@ export default function AdminSettings({ user: _user }: AdminSettingsProps) {
         setTimeout(() => setSaveStatus("idle"), 3000)
       } else {
         setSaveStatus("error")
-        logger.error("Erreur lors de la sauvegarde des paramètres")
+        const errData = await res.json().catch(() => ({}))
+        const message = errData?.error ?? `Erreur ${res.status}`
+        logger.error("Erreur lors de la sauvegarde des paramètres", message)
         setTimeout(() => setSaveStatus("idle"), 3000)
       }
     } catch (error) {
       setSaveStatus("error")
-      logger.error("Erreur lors de la sauvegarde:", error)
+      logger.error("Erreur lors de la sauvegarde:", error instanceof Error ? error.message : String(error))
       setTimeout(() => setSaveStatus("idle"), 3000)
     } finally {
       setSaving(false)

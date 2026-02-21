@@ -1,9 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
-
-// Force dynamic rendering to avoid build-time errors
-export const dynamic = 'force-dynamic'
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -77,10 +74,18 @@ export default function NouveauProduitPage() {
   const [uploadingImage, setUploadingImage] = useState<UploadTarget | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [csrfToken, setCsrfToken] = useState<string | null>(null)
   const fileInputMainRef = useRef<HTMLInputElement>(null)
   const fileInputSecondary1Ref = useRef<HTMLInputElement>(null)
   const fileInputSecondary2Ref = useRef<HTMLInputElement>(null)
   const tempProductSlugRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/csrf-token', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: { csrfToken?: string }) => setCsrfToken(d.csrfToken ?? null))
+      .catch(() => {})
+  }, [])
 
   const handleInputChange = (field: keyof ProductFormData, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -115,6 +120,19 @@ export default function NouveauProduitPage() {
     setUploadingImage(target)
     setUploadError(null)
     try {
+      let token = csrfToken
+      if (!token) {
+        const tr = await fetch('/api/csrf-token', { credentials: 'include' })
+        const td = tr.ok ? await tr.json() : {}
+        token = td.csrfToken ?? ''
+        if (token) setCsrfToken(token)
+      }
+      if (!token) {
+        setUploadError('Token CSRF invalide ou manquant')
+        setUploadingImage(null)
+        return
+      }
+
       const formDataUpload = new FormData()
       formDataUpload.append('file', file)
       formDataUpload.append('productName', productName)
@@ -128,11 +146,19 @@ export default function NouveauProduitPage() {
 
       const res = await fetch('/api/upload/product-image', {
         method: 'POST',
+        headers: { 'X-CSRF-Token': token },
+        credentials: 'include',
         body: formDataUpload
       })
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'upload')
+      const text = await res.text()
+      let data: { imageUrl?: string; error?: string }
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = { error: res.ok ? 'Réponse invalide' : (text || 'Erreur lors de l\'upload') }
+      }
+      if (!res.ok) throw new Error(data.error || text || 'Erreur lors de l\'upload')
 
       const imageUrl = data.imageUrl as string
       if (target === 'main') handleInputChange('image_url', imageUrl)
@@ -176,10 +202,18 @@ export default function NouveauProduitPage() {
     setLoading(true)
     try {
       // Récupérer le token CSRF
-      const csrfRes = await fetch('/api/csrf-token')
-      const csrfData = await csrfRes.json()
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      const csrfText = await csrfRes.text()
+      let csrfData: { csrfToken?: string } = {}
+      try {
+        csrfData = csrfText ? JSON.parse(csrfText) : {}
+      } catch {
+        csrfData = {}
+      }
       const csrfToken = csrfData.csrfToken
-
+      if (!csrfToken) {
+        throw new Error("Token CSRF manquant. Rechargez la page et réessayez.")
+      }
       const categoryName = categoryIdToName[formData.category_id] || formData.category_id
       
       // Validation de la catégorie
@@ -208,15 +242,15 @@ export default function NouveauProduitPage() {
         throw new Error("Les chemins de fichiers locaux ne sont pas acceptés. Veuillez utiliser le bouton 'Upload' (📤) pour télécharger l'image depuis votre ordinateur.")
       }
       
-      // Accepter les chemins relatifs Next.js (commençant par /images/)
-      const isRelativePath = imageUrl.startsWith('/images/')
+      // Accepter les chemins relatifs Next.js (commençant par /images/ ou /)
+      const isRelativePath = imageUrl.startsWith('/images/') || (imageUrl.startsWith('/') && !imageUrl.startsWith('//'))
       
       // Accepter les URLs web complètes (http:// ou https://)
       const isWebUrl = imageUrl.startsWith('http://') || imageUrl.startsWith('https://')
       
       // Si ce n'est ni un chemin relatif Next.js ni une URL web, c'est invalide
       if (!isRelativePath && !isWebUrl) {
-        throw new Error("Format d'image invalide. Veuillez utiliser le bouton 'Upload' (📤) pour télécharger une image depuis votre ordinateur, ou fournir une URL web complète (ex: https://example.com/image.jpg).")
+        throw new Error("Format d'image invalide. Veuillez utiliser le bouton 'Upload' (📤) pour télécharger une image depuis votre ordinateur, ou fournir une URL web complète (ex: https://example.com/image.jpg) ou un chemin relatif (ex: /images/products/image.jpg).")
       }
       
       const productData = {
@@ -251,30 +285,24 @@ export default function NouveauProduitPage() {
       })
 
       if (!res.ok) {
+        const responseText = await res.text()
         let errorMessage = "Erreur lors de la création"
         try {
-          const err = await res.json()
-          // Afficher les détails de validation si disponibles
+          const err = responseText ? JSON.parse(responseText) : {}
           if (err.details && Array.isArray(err.details)) {
             errorMessage = `Données invalides:\n${err.details.join('\n')}`
           } else if (err.error) {
             errorMessage = err.error
+          } else if (responseText) {
+            errorMessage = responseText
           }
         } catch {
-          // Si la réponse n'est pas du JSON, essayer de lire le texte
-          try {
-            const text = await res.text()
-            if (text) {
-              errorMessage = text
-            }
-          } catch {
-            // Utiliser le message par défaut
-          }
+          if (responseText) errorMessage = responseText
         }
         throw new Error(errorMessage)
       }
 
-      router.push("/admin/produits")
+      router.push("/admin/produits?created=1")
     } catch (error) {
       logger.error("Erreur lors de la création:", error)
       setErrors({ submit: error instanceof Error ? error.message : "Erreur lors de la création" })

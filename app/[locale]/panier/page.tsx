@@ -1,8 +1,5 @@
 "use client"
 
-// Forcer le rendu dynamique pour éviter les erreurs next-intl
-export const dynamic = 'force-dynamic'
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -96,18 +93,11 @@ export default function PanierPage() {
           throw new Error(`API returned ${res.status}`)
         }
         
-        const productsData: Product[] = await res.json()
-        
-        // Vérifier que productsData est un tableau
-        if (!Array.isArray(productsData)) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('API products n\'a pas retourné un tableau:', productsData)
-          }
-          throw new Error('Format de réponse invalide')
-        }
+        const raw = await res.json()
+        const productsArray: Product[] = Array.isArray(raw) ? raw : (raw?.products ?? [])
         
         const enrichedItems = items.map(item => {
-          const product = productsData.find((p: Product) => String(p.id) === String(item.id))
+          const product = productsArray.find((p: Product) => String(p.id) === String(item.id))
           return {
             ...item,
             name: product?.name || item.name,

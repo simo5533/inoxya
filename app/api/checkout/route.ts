@@ -54,13 +54,14 @@ export async function POST(request: NextRequest) {
     let total = 0
     const verifiedItems: { id: string; price: number; quantity: number; name: string; isPack?: boolean }[] = []
     
+     
     for (const item of validatedData.items) {
       // Quantité déjà validée par Zod
       const qty = item.quantity
       
       // SÉCURITÉ: Récupérer le prix RÉEL depuis la base de données
       // Vérifier d'abord si c'est un pack (pack_id présent) ou un bijou
-      const productId = item.pack_id || item.bijou_id
+      const productId = item.pack_id || item.bijou_id || (item as { product_id?: string }).product_id
       if (!productId) {
         return NextResponse.json({ error: 'ID produit/pack manquant' }, { status: 400 })
       }
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       // Si pack_id est présent, c'est un pack
       if (item.pack_id) {
         // Essayer d'abord comme pack
+        // eslint-disable-next-line no-await-in-loop
         const pack = await getPackById(String(productId))
         if (pack) {
           // Utiliser le prix de la BDD, pas celui envoyé par le client
@@ -82,15 +84,16 @@ export async function POST(request: NextRequest) {
             isPack: true
           })
           
-      // Log si le prix client diffère du prix réel (tentative de fraude potentielle)
-      if (Math.abs(item.price - verifiedPrice) > 0.01) {
-        logger.warn(`[SECURITY] Prix manipulé détecté (pack): client=${item.price}, réel=${verifiedPrice}, pack=${productId}`)
-      }
+          // Log si le prix client diffère du prix réel (tentative de fraude potentielle)
+          if (Math.abs(item.price - verifiedPrice) > 0.01) {
+            logger.warn(`[SECURITY] Prix manipulé détecté (pack): client=${item.price}, réel=${verifiedPrice}, pack=${productId}`)
+          }
           continue
         }
       }
       
       // Sinon, traiter comme un bijou
+      // eslint-disable-next-line no-await-in-loop
       const product = await getBijouById(String(productId))
       if (!product) {
         return NextResponse.json({ error: `Produit ${productId} introuvable` }, { status: 404 })
@@ -157,7 +160,7 @@ export async function POST(request: NextRequest) {
         try {
           const { createNotification } = await import('@/lib/database')
           await createNotification({
-            user_id: '',
+            user_id: null,
             title: 'Nouvelle commande',
             message: `Client: ${sanitizedCustomerName || 'N/A'} - ${sanitizedPhone}\nCommande - ${total} MAD - ${validatedData.payment_method || 'cash_on_delivery'}`,
             type: 'info',

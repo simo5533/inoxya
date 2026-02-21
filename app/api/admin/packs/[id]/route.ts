@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPackById, updatePack, deletePack } from '@/lib/pack-management'
 import { createNotification } from '@/lib/database'
+import { getDatabaseAdapter } from '@/lib/db'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { logger } from '@/lib/logger'
 import { updatePackSchema, validateWithSchema } from '@/lib/validations'
 import { sanitizeInput, validateNumericId, requireCSRF } from '@/lib/security'
+
+/** Utiliser l'adapter pour getPackById si disponible (évite better-sqlite3) */
+async function getPackByIdSafe(id: string): Promise<{ name: string; id: string } | null> {
+  try {
+    const adapter = await getDatabaseAdapter()
+    if (typeof adapter.getPackById === 'function') {
+      const pack = await adapter.getPackById(id)
+      return pack ? { id: String(pack.id), name: pack.name } : null
+    }
+  } catch {
+    // Ignorer, fallback ci-dessous
+  }
+  const pack = await getPackById(id)
+  return pack ? { id: pack.id, name: pack.name } : null
+}
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -82,12 +98,6 @@ export async function PUT(
     // Type guard: après la vérification success, TypeScript sait que data existe
     const validatedData = validation.data as UpdatePackData
 
-    // Vérifier que le pack existe
-    const existingPack = await getPackById(id)
-    if (!existingPack) {
-      return NextResponse.json({ error: 'Pack non trouvé' }, { status: 404 })
-    }
-
     // SÉCURITÉ: Sanitization des entrées (après validation Zod)
     const updateData: {
       name?: string
@@ -102,14 +112,50 @@ export async function PUT(
     if (validatedData.slug) updateData.slug = sanitizeInput(validatedData.slug)
     if (validatedData.description) updateData.description = sanitizeInput(validatedData.description)
     if (validatedData.price !== undefined) updateData.price = validatedData.price
-    if (validatedData.image_url) updateData.image_url = validatedData.image_url
+    if (validatedData.image_url !== undefined && validatedData.image_url !== null) updateData.image_url = validatedData.image_url
     if (validatedData.is_featured !== undefined) updateData.is_featured = validatedData.is_featured
 
-    // Mettre à jour le pack (convertit les types côté updatePack, throw si aucune ligne modifiée)
-    await updatePack(id, updateData)
+    let existingPack: { name: string } | null = null
+    let pack: { id: string; name: string } | null = null
 
-    // Relire le pack après mise à jour
-    const pack = await getPackById(id)
+    // Priorité 1 : adapter (Supabase / SQLite via adapter)
+    try {
+      const adapter = await getDatabaseAdapter()
+      if (typeof adapter.getPackById === 'function' && typeof adapter.updatePack === 'function') {
+        const existing = await adapter.getPackById(id)
+        if (!existing) {
+          return NextResponse.json({ error: 'Pack non trouvé' }, { status: 404 })
+        }
+        existingPack = { name: existing.name }
+        const updated = await adapter.updatePack(id, updateData)
+        if (updated) {
+          const updatedPack = await adapter.getPackById(id)
+          pack = updatedPack ? { id: String(updatedPack.id), name: updatedPack.name } : existingPack as { id: string; name: string }
+          try {
+            await createNotification({
+              user_id: null,
+              title: 'Pack modifié',
+              message: `Pack "${pack?.name ?? existingPack.name}" modifié par ${user.first_name || user.phone}`,
+              type: 'info',
+              link: `/admin/packs`
+            })
+          } catch (notifError) {
+            logger.warn('Erreur création notification:', { error: notifError })
+          }
+          return NextResponse.json({ success: true, pack: updatedPack ?? pack })
+        }
+      }
+    } catch (adapterError) {
+      logger.warn('[PUT /api/admin/packs/[id]] Adapter failed, fallback pack-management:', { error: adapterError instanceof Error ? adapterError.message : String(adapterError) })
+    }
+
+    // Fallback : pack-management (better-sqlite3)
+    existingPack = await getPackByIdSafe(id)
+    if (!existingPack) {
+      return NextResponse.json({ error: 'Pack non trouvé' }, { status: 404 })
+    }
+    await updatePack(id, updateData)
+    pack = await getPackByIdSafe(id)
 
     // Notification admin
     try {
@@ -137,30 +183,58 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // SÉCURITÉ: Validation CSRF
     const csrfCheck = await requireCSRF(request)
     if (!csrfCheck.valid) {
       return csrfCheck.error
     }
-    
+
     const { id } = await params
     const auth = await requireAdminApi()
     if ('error' in auth) return auth.error
     const { user } = auth
 
-    // Vérifier que le pack existe
-    const existingPack = await getPackById(id)
+    let existingPack: { name: string } | null = null
+
+    // PRIORITÉ 1: Utiliser l'adapter (Supabase) pour supprimer
+    try {
+      const adapter = await getDatabaseAdapter()
+      if (typeof adapter.getPackById === 'function' && typeof adapter.deletePack === 'function') {
+        const pack = await adapter.getPackById(id)
+        if (pack) {
+          existingPack = { name: pack.name }
+          const deleted = await adapter.deletePack(id)
+          if (deleted) {
+            logger.info(`[DELETE /api/admin/packs/${id}] Pack supprimé via adapter`)
+            try {
+              await createNotification({
+                user_id: null,
+                title: 'Pack supprimé',
+                message: `Pack "${existingPack.name}" supprimé par ${user.first_name || user.phone}`,
+                type: 'warning',
+                link: `/admin/packs`
+              })
+            } catch (notifError) {
+              logger.warn('Erreur création notification:', { error: notifError })
+            }
+            return NextResponse.json({ success: true })
+          }
+        }
+      }
+    } catch (adapterError) {
+      logger.warn('[DELETE /api/admin/packs/[id]] Adapter failed, fallback pack-management:', { error: adapterError instanceof Error ? adapterError.message : String(adapterError) })
+    }
+
+    // FALLBACK: pack-management (SQLite)
+    existingPack = await getPackById(id)
     if (!existingPack) {
       return NextResponse.json({ error: 'Pack non trouvé' }, { status: 404 })
     }
 
-    // Supprimer le pack (retourne void, lance une exception si échec)
     await deletePack(id)
 
-    // Notification admin
     try {
       await createNotification({
-        user_id: '',
+        user_id: null,
         title: 'Pack supprimé',
         message: `Pack "${existingPack.name}" supprimé par ${user.first_name || user.phone}`,
         type: 'warning',

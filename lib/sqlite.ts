@@ -1669,8 +1669,8 @@ export function getDashboardStats(): {
   totalUsers: number
   totalOrders: number
   totalRevenue: number
-  recentOrders: { id: string; total_amount: number; status: string; created_at: string }[]
-  topProducts: { name: string; quantity: number; price: number }[]
+  recentOrders: { id: string; total_amount: number; status: string; created_at: string; phone?: string }[]
+  topProducts: { id: string; name: string; quantity: number; price: number; image_url?: string; is_pack?: boolean }[]
   userGrowth: unknown[]
 } {
   if (!db) {
@@ -1682,15 +1682,32 @@ export function getDashboardStats(): {
     const categories = db.prepare('SELECT COUNT(*) as c FROM categories').get() as { c: number }
     const users = db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }
     const orders = db.prepare('SELECT COUNT(*) as c, COALESCE(SUM(total_amount), 0) as revenue FROM orders').get() as { c: number; revenue: number }
-    const recentOrders = db.prepare('SELECT id, total_amount, status, created_at FROM orders ORDER BY created_at DESC LIMIT 5').all() as { id: number; total_amount: number; status: string; created_at: string }[]
-    const topItems = db.prepare(`
-      SELECT b.name, SUM(oi.quantity) as qty, oi.price
+    const recentOrdersRows = db.prepare('SELECT id, total_amount, status, created_at, phone FROM orders ORDER BY created_at DESC LIMIT 10').all() as { id: number; total_amount: number; status: string; created_at: string; phone?: string }[]
+    const recentOrders = (recentOrdersRows || []).map(o => ({ ...o, id: String(o.id) }))
+
+    const topFromProducts = db.prepare(`
+      SELECT oi.bijou_id as id, b.name, b.image_url, SUM(oi.quantity) as qty, oi.price
       FROM order_items oi
       LEFT JOIN products b ON oi.bijou_id = b.id
+      WHERE oi.bijou_id IS NOT NULL
       GROUP BY oi.bijou_id
       ORDER BY qty DESC
-      LIMIT 5
-    `).all() as { name: string; qty: number; price: number }[]
+      LIMIT 10
+    `).all() as { id: number; name: string; image_url?: string; qty: number; price: number }[]
+    const topFromPacks = db.prepare(`
+      SELECT oi.pack_id as id, p.name, p.image_url, SUM(oi.quantity) as qty, oi.price
+      FROM order_items oi
+      LEFT JOIN packs p ON oi.pack_id = p.id
+      WHERE oi.pack_id IS NOT NULL AND oi.pack_id != ''
+      GROUP BY oi.pack_id
+      ORDER BY qty DESC
+      LIMIT 10
+    `).all() as { id: string; name: string; image_url?: string; qty: number; price: number }[]
+    const merged = [
+      ...topFromProducts.map(t => ({ id: String(t.id), name: t.name || 'N/A', quantity: t.qty, price: t.price, image_url: t.image_url || undefined, is_pack: false })),
+      ...topFromPacks.map(t => ({ id: String(t.id), name: t.name || 'N/A', quantity: t.qty, price: t.price, image_url: t.image_url || undefined, is_pack: true }))
+    ].sort((a, b) => b.quantity - a.quantity).slice(0, 10)
+
     return {
       totalBijoux: products?.c ?? 0,
       totalPacks: packs?.c ?? 0,
@@ -1698,8 +1715,8 @@ export function getDashboardStats(): {
       totalUsers: users?.c ?? 0,
       totalOrders: orders?.c ?? 0,
       totalRevenue: orders?.revenue ?? 0,
-      recentOrders: (recentOrders || []).map(o => ({ ...o, id: String(o.id) })),
-      topProducts: (topItems || []).map(t => ({ name: t.name || 'N/A', quantity: t.qty, price: t.price })),
+      recentOrders,
+      topProducts: merged,
       userGrowth: []
     }
   } catch {
@@ -1750,16 +1767,25 @@ export function createOrder(data: { user_id: string | null; total_amount: number
 /**
  * Créer un item de commande
  */
-export function createOrderItem(data: { order_id: string; bijou_id: string; quantity: number; price: number }): boolean {
-  if (!db) return false
+export function createOrderItem(data: { order_id: string; bijou_id: string; quantity: number; price: number }): { id: string; order_id: string; bijou_id: string; quantity: number; price: number } | null {
+  if (!db) return null
   try {
-    db.prepare(`
+    const result = db.prepare(`
       INSERT INTO order_items (order_id, bijou_id, quantity, price)
       VALUES (?, ?, ?, ?)
     `).run(data.order_id, data.bijou_id, String(data.quantity), data.price)
-    return true
+    
+    if (!result.lastInsertRowid) return null
+    
+    return {
+      id: String(result.lastInsertRowid),
+      order_id: data.order_id,
+      bijou_id: data.bijou_id,
+      quantity: data.quantity,
+      price: data.price,
+    }
   } catch {
-    return false
+    return null
   }
 }
 
@@ -2319,7 +2345,7 @@ export function getOrderById(id: string): { id: string; user_id: string | null; 
 /**
  * Récupérer les items d'une commande
  */
-export function getOrderItems(orderId: string): { id: string; bijou_id: string; quantity: number; price: number }[] {
+export function getOrderItems(orderId: string): { id: string; bijou_id: string; pack_id?: string; quantity: number; price: number }[] {
   // S'assurer que la connexion DB est établie
   if (!db && !sqlJsDb) {
     try {
@@ -2337,10 +2363,11 @@ export function getOrderItems(orderId: string): { id: string; bijou_id: string; 
   try {
     const numericId = Number(orderId) || orderId
     // Utiliser selectRows qui fonctionne avec better-sqlite3 et sql.js
-    const rows = selectRows('SELECT id, bijou_id, quantity, price FROM order_items WHERE order_id = ?', [numericId]) as { id: number | string; bijou_id: number | string; quantity: number; price: number }[]
+    const rows = selectRows('SELECT id, bijou_id, pack_id, quantity, price FROM order_items WHERE order_id = ?', [numericId]) as { id: number | string; bijou_id: number | string | null; pack_id: string | null; quantity: number; price: number }[]
     return rows.map(r => ({ 
       id: String(r.id), 
-      bijou_id: String(r.bijou_id || ''), 
+      bijou_id: String(r.bijou_id ?? ''), 
+      pack_id: r.pack_id ? String(r.pack_id) : undefined,
       quantity: Number(r.quantity) || 0, 
       price: Number(r.price) || 0 
     }))
@@ -2484,12 +2511,12 @@ export function getNotifications(userId?: string | null): { id: string; title: s
     let query = 'SELECT id, title, message, type, is_read, created_at, action_url FROM notifications'
     const params: unknown[] = []
     
-    if (userId) {
-      // Notifications pour un utilisateur spécifique
+    if (userId != null && userId !== '') {
+      // Notifications pour un utilisateur spécifique (favoris, etc.)
       query += ' WHERE user_id = ?'
       params.push(userId)
     } else {
-      // Notifications admin (user_id IS NULL)
+      // Notifications admin uniquement (globales) — pas celles d'un utilisateur connecté
       query += ' WHERE user_id IS NULL'
     }
     

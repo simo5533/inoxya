@@ -5,7 +5,7 @@ import sharp from 'sharp'
 import { generateSlug, getCategoryFolder } from '@/lib/image-utils'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
-import { checkRateLimit } from '@/lib/security'
+import { checkRateLimit, requireCSRF } from '@/lib/security'
 import { uploadImage, generateBlobFilename } from '@/lib/storage-adapter'
 
 export const runtime = 'nodejs'
@@ -18,6 +18,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB (réduit de 10MB)
 
 export async function POST(request: NextRequest) {
   try {
+    const csrfCheck = await requireCSRF(request)
+    if (!csrfCheck.valid) return csrfCheck.error
+
     // SÉCURITÉ: Vérification authentification admin obligatoire
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {

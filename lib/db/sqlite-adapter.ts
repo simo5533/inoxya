@@ -89,7 +89,7 @@ export class SqliteAdapter implements DatabaseAdapter {
     if (categorySlug) {
       const dbValue = slugToDbValue(categorySlug)
       if (dbValue) {
-        return products.filter((p: any) => 
+        return products.filter((p: Product) => 
           p.category === dbValue || p.category_id === dbValue
         ) as Product[]
       }
@@ -102,13 +102,13 @@ export class SqliteAdapter implements DatabaseAdapter {
     return await getProductByIdAsync(id) as Product | null
   }
 
-  async createProduct(_productData: any): Promise<Product | null> {
+  async createProduct(_productData: Partial<Product> & { name: string; price: number }): Promise<Product | null> {
     // TODO: Implémenter si nécessaire
     logger.warn('[SqliteAdapter] createProduct not yet implemented')
     return null
   }
 
-  async updateProduct(_id: string, _productData: any): Promise<boolean> {
+  async updateProduct(_id: string, _productData: Partial<Product>): Promise<boolean> {
     // TODO: Implémenter si nécessaire
     logger.warn('[SqliteAdapter] updateProduct not yet implemented')
     return false
@@ -125,13 +125,13 @@ export class SqliteAdapter implements DatabaseAdapter {
     return getCategories() as Category[]
   }
 
-  async createCategory(_categoryData: any): Promise<Category | null> {
+  async createCategory(_categoryData: Partial<Category> & { name: string; slug: string }): Promise<Category | null> {
     // TODO: Implémenter si nécessaire
     logger.warn('[SqliteAdapter] createCategory not yet implemented')
     return null
   }
 
-  async updateCategory(_id: string, _categoryData: any): Promise<boolean> {
+  async updateCategory(_id: string, _categoryData: Partial<Category>): Promise<boolean> {
     // TODO: Implémenter si nécessaire
     logger.warn('[SqliteAdapter] updateCategory not yet implemented')
     return false
@@ -144,16 +144,16 @@ export class SqliteAdapter implements DatabaseAdapter {
 
   async getPackById(id: string): Promise<Pack | null> {
     const packs = await getPacksAsync()
-    return (packs.find((p: any) => p.id === id || p.slug === id) || null) as Pack | null
+    return (packs.find((p: Pack) => p.id === id || p.slug === id) || null) as Pack | null
   }
 
-  async createPack(_packData: any): Promise<Pack | null> {
+  async createPack(_packData: Partial<Pack> & { name: string; slug: string; price: number }): Promise<Pack | null> {
     // TODO: Implémenter si nécessaire
     logger.warn('[SqliteAdapter] createPack not yet implemented')
     return null
   }
 
-  async updatePack(_id: string, _packData: any): Promise<boolean> {
+  async updatePack(_id: string, _packData: Partial<Pack>): Promise<boolean> {
     // TODO: Implémenter si nécessaire
     logger.warn('[SqliteAdapter] updatePack not yet implemented')
     return false
@@ -193,11 +193,25 @@ export class SqliteAdapter implements DatabaseAdapter {
 
   async createOrderItem(itemData: {
     order_id: string
-    bijou_id: string
+    bijou_id?: string
+    product_id?: string
     quantity: number
     price: number
-  }): Promise<boolean> {
-    return createOrderItem(itemData)
+    product_name?: string
+  }): Promise<OrderItem | null> {
+    const bijou_id = itemData.bijou_id || itemData.product_id
+    if (!bijou_id) {
+      return null
+    }
+    
+    const result = createOrderItem({
+      order_id: itemData.order_id,
+      bijou_id: bijou_id,
+      quantity: itemData.quantity,
+      price: itemData.price,
+    })
+    
+    return result
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {

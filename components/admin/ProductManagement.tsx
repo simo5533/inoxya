@@ -107,8 +107,10 @@ export default function ProductManagement() {
         throw new Error('Erreur lors du chargement des produits')
       }
 
-      const productsData = await response.json()
-      setProducts(productsData)
+      const responseData = await response.json()
+      // L'API retourne { products: [...], total: ... }
+      const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || [])
+      setProducts(productsArray)
       
     } catch (error) {
       logger.error("Erreur lors du chargement des produits:", error)
@@ -234,12 +236,22 @@ export default function ProductManagement() {
         ].filter(img => img.trim() !== '') // Filtrer les images vides
       }
       
+      // Récupérer le token CSRF (OBLIGATOIRE pour POST)
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) {
+        throw new Error('Impossible de récupérer le token CSRF')
+      }
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+      
       // Appel à l'API pour créer le produit
       const response = await fetch('/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
+        credentials: 'include',
         body: JSON.stringify(productData)
       })
 
@@ -324,12 +336,22 @@ export default function ProductManagement() {
         ].filter(img => img.trim() !== '') // Filtrer les images vides
       }
       
+      // Récupérer le token CSRF (OBLIGATOIRE pour PUT)
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) {
+        throw new Error('Impossible de récupérer le token CSRF')
+      }
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+      
       // Appel à l'API pour modifier le produit
       const response = await fetch(`/api/products/${selectedProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
+        credentials: 'include',
         body: JSON.stringify(productData)
       })
 
@@ -363,12 +385,22 @@ export default function ProductManagement() {
     try {
       setLoading(true)
       
+      // Récupérer le token CSRF (OBLIGATOIRE pour DELETE)
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) {
+        throw new Error('Impossible de récupérer le token CSRF')
+      }
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+      
       // Appel à l'API pour supprimer le produit
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-        }
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include'
       })
 
       if (!response.ok) {

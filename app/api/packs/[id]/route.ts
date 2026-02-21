@@ -5,8 +5,9 @@ import {
   deletePack 
 } from '@/lib/pack-management'
 import { logger } from '@/lib/logger'
-import { sanitizeInput, validateNumericId, requireCSRF } from '@/lib/security'
+import { sanitizeInput, requireCSRF, validateNumericId } from '@/lib/security'
 import { getCurrentUser } from '@/lib/auth'
+import { validateWithSchema, updatePackSchema } from '@/lib/validations'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -79,6 +80,17 @@ export async function PUT(
     
     const body = await request.json()
 
+    // SÉCURITÉ: Validation avec Zod
+    const validation = validateWithSchema(updatePackSchema, body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Données invalides', details: validation.errors },
+        { status: 400 }
+      )
+    }
+    
+    const validatedData = validation.data
+
     // Vérifier que le pack existe
     const existingPack = await getPackById(id)
     if (!existingPack) {
@@ -88,38 +100,17 @@ export async function PUT(
       )
     }
 
-    // SÉCURITÉ: Préparer les données de mise à jour avec sanitization
+    // SÉCURITÉ: Préparer les données de mise à jour avec sanitization (utiliser les données validées par Zod)
     const updateData: Record<string, unknown> = {}
     
-    if (body['name']) updateData['name'] = sanitizeInput(String(body['name']))
-    if (body['slug']) updateData['slug'] = sanitizeInput(String(body['slug']))
-    if (body['description'] !== undefined) updateData['description'] = sanitizeInput(String(body['description']))
-    if (body['price']) {
-      const priceNum = parseFloat(String(body['price']))
-      if (isNaN(priceNum) || priceNum <= 0) {
-        return NextResponse.json(
-          { error: 'Le prix doit être un nombre supérieur à 0' },
-          { status: 400 }
-        )
-      }
-      updateData['price'] = priceNum
+    if (validatedData.name !== undefined) updateData['name'] = sanitizeInput(validatedData.name)
+    if (validatedData.slug !== undefined) updateData['slug'] = sanitizeInput(validatedData.slug)
+    if (validatedData.description !== undefined) updateData['description'] = sanitizeInput(validatedData.description)
+    if (validatedData.price !== undefined) {
+      updateData['price'] = validatedData.price
     }
-    if (body['original_price'] !== undefined) {
-      const originalPriceNum = parseFloat(String(body['original_price']))
-      if (isNaN(originalPriceNum) || originalPriceNum <= 0) {
-        return NextResponse.json(
-          { error: 'Le prix original doit être un nombre supérieur à 0' },
-          { status: 400 }
-        )
-      }
-      updateData['original_price'] = originalPriceNum
-    }
-    if (body['image_url'] !== undefined) updateData['image_url'] = body['image_url']
-    if (body['images']) updateData['images'] = Array.isArray(body['images']) ? body['images'] : []
-    if (body['category']) updateData['category'] = sanitizeInput(String(body['category']))
-    if (body['tags']) updateData['tags'] = Array.isArray(body['tags']) ? body['tags'] : []
-    if (body['is_featured'] !== undefined) updateData['is_featured'] = Boolean(body['is_featured'])
-    if (body['is_active'] !== undefined) updateData['is_active'] = Boolean(body['is_active'])
+    if (validatedData.image_url !== undefined) updateData['image_url'] = validatedData.image_url
+    if (validatedData.is_featured !== undefined) updateData['is_featured'] = validatedData.is_featured
     if (body['stock_quantity'] !== undefined) {
       const stockNum = parseInt(String(body['stock_quantity']))
       if (isNaN(stockNum) || stockNum < 0) {

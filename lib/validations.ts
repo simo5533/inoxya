@@ -21,17 +21,25 @@ export const numericIdSchema = z.union([
  * Validation téléphone marocain
  * Accepte aussi "admin_phone" comme identifiant spécial pour les admins
  */
-export const phoneSchema = z.string().refine(
-  (val) => {
-    // Accepter admin_phone comme identifiant spécial
-    if (val === 'admin_phone') return true
-    // Accepter le format téléphone marocain standard
-    return /^(\+212|0)[5-7][0-9]{8}$/.test(val)
-  },
-  {
-    message: 'Format téléphone invalide (ex: +212612345678 ou 0612345678)'
-  }
-)
+export const phoneSchema = z.string()
+  .min(1, 'Le numéro de téléphone est requis')
+  .transform((val) => {
+    // Normaliser le numéro : supprimer espaces, tirets, points
+    return val.trim().replace(/[\s\-\.]/g, '')
+  })
+  .refine(
+    (val) => {
+      // Accepter admin_phone comme identifiant spécial
+      if (val === 'admin_phone') return true
+      // Accepter le format téléphone marocain standard
+      // Format: +212[5-7][0-9]{8} ou 0[5-7][0-9]{8}
+      // Exemples valides: +212612345678, 0612345678, 0712345678, 0512345678
+      return /^(\+212|0)[5-7][0-9]{8}$/.test(val)
+    },
+    {
+      message: 'Format téléphone invalide (ex: +212612345678 ou 0612345678)'
+    }
+  )
 
 /**
  * Validation email
@@ -79,15 +87,17 @@ export const createProductSchema = z.object({
   category: z.string().min(1, 'La catégorie est requise'),
   stock: stockSchema.optional().default(0),
   is_active: z.boolean().optional().default(true),
-  // Accepter URL web complète, chemin relatif Next.js (/images/...), chaîne vide (transformée en null), ou null
+  // Accepter : URL web, chemin relatif Next.js, chemin local (C:\, /Users/, etc.), ou null
   image_url: z.preprocess(
     (val) => {
       if (typeof val === 'string' && val.trim() === '') return null
       return val
     },
     z.union([
-      z.string().url('URL image invalide'), // URL web complète (https://...)
-      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'), // Chemin relatif Next.js
+      z.string().url('URL image invalide'),
+      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'),
+      z.string().regex(/^\//, 'Chemin relatif doit commencer par /'),
+      z.string().min(2).refine((s) => /^[A-Za-z]:\\/i.test(s) || /\\/.test(s) || s.startsWith('/Users/') || s.startsWith('/home/'), { message: 'Chemin local invalide' }),
       z.null()
     ]).optional().nullable()
   ),
@@ -97,8 +107,10 @@ export const createProductSchema = z.object({
       return val
     },
     z.union([
-      z.string().url('URL image principale invalide'), // URL web complète (https://...)
-      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'), // Chemin relatif Next.js
+      z.string().url('URL image principale invalide'),
+      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'),
+      z.string().regex(/^\//, 'Chemin relatif doit commencer par /'),
+      z.string().min(2).refine((s) => /^[A-Za-z]:\\/i.test(s) || /\\/.test(s) || s.startsWith('/Users/') || s.startsWith('/home/'), { message: 'Chemin local invalide' }),
       z.null()
     ]).optional().nullable()
   ),
@@ -134,15 +146,17 @@ export const updateProductSchema = z.object({
   category: z.string().min(1, 'La catégorie est requise').optional(),
   stock: stockSchema.optional(),
   is_active: z.boolean().optional(),
-  // Accepter URL web complète, chemin relatif Next.js (/images/...), chaîne vide (transformée en null), ou null
+  // Accepter : URL web, chemin relatif Next.js, chemin local, ou null
   image_url: z.preprocess(
     (val) => {
       if (typeof val === 'string' && val.trim() === '') return null
       return val
     },
     z.union([
-      z.string().url('URL image invalide'), // URL web complète (https://...)
-      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'), // Chemin relatif Next.js
+      z.string().url('URL image invalide'),
+      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'),
+      z.string().regex(/^\//, 'Chemin relatif doit commencer par /'),
+      z.string().min(2).refine((s) => /^[A-Za-z]:\\/i.test(s) || /\\/.test(s) || s.startsWith('/Users/') || s.startsWith('/home/'), { message: 'Chemin local invalide' }),
       z.null()
     ]).optional().nullable()
   ),
@@ -152,8 +166,10 @@ export const updateProductSchema = z.object({
       return val
     },
     z.union([
-      z.string().url('URL image principale invalide'), // URL web complète (https://...)
-      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'), // Chemin relatif Next.js
+      z.string().url('URL image principale invalide'),
+      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'),
+      z.string().regex(/^\//, 'Chemin relatif doit commencer par /'),
+      z.string().min(2).refine((s) => /^[A-Za-z]:\\/i.test(s) || /\\/.test(s) || s.startsWith('/Users/') || s.startsWith('/home/'), { message: 'Chemin local invalide' }),
       z.null()
     ]).optional().nullable()
   ),
@@ -313,13 +329,26 @@ export const createPackSchema = z.object({
 
 /**
  * Schéma pour mettre à jour un pack
+ * image_url : accepte URL, chemin relatif ou chemin local (Windows/Unix)
  */
 export const updatePackSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(200, 'Le nom est trop long').optional(),
   slug: z.string().min(1, 'Le slug est requis').max(200, 'Le slug est trop long').regex(/^[a-z0-9-]+$/, 'Le slug doit contenir uniquement des lettres minuscules, chiffres et tirets').optional(),
   description: z.string().min(1, 'La description est requise').max(5000, 'La description est trop longue').optional(),
   price: priceSchema.optional(),
-  image_url: z.string().url('URL image invalide').optional(),
+  image_url: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined
+      if (typeof val === 'string' && val.trim() === '') return undefined
+      return val
+    },
+    z.union([
+      z.string().url('URL image invalide'),
+      z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/'),
+      z.string().regex(/^\//, 'Chemin relatif doit commencer par /'),
+      z.string().min(2).refine((s) => /^[A-Za-z]:\\/i.test(s) || /\\/.test(s) || s.startsWith('/Users/') || s.startsWith('/home/'), { message: 'Chemin local invalide' })
+    ]).optional()
+  ),
   is_featured: z.boolean().optional()
 })
 

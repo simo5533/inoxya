@@ -44,11 +44,14 @@ export default function AdminProducts() {
       }
 
       const data = await res.json()
-      const bijouxData = Array.isArray(data) ? data.map((p: { 
+      // L'API retourne { products: [...], total: ... }
+      const productsArray = Array.isArray(data) ? data : (data?.products || [])
+      const bijouxData = productsArray.map((p: { 
         id: string | number
         name: string
         price: number
         main_image?: string
+        image_url?: string
         description?: string
         is_active?: boolean
         is_featured?: boolean
@@ -58,13 +61,13 @@ export default function AdminProducts() {
         id: String(p.id),
         name: p.name,
         price: p.price,
-        image_url: p.main_image,
+        image_url: p.main_image || p.image_url,
         description: p.description,
         is_available: p.is_active !== false,
         is_featured: p.is_featured || false,
         is_custom: p.is_custom || false,
         created_at: p.created_at || new Date().toISOString()
-      })) : []
+      }))
       setBijoux(bijouxData)
     } catch (error) {
       console.error("Erreur lors du chargement des bijoux:", error)
@@ -300,10 +303,19 @@ export default function AdminProducts() {
                                   throw new Error('ID produit invalide')
                                 }
 
+                                // Récupérer le token CSRF (OBLIGATOIRE pour DELETE)
+                                const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+                                if (!csrfRes.ok) {
+                                  throw new Error('Impossible de récupérer le token CSRF')
+                                }
+                                const csrfData = await csrfRes.json()
+                                const csrfToken = csrfData.csrfToken
+
                                 const res = await fetch(`/api/products/${bijou.id}`, {
                                   method: 'DELETE',
                                   headers: { 
                                     'Content-Type': 'application/json',
+                                    'X-CSRF-Token': csrfToken
                                   },
                                   credentials: 'include'
                                 })

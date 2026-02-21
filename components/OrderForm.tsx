@@ -88,7 +88,9 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
       })
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
-        throw new Error(data?.error || t('errors.orderCreation'))
+        const details = Array.isArray(data?.details) ? data.details.join('\n') : ''
+        const message = details ? `${data?.error ?? t('errors.orderCreation')}\n${details}` : (data?.error || t('errors.orderCreation'))
+        throw new Error(message)
       }
       const data = await response.json()
       setOrderId(data.order_id || null)
@@ -106,7 +108,8 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
     } catch (error) {
       console.error('Erreur lors de l\'envoi de la commande:', error)
       setIsSubmitting(false)
-      alert(t('errors.orderError'))
+      const message = error instanceof Error ? error.message : t('errors.orderError')
+      alert(message)
     }
   }
 

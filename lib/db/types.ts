@@ -17,6 +17,7 @@ export interface Product {
   is_available: boolean
   is_active?: boolean
   is_featured: boolean
+  stock?: number
   rating?: number
   reviews_count?: number
   created_at?: string

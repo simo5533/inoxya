@@ -7,7 +7,7 @@ export default async function AdminSettingsPage() {
   const user = await getCurrentUser()
   
   if (!user) {
-    redirect("/login")
+    redirect("/fr/login?redirect=/admin/settings")
   }
 
   return (

@@ -98,8 +98,9 @@ export async function POST(request: NextRequest) {
           logger.info('[API Login] Base de données trouvée, chargement de sql.js...', { path: dbPath })
           
           // Charger sql.js de manière dynamique
+          // Type pour sql.js module (peut être fonction, objet avec default, ou déjà initialisé)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let sqlJsModule: any
+          let sqlJsModule: any // sql.js peut être exporté sous différents formats
           try {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             sqlJsModule = require('sql.js')
@@ -111,8 +112,9 @@ export async function POST(request: NextRequest) {
           }
           
           // Initialiser sql.js - essayer plusieurs formats
+          // Type pour SQL.js (peut être Database constructor ou module)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let SQL: any = null
+          let SQL: any = null // SQL.js peut avoir différents formats selon la version
           try {
             logger.info('[API Login] Initialisation de sql.js...')
             
@@ -163,8 +165,16 @@ export async function POST(request: NextRequest) {
             stmt.bind([sanitizedPhone])
             
             let userFound = false
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let userRow: any = null
+            // Type pour userRow depuis sql.js (getAsObject retourne Record<string, unknown>)
+            type UserRow = {
+              id: string | number
+              phone: string
+              password_hash: string
+              first_name?: string | null
+              last_name?: string | null
+              role: string
+            }
+            let userRow: UserRow | null = null
             
             if (stmt.step()) {
               userRow = stmt.getAsObject()

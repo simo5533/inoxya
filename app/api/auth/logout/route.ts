@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { requireCSRF } from '@/lib/security'
 
 export const runtime = 'nodejs'
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
+    const csrfCheck = await requireCSRF(request)
+    if (!csrfCheck.valid) return csrfCheck.error
+
     const cookieStore = await cookies()
     
     // Supprimer le cookie de session

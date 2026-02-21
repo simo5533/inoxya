@@ -187,7 +187,7 @@ export default function AdminCartsPage() {
                         <div className="font-bold text-orange-600">
                           {formatCurrency(item.price * item.quantity)}
                         </div>
-                        <Link href={`/admin/produits/${item.bijou_id}`}>
+                        <Link href={`/admin/produits/${item.bijou_id}/modifier`}>
                           <Button variant="ghost" size="sm" className="mt-1 hover:bg-orange-50">
                             <Eye className="w-3 h-3 mr-1" />
                             Voir

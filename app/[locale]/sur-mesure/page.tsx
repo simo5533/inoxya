@@ -1,10 +1,8 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useTranslations, useLocale } from "next-intl"
-
-export const dynamic = 'force-dynamic'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle } from "lucide-react"
@@ -46,9 +44,26 @@ export default function SurMesurePage() {
   
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [csrfToken, setCsrfToken] = useState<string | null>(null)
   
   const formSectionRef = useRef<HTMLDivElement>(null)
   const processSectionRef = useRef<HTMLDivElement>(null)
+  
+  // Récupérer le token CSRF au chargement
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        const response = await fetch('/api/csrf-token')
+        if (response.ok) {
+          const data = await response.json()
+          setCsrfToken(data.csrfToken)
+        }
+      } catch (err) {
+        console.error('Erreur lors de la récupération du token CSRF:', err)
+      }
+    }
+    fetchCsrfToken()
+  }, [])
 
   const handleInputChange = (field: keyof CustomJewelryForm, value: string) => {
     setFormData(prev => ({
@@ -61,11 +76,19 @@ export default function SurMesurePage() {
     e.preventDefault()
     setLoading(true)
     
+    // Vérifier que le token CSRF est disponible
+    if (!csrfToken) {
+      alert('Token de sécurité manquant. Veuillez rafraîchir la page.')
+      setLoading(false)
+      return
+    }
+    
     try {
       const response = await fetch('/api/custom-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
         body: JSON.stringify({
           name: formData.name,
@@ -74,21 +97,20 @@ export default function SurMesurePage() {
           type: formData.type,
           description: formData.description,
           budget: formData.budget,
-          material: formData.material,
-          style: formData.style,
         }),
       })
 
       if (!response.ok) {
-        throw new Error(t('error'))
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || t('error'))
       }
     
-    setIsSubmitted(true)
+      setIsSubmitted(true)
     } catch (error) {
       console.error('Erreur:', error)
-      alert(t('error'))
+      alert((error as Error)?.message || t('error'))
     } finally {
-    setLoading(false)
+      setLoading(false)
     }
   }
 

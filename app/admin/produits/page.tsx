@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-
-// Force dynamic rendering to avoid build-time errors
-export const dynamic = 'force-dynamic'
+import { useState, useEffect, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
@@ -43,6 +41,7 @@ interface Product {
 }
 
 export default function AdminProduitsPage() {
+  const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,45 +49,56 @@ export default function AdminProduitsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("newest")
+  const [restoreId, setRestoreId] = useState("")
+  const [restoreLoading, setRestoreLoading] = useState(false)
 
-  // Charger les produits depuis l'API
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true)
-        // PHASE 3: no-store pour éviter le cache Next.js
-        const res = await fetch("/api/products", {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        })
-        const data = await res.json()
-        const productsData = Array.isArray(data) ? data.map((p: { id: string; name: string; price: number; main_image?: string; images?: string[] }) => ({
-          id: String(p.id),
-          name: p.name,
-          price: p.price,
-          image_url: p.main_image,
-          images: p.images || [],
-          is_available: true,
-          is_featured: false,
-          is_custom: false,
-          created_at: ""
-        })) : []
-        setProducts(productsData)
-        setFilteredProducts(productsData)
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Erreur lors du chargement des produits:", error)
-        }
-        setProducts([])
-        setFilteredProducts([])
-      } finally {
-        setLoading(false)
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/products?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      })
+      const data = await res.json()
+      const productsArray = Array.isArray(data) ? data : (data?.products || [])
+      const productsData = productsArray.map((p: { id: string | number; name: string; price: number; main_image?: string; image_url?: string; images?: string[] | string; is_active?: boolean; is_featured?: boolean; is_custom?: boolean; created_at?: string }) => ({
+        id: String(p.id),
+        name: p.name,
+        price: p.price,
+        image_url: p.main_image || p.image_url,
+        images: Array.isArray(p.images) ? p.images : (typeof p.images === 'string' ? JSON.parse(p.images || '[]') : []),
+        is_available: p.is_active !== false,
+        is_featured: p.is_featured || false,
+        is_custom: p.is_custom || false,
+        created_at: p.created_at || ""
+      }))
+      setProducts(productsData)
+      setFilteredProducts(productsData)
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Erreur lors du chargement des produits:", error)
       }
+      setProducts([])
+      setFilteredProducts([])
+    } finally {
+      setLoading(false)
     }
-    loadProducts()
   }, [])
+
+  // Charger au montage
+  useEffect(() => {
+    loadProducts()
+  }, [loadProducts])
+
+  // Recharger après création (?created=1) ou modification (?updated=1)
+  useEffect(() => {
+    const created = searchParams.get('created')
+    const updated = searchParams.get('updated')
+    if (created || updated) {
+      loadProducts()
+      window.history.replaceState(null, '', '/admin/produits')
+    }
+  }, [searchParams, loadProducts])
 
   // Filtrer et trier les produits
   useEffect(() => {
@@ -157,10 +167,19 @@ export default function AdminProduitsPage() {
         throw new Error('ID produit invalide')
       }
 
+      // Récupérer le token CSRF (OBLIGATOIRE pour DELETE)
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      if (!csrfRes.ok) {
+        throw new Error('Impossible de récupérer le token CSRF')
+      }
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+
       const res = await fetch(`/api/products/${productId}`, {
         method: 'DELETE',
         headers: { 
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
         credentials: 'include'
       })
@@ -310,6 +329,53 @@ export default function AdminProduitsPage() {
     })
   }
 
+  const getSafeImageSrc = (url: string | undefined): string => {
+    if (!url || !url.trim()) return '/placeholder.svg'
+    const u = url.trim().replace(/^"|"$/g, '')
+    if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/')) return u
+    if (/^[A-Za-z]:\\/i.test(u) || u.includes('\\') || u.startsWith('/Users/') || u.startsWith('/home/')) {
+      return `/api/admin/serve-local-image?path=${encodeURIComponent(u)}`
+    }
+    return '/placeholder.svg'
+  }
+
+  const isLocalImageSrc = (url: string | undefined): boolean => {
+    if (!url || !url.trim()) return false
+    const u = url.trim().replace(/^"|"$/g, '')
+    return /^[A-Za-z]:\\/i.test(u) || u.includes('\\') || u.startsWith('/Users/') || u.startsWith('/home/')
+  }
+
+  const handleRestoreProduct = async () => {
+    const id = restoreId.trim()
+    if (!id) {
+      alert('Veuillez entrer l\'ID du produit à restaurer (ex: 39).')
+      return
+    }
+    setRestoreLoading(true)
+    try {
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      const csrfData = await csrfRes.json()
+      const csrfToken = csrfData.csrfToken
+      const res = await fetch(`/api/admin/products/${id}/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        credentials: 'include'
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data?.error || 'Erreur lors de la restauration.')
+        return
+      }
+      setRestoreId('')
+      await loadProducts()
+      alert('Produit restauré avec succès.')
+    } catch {
+      alert('Erreur lors de la restauration.')
+    } finally {
+      setRestoreLoading(false)
+    }
+  }
+
   const getStatusBadge = (product: Product) => {
     if (!product.is_available) {
       return <Badge variant="destructive">Indisponible</Badge>
@@ -346,12 +412,26 @@ export default function AdminProduitsPage() {
                 Gérez votre catalogue de bijoux ({filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''})
               </div>
             </div>
-            <Link href="/admin/produits/nouveau">
-              <Button className="bg-gradient-to-r from-orange-500 to-yellow-600 hover:from-orange-600 hover:to-yellow-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Nouveau produit
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Link href="/admin/produits/nouveau">
+                <Button className="bg-gradient-to-r from-orange-500 to-yellow-600 hover:from-orange-600 hover:to-yellow-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nouveau produit
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  placeholder="ID produit à restaurer (ex: 39)"
+                  value={restoreId}
+                  onChange={(e) => setRestoreId(e.target.value)}
+                  className="w-44"
+                />
+                <Button variant="outline" onClick={handleRestoreProduct} disabled={restoreLoading}>
+                  {restoreLoading ? '...' : 'Restaurer'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -481,13 +561,15 @@ export default function AdminProduitsPage() {
             <Card key={product.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start gap-6">
-                  {/* Image du produit */}
+                  {/* Image du produit (URL, chemin relatif ou chemin local C:\... /Users/...) */}
                   <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                     <Image
-                      src={product.image_url || "/placeholder.svg"}
+                      src={getSafeImageSrc(product.image_url)}
                       alt={product.name}
                       fill
                       className="object-cover"
+                      unoptimized={isLocalImageSrc(product.image_url)}
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
                     />
                   </div>
                   
@@ -535,7 +617,7 @@ export default function AdminProduitsPage() {
                         {getStatusBadge(product)}
                         
                         <div className="flex items-center gap-1">
-                          <Link href={`/bijoux/${product.id}`}>
+                          <Link href={`/fr/bijoux/${product.id}`} target="_blank" rel="noopener noreferrer">
                             <Button variant="outline" size="sm">
                               <Eye className="w-4 h-4" />
                             </Button>

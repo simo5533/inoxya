@@ -34,6 +34,24 @@ interface AdminDashboardProps {
   }
 }
 
+interface RecentOrder {
+  id: string
+  total_amount: number
+  status: string
+  created_at: string
+  phone?: string
+  firstProductName?: string
+}
+
+interface TopProduct {
+  id: string
+  name: string
+  quantity: number
+  price: number
+  image_url?: string
+  is_pack?: boolean
+}
+
 interface DashboardStats {
   totalBijoux: number
   totalPacks: number
@@ -41,9 +59,9 @@ interface DashboardStats {
   totalUsers: number
   totalOrders: number
   totalRevenue: number
-  recentOrders: any[]
-  topProducts: any[]
-  userGrowth: any[]
+  recentOrders: RecentOrder[]
+  topProducts: TopProduct[]
+  userGrowth: unknown[]
 }
 
 export default function AdminDashboard({ user }: AdminDashboardProps) {
@@ -250,41 +268,49 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Commandes récentes */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center">
               <Activity className="w-5 h-5 mr-2" />
               Commandes Récentes
             </CardTitle>
+            <Link href="/admin/orders">
+              <Button variant="ghost" size="sm">Voir tout</Button>
+            </Link>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {loading ? (
                 <div className="text-center py-4">Chargement...</div>
               ) : stats.recentOrders.length > 0 ? (
                 stats.recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Commande #{order.id.slice(-6)}</p>
-                      <p className="text-sm text-gray-500">
-                        {order.order_items?.[0]?.bijoux?.name || 'Produit'}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {formatDate(order.created_at)}
-                      </p>
+                  <Link key={order.id} href={`/admin/orders/${order.id}`}>
+                    <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900">Commande #{String(order.id).slice(-6)}</p>
+                        <p className="text-sm text-gray-600 truncate">
+                          {order.firstProductName || '—'}
+                        </p>
+                        {order.phone && (
+                          <p className="text-xs text-gray-500">{order.phone}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formatDate(order.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="font-bold text-gray-900">{formatCurrency(order.total_amount)}</p>
+                        <Badge 
+                          variant={order.status === 'confirmed' || order.status === 'completed' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {order.status === 'completed' ? 'Terminée' : order.status === 'confirmed' ? 'Confirmée' : 'En attente'}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">{formatCurrency(order.total_amount)}</p>
-                      <Badge 
-                        variant={order.status === 'completed' ? 'default' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {order.status === 'completed' ? 'Terminée' : 'En cours'}
-                      </Badge>
-                    </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-6 text-gray-500">
                   Aucune commande récente
                 </div>
               )}
@@ -301,30 +327,38 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {loading ? (
                 <div className="text-center py-4">Chargement...</div>
               ) : stats.topProducts.length > 0 ? (
                 stats.topProducts.map((product, index) => (
-                  <div key={product.bijou_id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{product.bijoux?.name || 'Produit'}</p>
-                        <p className="text-sm text-gray-500">
-                          {formatCurrency(product.bijoux?.price || 0)}
-                        </p>
-                      </div>
+                  <div key={`${product.is_pack ? 'pack' : 'prod'}-${product.id}`} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                      {product.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.image_url.startsWith('http') || product.image_url.startsWith('/') ? product.image_url : `/api/admin/serve-local-image?path=${encodeURIComponent(product.image_url)}`}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-lg font-bold text-gray-400">#{index + 1}</span>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">{product.quantity} vendus</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 truncate">{product.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {formatCurrency(product.price)} · {product.quantity} vendu{product.quantity > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-bold text-orange-600">{product.quantity}</p>
+                      <p className="text-xs text-gray-500">ventes</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-6 text-gray-500">
                   Aucune donnée de vente
                 </div>
               )}

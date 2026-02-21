@@ -55,9 +55,13 @@ export default function CategoryCard({ category, index, onFilter }: CategoryCard
     }
     
     // Si on est sur la page d'accueil (window.filterProductsByCategory existe), filtrer
-    if (typeof window !== 'undefined' && (window as any).filterProductsByCategory && category.slug !== "broches" && category.name !== "Nos packs") {
+    type WindowWithFilter = Window & {
+      filterProductsByCategory?: (slug: string) => void
+    }
+    const windowWithFilter = typeof window !== 'undefined' ? (window as WindowWithFilter) : null
+    if (windowWithFilter?.filterProductsByCategory && category.slug !== "broches" && category.name !== "Nos packs") {
       e.preventDefault()
-      ;(window as any).filterProductsByCategory(category.slug)
+      windowWithFilter.filterProductsByCategory(category.slug)
       return
     }
     

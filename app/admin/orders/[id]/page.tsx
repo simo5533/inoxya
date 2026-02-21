@@ -276,7 +276,7 @@ export default function AdminOrderDetailPage() {
                   <div className="flex-1">
                     <div className="font-medium">
                       {it.bijou_id ? (
-                        <Link href={`/admin/produits/${it.bijou_id}`} className="text-blue-600 hover:underline">
+                        <Link href={`/admin/produits/${it.bijou_id}/modifier`} className="text-blue-600 hover:underline">
                           Produit #{String(it.bijou_id).slice(-8)}
                         </Link>
                       ) : (

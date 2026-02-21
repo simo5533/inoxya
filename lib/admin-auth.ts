@@ -62,7 +62,7 @@ export async function requireAdminOrModerator(): Promise<AdminUser> {
   }
   
   if (user.role !== 'admin' && user.role !== 'moderator') {
-    redirect('/profile?error=unauthorized')
+    redirect('/fr?error=unauthorized')
   }
   
   return user as AdminUser

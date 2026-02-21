@@ -144,14 +144,14 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
   if (product.images) {
     if (Array.isArray(product.images)) {
       // Filtrer les badges (promo, nouveau, etc.) et garder seulement les vraies images
-      imagesArray = product.images.filter((img: any) => 
+      imagesArray = product.images.filter((img: unknown): img is string => 
         typeof img === 'string' && (img.startsWith('/') || img.startsWith('http'))
       )
     } else if (typeof product.images === 'string') {
       try {
         const parsed = JSON.parse(product.images)
         if (Array.isArray(parsed)) {
-          imagesArray = parsed.filter((img: any) => 
+          imagesArray = parsed.filter((img: unknown): img is string => 
             typeof img === 'string' && (img.startsWith('/') || img.startsWith('http'))
           )
         }
@@ -174,8 +174,17 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
   })
 
   // Préparer le breadcrumb pour SEO
-  const categoryName = (product as any).category_id || (product as any).category || t('breadcrumb.jewelry')
-  const categorySlug = (product as any).category_id || ''
+  type ProductWithCategory = {
+    category_id?: string | null
+    category?: string | null
+    [key: string]: unknown
+  }
+  const productWithCategory = product as ProductWithCategory
+  const categoryName = (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : null) 
+    || (typeof productWithCategory.category === 'string' ? productWithCategory.category : null)
+    || t('breadcrumb.jewelry')
+  const categorySlug = (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : '') 
+    || (typeof productWithCategory.category === 'string' ? productWithCategory.category : '')
   const breadcrumbItems = [
     { name: t('breadcrumb.home'), url: siteUrl },
     { name: t('breadcrumb.jewelry'), url: `${siteUrl}/${locale}/bijoux` },
@@ -229,14 +238,14 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
                 let imageTags: string[] = []
                 if (product.images) {
                   if (Array.isArray(product.images)) {
-                    imageTags = product.images.filter((img: any) => 
+                    imageTags = product.images.filter((img: unknown): img is string => 
                       typeof img === 'string' && !img.startsWith('/') && !img.startsWith('http')
                     )
                   } else if (typeof product.images === 'string') {
                     try {
                       const parsed = JSON.parse(product.images)
                       if (Array.isArray(parsed)) {
-                        imageTags = parsed.filter((img: any) => 
+                        imageTags = parsed.filter((img: unknown): img is string => 
                           typeof img === 'string' && !img.startsWith('/') && !img.startsWith('http')
                         )
                       }
@@ -548,7 +557,17 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
                         <span className="text-luxury-gold font-bold">{Math.round(product.price)} MAD</span>
                         <div className="flex items-center gap-1">
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs text-gray-600">{(product as any).rating?.toFixed(1) || "0.0"}</span>
+                          <span className="text-xs text-gray-600">
+                            {(() => {
+                              const rating = (product as { rating?: number | string | unknown })['rating']
+                              if (typeof rating === 'number') return rating.toFixed(1)
+                              if (typeof rating === 'string') {
+                                const numRating = Number(rating)
+                                return isNaN(numRating) ? "0.0" : numRating.toFixed(1)
+                              }
+                              return "0.0"
+                            })()}
+                          </span>
                         </div>
                       </div>
                     </CardContent>

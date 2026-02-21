@@ -34,20 +34,20 @@ export interface DatabaseAdapter {
   // Products
   getProducts(categorySlug?: string): Promise<Product[]>
   getProductById(id: string): Promise<Product | null>
-  createProduct(productData: any): Promise<Product | null>
-  updateProduct(id: string, productData: any): Promise<boolean>
+  createProduct(productData: Partial<Product> & { name: string; price: number }): Promise<Product | null>
+  updateProduct(id: string, productData: Partial<Product>): Promise<boolean>
   deleteProduct(id: string): Promise<boolean>
 
   // Categories
   getCategories(): Promise<Category[]>
-  createCategory(categoryData: any): Promise<Category | null>
-  updateCategory(id: string, categoryData: any): Promise<boolean>
+  createCategory(categoryData: Partial<Category> & { name: string; slug: string }): Promise<Category | null>
+  updateCategory(id: string, categoryData: Partial<Category>): Promise<boolean>
 
   // Packs
   getPacks(): Promise<Pack[]>
   getPackById(id: string): Promise<Pack | null>
-  createPack(packData: any): Promise<Pack | null>
-  updatePack(id: string, packData: any): Promise<boolean>
+  createPack(packData: Partial<Pack> & { name: string; slug: string; price: number }): Promise<Pack | null>
+  updatePack(id: string, packData: Partial<Pack>): Promise<boolean>
   deletePack(id: string): Promise<boolean>
 
   // Orders
@@ -63,10 +63,12 @@ export interface DatabaseAdapter {
   }): Promise<Order | null>
   createOrderItem(itemData: {
     order_id: string
-    bijou_id: string
+    bijou_id?: string
+    product_id?: string
     quantity: number
     price: number
-  }): Promise<boolean>
+    product_name?: string
+  }): Promise<OrderItem | null>
   getOrderItems(orderId: string): Promise<OrderItem[]>
   updateOrderStatus(id: string, status: string): Promise<boolean>
 
@@ -106,6 +108,10 @@ export interface DatabaseAdapter {
 
   // Stats
   getDashboardStats(): Promise<DashboardStats>
+
+  // Settings (optionnel : Supabase uniquement pour l’instant)
+  getSettings?(): Promise<Record<string, unknown>>
+  updateSettings?(settings: Record<string, unknown>): Promise<boolean>
 
   // Utility
   testConnection(): Promise<boolean>

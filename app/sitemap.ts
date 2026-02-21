@@ -49,14 +49,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { getAllBijoux } = await import('@/lib/database')
     const products = await getAllBijoux()
+    type Product = {
+      id: string | number
+      is_active?: boolean
+      is_available?: boolean
+      updated_at?: string | null
+      [key: string]: unknown
+    }
     productPages = (products || [])
-      .filter((p: any) => p.is_active !== false && p.is_available !== false)
-      .map((product: any) => ({
-        url: `${siteUrl}/bijoux/${product.id}`,
-        lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      }))
+      .filter((p: Product) => p.is_active !== false && p.is_available !== false)
+      .map((product: Product) => {
+        const updatedAt = product['updated_at']
+        const lastModified = (typeof updatedAt === 'string' && updatedAt) ? new Date(updatedAt) : new Date()
+        return {
+          url: `${siteUrl}/bijoux/${product.id}`,
+          lastModified,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        }
+      })
   } catch (error) {
     // Silencieux: utiliser le fallback depuis les images si DB non disponible
     try {
@@ -82,12 +93,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { getAllPacks } = await import('@/lib/database')
     const packs = await getAllPacks()
-    packPages = (packs || []).map((pack: any) => ({
-      url: `${siteUrl}/packs/${pack.id || pack.slug}`,
-      lastModified: pack.updated_at ? new Date(pack.updated_at) : new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    }))
+    type Pack = {
+      id: string | number
+      slug?: string
+      [key: string]: unknown
+    }
+    packPages = (packs || []).map((pack: Pack) => {
+      const updatedAt = pack['updated_at']
+      const lastModified = (typeof updatedAt === 'string' && updatedAt) ? new Date(updatedAt) : new Date()
+      return {
+        url: `${siteUrl}/packs/${pack.id || pack.slug || ''}`,
+        lastModified,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }
+    })
   } catch (error) {
     // Silencieux: utiliser le fallback depuis les images si DB non disponible
     try {

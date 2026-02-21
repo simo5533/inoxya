@@ -73,6 +73,12 @@ export const isFavorite = (productId: string): boolean => {
   return favorites.some((item) => item.id === productId)
 }
 
+/** Vide les favoris du localStorage (à appeler à la déconnexion pour ne pas garder les favoris d’un autre compte). */
+export const clearFavorites = (): void => {
+  if (typeof window === "undefined") return
+  localStorage.removeItem("inoxya_favorites")
+}
+
 // ==================== PANIER ====================
 
 export const getCartItems = (): CartItem[] => {

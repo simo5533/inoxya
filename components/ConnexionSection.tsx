@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { User, LogOut, Crown, Shield } from "lucide-react"
 import Link from "next/link"
-import { logoutUser } from "@/lib/auth"
+import { useLocale } from "next-intl"
+import { clearFavorites, clearCart } from "@/lib/cart-favorites"
 
 interface ConnexionSectionProps {
   user: {
@@ -17,6 +19,9 @@ interface ConnexionSectionProps {
 }
 
 export default function ConnexionSection({ user }: ConnexionSectionProps) {
+  const locale = useLocale()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -26,6 +31,26 @@ export default function ConnexionSection({ user }: ConnexionSectionProps) {
       default:
         return null
     }
+  }
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {}
+      const csrfToken = csrfData.csrfToken ?? ''
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+      })
+    } catch {
+      // Ignorer les erreurs, on redirige quand même
+    }
+    clearFavorites()
+    clearCart()
+    window.location.replace(`/${locale}`)
   }
 
   if (user) {
@@ -38,24 +63,22 @@ export default function ConnexionSection({ user }: ConnexionSectionProps) {
             {getRoleBadge(user.role)}
           </Button>
         </Link>
-        <form action={logoutUser}>
-          <Button variant="ghost" size="icon" type="submit">
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </form>
+        <Button variant="ghost" size="icon" onClick={handleLogout} disabled={isLoggingOut}>
+          <LogOut className="w-4 h-4" />
+        </Button>
       </div>
     )
   }
 
   return (
     <div className="flex items-center space-x-2">
-      <Link href="/login">
+      <Link href={`/${locale}/login`}>
         <Button variant="ghost" size="sm">
           <User className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">Connexion</span>
         </Button>
       </Link>
-      <Link href="/inscription">
+      <Link href={`/${locale}/inscription`}>
         <Button size="sm" className="bg-gray-900 hover:bg-gray-800">
           <span className="hidden sm:inline">S'inscrire</span>
           <span className="sm:hidden">+</span>

@@ -6,15 +6,102 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AlertCircle, CheckCircle, XCircle, RefreshCw, Database, Package, Tag, AlertTriangle } from 'lucide-react'
 
+interface TableColumn {
+  cid: number
+  name: string
+  type: string
+  notnull: number
+  dflt_value: unknown
+  pk: number
+}
+
+interface TableProblem {
+  table?: string
+  error: string
+}
+
+interface ProductItem {
+  id: number | string
+  name: string
+  name_ar?: string | null
+  price: number
+  original_price?: number | null
+  category: string
+  stock: number
+  is_active: boolean
+  is_featured: boolean
+  image_url?: string | null
+  has_images: boolean
+  created_at?: string | null
+  created_by?: string | null
+}
+
+interface ProductProblem {
+  product_id?: number | string
+  name?: string
+  problems?: string[]
+  error?: string
+}
+
+interface PackItem {
+  id: number | string
+  name: string
+  slug: string
+  price: number
+  image_url?: string | null
+  is_featured: boolean
+  created_at?: string | null
+}
+
+interface PackProblem {
+  pack_id?: number | string
+  name?: string
+  problems?: string[]
+  error?: string
+}
+
+interface CategoryItem {
+  id: number | string
+  name: string
+  slug: string
+  description?: string | null
+  image_url?: string | null
+}
+
+interface CategoryProblem {
+  category_id?: number | string
+  name?: string
+  problems?: string[]
+  error?: string
+}
+
+interface OrphanedItem {
+  type: string
+  count: number
+  items: Array<{
+    id: number | string
+    name: string
+    category?: string
+  }>
+}
+
+interface DuplicateItem {
+  type: string
+  items: Array<{
+    slug: string
+    count: number
+  }>
+}
+
 interface AnalysisResult {
   timestamp: string
   connection: { status: boolean; method: string | null; error: string | null }
   database: { path: string; exists: boolean; size: number }
-  tables: { list: string[]; structure: Record<string, any[]>; counts: Record<string, number>; problems: any[] }
-  products: { total: number; active: number; inactive: number; list: any[]; problems: any[] }
-  packs: { total: number; list: any[]; problems: any[] }
-  categories: { total: number; list: any[]; problems: any[] }
-  integrity: { foreignKeys: any[]; orphaned: any[]; duplicates: any[] }
+  tables: { list: string[]; structure: Record<string, TableColumn[]>; counts: Record<string, number>; problems: TableProblem[] }
+  products: { total: number; active: number; inactive: number; list: ProductItem[]; problems: ProductProblem[] }
+  packs: { total: number; list: PackItem[]; problems: PackProblem[] }
+  categories: { total: number; list: CategoryItem[]; problems: CategoryProblem[] }
+  integrity: { foreignKeys: unknown[]; orphaned: OrphanedItem[]; duplicates: DuplicateItem[] }
   recommendations: string[]
 }
 
@@ -186,11 +273,13 @@ export default function DatabaseAnalysisPage() {
                 {analysis.products.problems.slice(0, 10).map((problem, idx) => (
                   <div key={idx} className="text-sm">
                     <span className="font-semibold">ID {problem.product_id}:</span> {problem.name}
-                    <ul className="ml-4 mt-1">
-                      {problem.problems.map((p: string, i: number) => (
-                        <li key={i} className="text-yellow-700">• {p}</li>
-                      ))}
-                    </ul>
+                    {problem.problems && problem.problems.length > 0 && (
+                      <ul className="ml-4 mt-1">
+                        {problem.problems.map((p: string, i: number) => (
+                          <li key={i} className="text-yellow-700">• {p}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 ))}
               </div>

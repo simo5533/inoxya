@@ -7,7 +7,7 @@ import { logger } from '../logger'
 import type { DatabaseAdapter } from './adapter'
 
 let adapter: DatabaseAdapter | null = null
-let adapterType: 'sqlite' | 'postgres' | null = null
+let adapterType: 'sqlite' | 'postgres' | 'supabase' | null = null
 let adapterInitializing = false
 let adapterInitPromise: Promise<DatabaseAdapter> | null = null
 
@@ -27,11 +27,11 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
     return await adapterInitPromise
   }
 
-  // Timeout de 2 secondes pour l'initialisation
+  // Timeout de 10 secondes pour l'initialisation (augmenté pour Vercel)
   const timeoutPromise = new Promise<DatabaseAdapter>((_, reject) => {
     setTimeout(() => {
-      reject(new Error('Timeout initialisation adapter (2s)'))
-    }, 2000)
+      reject(new Error('Timeout initialisation adapter (10s)'))
+    }, 10000)
   })
 
   // Marquer comme en cours d'initialisation
@@ -40,11 +40,48 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
   const initPromise = (async (): Promise<DatabaseAdapter> => {
     try {
       const databaseUrl = process.env['DATABASE_URL']
+      const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
+      const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY']
       let localAdapter: DatabaseAdapter | null = null
-      let localAdapterType: 'sqlite' | 'postgres' | null = null
+      let localAdapterType: 'sqlite' | 'postgres' | 'supabase' | null = null
 
-      // Si DATABASE_URL est défini et commence par postgres, utiliser Postgres
-      if (databaseUrl && (databaseUrl.startsWith('postgresql://') || databaseUrl.startsWith('postgres://'))) {
+      // PRIORITÉ 1: Si Supabase est configuré, utiliser Supabase
+      if (supabaseUrl && supabaseKey) {
+        try {
+          const { SupabaseAdapter } = await import('./supabase-adapter')
+          localAdapter = new SupabaseAdapter(supabaseUrl, supabaseKey)
+          localAdapterType = 'supabase'
+          logger.info('[DB] ✅ Initialisation Supabase...')
+          
+          // Tester la connexion avec timeout
+          const connectionTestPromise = localAdapter.testConnection()
+          const connectionTimeoutPromise = new Promise<boolean>((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout test connexion Supabase (5s)')), 5000)
+          })
+          
+          const isConnected = await Promise.race([connectionTestPromise, connectionTimeoutPromise]) as boolean
+          
+          if (!isConnected) {
+            logger.error('[DB] ❌ Échec de connexion Supabase, fallback vers PostgreSQL/SQLite')
+            localAdapter = null
+            localAdapterType = null
+          } else {
+            logger.info('[DB] ✅ Connexion Supabase réussie')
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          logger.error('[DB] ❌ Erreur lors de l\'initialisation Supabase:', { 
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined
+          })
+          logger.warn('[DB] ⚠️  Fallback vers PostgreSQL/SQLite')
+          localAdapter = null
+          localAdapterType = null
+        }
+      }
+
+      // PRIORITÉ 2: Si DATABASE_URL est défini et commence par postgres, utiliser Postgres
+      if (!localAdapter && databaseUrl && (databaseUrl.startsWith('postgresql://') || databaseUrl.startsWith('postgres://'))) {
         try {
           const { PostgresAdapter } = await import('./postgres-adapter')
           localAdapter = new PostgresAdapter(databaseUrl)
@@ -168,7 +205,7 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
 /**
  * Retourne le type d'adapter actuel
  */
-export function getAdapterType(): 'sqlite' | 'postgres' | null {
+export function getAdapterType(): 'sqlite' | 'postgres' | 'supabase' | null {
   return adapterType
 }
 

@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     // Créer une notification en base pour l'admin
     try {
       await createNotification({
-        user_id: '',
+        user_id: null,
         title: 'Nouveau paiement',
         message: `Commande ${orderIdStr} - ${amount} MAD - ${payment_method}`,
         type: 'success',

@@ -51,6 +51,31 @@ export default function ImageUpload({
       setUploading(true)
       const uploadedUrls: string[] = []
 
+      // Récupérer le token CSRF pour l'upload
+      let csrfToken = ''
+      try {
+        const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+        const csrfData = csrfRes.ok ? await csrfRes.json() : {}
+        csrfToken = csrfData.csrfToken ?? ''
+      } catch {
+        toast({
+          title: "Erreur",
+          description: "Token CSRF indisponible",
+          variant: "destructive"
+        })
+        setUploading(false)
+        return
+      }
+      if (!csrfToken) {
+        toast({
+          title: "Erreur",
+          description: "Token CSRF invalide ou manquant",
+          variant: "destructive"
+        })
+        setUploading(false)
+        return
+      }
+
       // Filtrer les fichiers valides
       const validFiles = filesToUpload.filter((file) => {
         if (!file || !file.type.startsWith('image/')) return false
@@ -84,6 +109,8 @@ export default function ImageUpload({
 
           const response = await fetch('/api/upload/product-image', {
             method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken },
+            credentials: 'include',
             body: formData
           })
 

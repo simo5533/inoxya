@@ -65,47 +65,66 @@ export async function POST(request: NextRequest) {
     }
 
     // SÉCURITÉ: Créer la commande EN BASE DE DONNÉES avec données sanitizées
-    const order = await createOrder({
-      user_id: '',
-      total: verifiedAmount,
-      status: 'pending',
-      shipping_address: `${sanitizedName}, ${sanitizedAddress}`,
-      shipping_phone: sanitizedPhone,
-      shipping_name: sanitizedName
-    })
-    
-    if (!order) {
-      return NextResponse.json({ error: 'Erreur lors de la création de la commande' }, { status: 500 })
-    }
-
-    // Créer les items de commande EN BASE DE DONNÉES
-    if (bijou_id && product) {
-      await createOrderItem({
-        order_id: order.id,
-        product_id: String(bijou_id),
-        quantity: qty,
-        price: product.price,
-        product_name: product.name
+    try {
+      const order = await createOrder({
+        user_id: '',
+        total: verifiedAmount,
+        status: 'pending',
+        shipping_address: `${sanitizedName}, ${sanitizedAddress}`,
+        shipping_phone: sanitizedPhone,
+        shipping_name: sanitizedName
       })
-    } else if (pack_id && pack) {
-      await createOrderItem({
+      
+      if (!order) {
+        logger.error('[POST /api/orders] createOrder returned null')
+        return NextResponse.json({ error: 'Erreur lors de la création de la commande' }, { status: 500 })
+      }
+
+      // Créer les items de commande EN BASE DE DONNÉES
+      if (bijou_id && product) {
+        const orderItem = await createOrderItem({
+          order_id: order.id,
+          product_id: String(bijou_id),
+          bijou_id: String(bijou_id),
+          quantity: qty,
+          price: product.price,
+          product_name: product.name
+        })
+        if (!orderItem) {
+          logger.warn(`[POST /api/orders] Échec création order item pour bijou ${bijou_id}`)
+        }
+      } else if (pack_id && pack) {
+        const orderItem = await createOrderItem({
+          order_id: order.id,
+          product_id: String(pack_id),
+          bijou_id: String(pack_id),
+          quantity: qty,
+          price: pack.price,
+          product_name: pack.name
+        })
+        if (!orderItem) {
+          logger.warn(`[POST /api/orders] Échec création order item pour pack ${pack_id}`)
+        }
+      }
+
+      return NextResponse.json({ 
+        success: true, 
         order_id: order.id,
-        product_id: String(pack_id),
-        quantity: qty,
-        price: pack.price,
-        product_name: pack.name
+        message: 'Commande créée avec succès' 
       })
+    } catch (orderError) {
+      logger.error('[POST /api/orders] Erreur lors de la création de la commande:', orderError)
+      return NextResponse.json({ 
+        error: 'Erreur lors de la création de la commande',
+        ...(process.env.NODE_ENV === 'development' ? { details: orderError instanceof Error ? orderError.message : String(orderError) } : {})
+      }, { status: 500 })
     }
-
-    return NextResponse.json({ 
-      success: true, 
-      order_id: order.id,
-      message: 'Commande créée avec succès' 
-    })
-
   } catch (error) {
     logger.error('Erreur API commandes:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Erreur serveur',
+      ...(process.env.NODE_ENV === 'development' ? { details: error instanceof Error ? error.message : String(error) } : {})
+    }, { status: 500 })
   }
 }
 

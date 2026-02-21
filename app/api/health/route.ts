@@ -21,9 +21,12 @@ export async function GET() {
 
     const isHealthy = dbTest.connected
     const databaseUrl = process.env['DATABASE_URL']
-    const dbType = databaseUrl?.startsWith('postgresql://') || databaseUrl?.startsWith('postgres://')
-      ? 'postgresql'
-      : 'sqlite'
+    const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
+    const dbType = supabaseUrl
+      ? 'supabase'
+      : databaseUrl?.startsWith('postgresql://') || databaseUrl?.startsWith('postgres://')
+        ? 'postgresql'
+        : 'sqlite'
 
     const health = {
       status: isHealthy ? 'ok' : 'error',
