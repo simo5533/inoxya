@@ -122,9 +122,15 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     notFound()
   }
 
-  // À ce point, TypeScript sait que bijou n'est pas null
-  // Créer une référence locale pour éviter les problèmes de type
-  const product = bijou
+  // Normaliser les champs pour éviter erreurs en production (données DB variables)
+  const product = {
+    ...bijou,
+    id: String(bijou.id ?? id),
+    price: Number(bijou.price) || 0,
+    original_price: bijou.original_price != null ? Number(bijou.original_price) : undefined,
+    name: String(bijou.name ?? ''),
+    description: bijou.description != null ? String(bijou.description) : '',
+  }
   
   // Récupérer des produits similaires
   let allBijoux = await getAllBijoux()

@@ -92,7 +92,8 @@ async function runSmokeTest() {
   // Tests des pages
   console.log('📄 Test des pages...\n')
   
-  const pages = ['/', '/bijoux', '/packs', '/faq', '/a-propos']
+  // Pages avec locale (next-intl)
+  const pages = ['/fr', '/fr/bijoux', '/fr/packs', '/fr/faq', '/fr/a-propos']
   for (const page of pages) {
     smokeTestResults.push(await testEndpoint(page))
   }

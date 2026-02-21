@@ -210,6 +210,10 @@ Une fois le projet connecté à Vercel et les variables configurées :
 \* Si vous utilisez Supabase (recommandé sur Vercel).  
 \** Si vous n’utilisez pas Supabase, fournir une URL PostgreSQL (Railway, Neon, etc.).
 
+#### Domaine propre (URL sans nom d'utilisateur)
+
+Pour une URL contenant uniquement **inoxya-bijoux** (ex. `https://inoxya-bijoux.vercel.app`) : Vercel → **Settings** → **Domains** ; le domaine de production du projet est en général **inoxya-bijoux.vercel.app**. Définir **NEXT_PUBLIC_SITE_URL** = `https://inoxya-bijoux.vercel.app` en Production. Aucune suppression de projet.
+
 #### Avantages:
 - ✅ Support Next.js natif
 - ✅ Déploiement automatique depuis Git
@@ -252,6 +256,21 @@ Une fois le projet connecté à Vercel et les variables configurées :
 - ✅ Contrôle total
 - ✅ PostgreSQL via Docker
 - ✅ Persistance des données
+
+---
+
+## ✅ Vérification avant déploiement
+
+Avant de pousser ou de cliquer sur Redeploy, exécuter localement :
+
+| Commande | Rôle |
+|----------|------|
+| `npm test -- --run` | Tests unitaires (auth, security) |
+| `npm run build` | Build production Next.js |
+| `npm run lint` | Vérification ESLint (warnings uniquement = OK) |
+| `npm run smoke:test` | Smoke test des APIs (nécessite `npm run dev` dans un autre terminal) |
+
+Si **tests** et **build** passent, le projet est prêt pour le déploiement.
 
 ---
 
