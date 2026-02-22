@@ -104,8 +104,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
  * Dynamic page : /[locale]/bijoux/[id]
  */
 export default async function BijouDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
-  const siteUrl = getSiteUrlSafe()
   try {
+  const siteUrl = getSiteUrlSafe()
   const { id, locale } = await params
   let t!: Awaited<ReturnType<typeof getTranslations>>
   try {
