@@ -66,9 +66,15 @@ export function getSiteUrlSync(): string {
  */
 export function getSiteUrlSafe(): string {
   try {
-    return getSiteUrlSync()
+    const url = getSiteUrlSync()
+    if (url && typeof url === 'string') return url.trim() || 'https://inoxya-bijoux.vercel.app'
+    return 'https://inoxya-bijoux.vercel.app'
   } catch {
-    return process.env['NEXT_PUBLIC_SITE_URL']?.replace(/\/$/, '') || 'https://inoxya-bijoux.vercel.app'
+    try {
+      const env = process.env['NEXT_PUBLIC_SITE_URL']
+      if (env && typeof env === 'string') return env.replace(/\/$/, '').trim() || 'https://inoxya-bijoux.vercel.app'
+    } catch { /* ignore */ }
+    return 'https://inoxya-bijoux.vercel.app'
   }
 }
 

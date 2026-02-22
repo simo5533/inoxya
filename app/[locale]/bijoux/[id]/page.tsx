@@ -23,8 +23,8 @@ export const revalidate = 0
  * Generate metadata for product page
  */
 export async function generateMetadata({ params }: { params: Promise<{ id: string; locale: string }> }): Promise<Metadata> {
-  const siteUrl = getSiteUrlSafe()
   try {
+    const siteUrl = getSiteUrlSafe()
     const { id, locale } = await params
     const bijou = await getBijouById(id)
     const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
@@ -88,8 +88,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     }
   } catch (error) {
-    const { logger } = await import('@/lib/logger')
-    logger.error('[generateMetadata bijoux] Erreur:', error)
+    try {
+      const { logger } = await import('@/lib/logger')
+      logger.error('[generateMetadata bijoux] Erreur:', error)
+    } catch { /* ignore */ }
     try {
       const { locale } = await params
       const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
