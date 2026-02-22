@@ -182,14 +182,19 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   async getProductById(id: string): Promise<Product | null> {
-    const { data, error } = await this.supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single()
-    
-    if (error || !data) return null
-    return this.mapProduct(data)
+    try {
+      const { data, error } = await this.supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error || !data) return null
+      return this.mapProduct(data)
+    } catch (err) {
+      logger.error('[SupabaseAdapter] getProductById exception:', { id, error: err instanceof Error ? err.message : String(err) })
+      return null
+    }
   }
 
   async createProduct(productData: Partial<Product>): Promise<Product | null> {
@@ -781,17 +786,21 @@ export class SupabaseAdapter implements DatabaseAdapter {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapProduct(row: any): Product {
+    if (!row || typeof row !== 'object') {
+      throw new Error('mapProduct: row is null or invalid')
+    }
     // Gérer les images (peut être string JSON ou array)
     let images: string[] = []
     if (row.images) {
       if (typeof row.images === 'string') {
         try {
-          images = JSON.parse(row.images)
+          const parsed = JSON.parse(row.images)
+          images = Array.isArray(parsed) ? parsed.filter((img: unknown): img is string => typeof img === 'string') : [row.images]
         } catch {
           images = [row.images]
         }
       } else if (Array.isArray(row.images)) {
-        images = row.images
+        images = row.images.filter((img: unknown): img is string => typeof img === 'string')
       }
     }
 
@@ -799,23 +808,28 @@ export class SupabaseAdapter implements DatabaseAdapter {
     const imageUrl = normalizeImageUrl(row.image_url || row.main_image || null)
     const normalizedImages = images.map(img => normalizeImageUrl(img))
 
+    const price = Number(row.price)
+    const numPrice = Number.isFinite(price) ? price : 0
+
     return {
-      id: String(row.id),
-      name: row.name,
-      name_ar: row.name_ar || undefined,
-      description: row.description || undefined,
-      price: Number(row.price),
-      original_price: row.original_price ? Number(row.original_price) : undefined,
+      id: String(row.id ?? ''),
+      name: row.name != null ? String(row.name) : 'Sans nom',
+      name_ar: row.name_ar != null ? String(row.name_ar) : undefined,
+      description: row.description != null ? String(row.description) : undefined,
+      price: numPrice,
+      original_price: row.original_price != null && Number.isFinite(Number(row.original_price)) ? Number(row.original_price) : undefined,
       image_url: imageUrl !== '/placeholder.svg' ? imageUrl : undefined,
-      images: normalizedImages.length > 0 && normalizedImages.some(img => img !== '/placeholder.svg') 
+      images: normalizedImages.length > 0 && normalizedImages.some(img => img !== '/placeholder.svg')
         ? normalizedImages.filter(img => img !== '/placeholder.svg')
         : undefined,
-      category: row.category || undefined,
-      is_available: row.is_active !== false, // Utiliser is_active comme proxy pour is_available
+      category: row.category != null ? String(row.category) : undefined,
+      category_id: row.category_id != null ? String(row.category_id) : (row.category != null ? String(row.category) : undefined),
+      is_available: row.is_active !== false,
       is_active: row.is_active !== false,
       is_featured: Boolean(row.is_featured),
-      rating: row.rating ? Number(row.rating) : undefined,
-      reviews_count: row.reviews_count ? Number(row.reviews_count) : undefined,
+      rating: row.rating != null && Number.isFinite(Number(row.rating)) ? Number(row.rating) : undefined,
+      reviews_count: row.reviews_count != null && Number.isFinite(Number(row.reviews_count)) ? Number(row.reviews_count) : undefined,
+      main_image: row.main_image != null ? String(row.main_image) : (row.image_url != null ? String(row.image_url) : undefined),
       created_at: row.created_at,
       updated_at: row.updated_at,
     }

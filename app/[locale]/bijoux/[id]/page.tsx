@@ -87,11 +87,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         },
       },
     }
-  } catch (error) {
-    try {
-      const { logger } = await import('@/lib/logger')
-      logger.error('[generateMetadata bijoux] Erreur:', error)
-    } catch { /* ignore */ }
+  } catch {
     try {
       const { locale } = await params
       const t = await getTranslations({ locale, namespace: 'bijoux.detail' })

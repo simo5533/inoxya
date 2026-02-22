@@ -27,11 +27,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
         description: t('description'),
         url: `${siteUrl}/${locale}/bijoux`,
         siteName: "INOXYA BIJOUX",
-        images: [{ url: `${siteUrl}/images/og-image.jpg`, width: 1200, height: 630, alt: t('title') }],
+        images: [{ url: `${siteUrl}/icon.svg`, width: 1200, height: 630, alt: t('title') }],
         locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
         type: "website",
       },
-      twitter: { card: "summary_large_image", title: t('title'), description: t('description'), images: [`${siteUrl}/images/og-image.jpg`] },
+      twitter: { card: "summary_large_image", title: t('title'), description: t('description'), images: [`${siteUrl}/icon.svg`] },
       alternates: { canonical: `${siteUrl}/${locale}/bijoux`, languages: { fr: `${siteUrl}/fr/bijoux`, ar: `${siteUrl}/ar/bijoux` } },
     }
   } catch {

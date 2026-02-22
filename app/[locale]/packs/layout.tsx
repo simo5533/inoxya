@@ -14,7 +14,7 @@ function getPacksMetadata(): Metadata {
     siteName: "INOXYA BIJOUX",
     images: [
       {
-        url: `${siteUrl}/images/og-image.jpg`,
+        url: `${siteUrl}/icon.svg`,
         width: 1200,
         height: 630,
         alt: "INOXYA BIJOUX - Packs Exclusifs",
@@ -27,7 +27,7 @@ function getPacksMetadata(): Metadata {
     card: "summary_large_image",
     title: "Packs Exclusifs | INOXYA BIJOUX",
     description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium",
-    images: [`${siteUrl}/images/og-image.jpg`],
+    images: [`${siteUrl}/icon.svg`],
   },
   alternates: {
     canonical: `${siteUrl}/packs`,

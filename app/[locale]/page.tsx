@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "INOXYA BIJOUX - Embellie ton âme",
     description: "Collection exclusive de bijoux en acier inoxydable premium",
-    images: [`${siteUrl}/images/og-image.jpg`],
+    images: [`${siteUrl}/icon.svg`],
   },
   alternates: {
     canonical: siteUrl,

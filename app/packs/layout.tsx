@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Packs Exclusifs | INOXYA BIJOUX",
     description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium",
-    images: [`${siteUrl}/images/og-image.jpg`],
+    images: [`${siteUrl}/icon.svg`],
   },
   alternates: {
     canonical: `${siteUrl}/packs`,

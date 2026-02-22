@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Bijoux Sur Mesure | INOXYA BIJOUX",
     description: "Créez le bijou de vos rêves avec notre service personnalisé",
-    images: [`${siteUrl}/images/og-image.jpg`],
+    images: [`${siteUrl}/icon.svg`],
   },
   alternates: {
     canonical: `${siteUrl}/sur-mesure`,
