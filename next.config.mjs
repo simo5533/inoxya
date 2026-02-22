@@ -1,7 +1,13 @@
-import createNextIntlPlugin from 'next-intl/plugin'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
 
-// Plugin next-intl - utilise i18n/request.ts
-const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
+let withNextIntl = (config) => config
+try {
+  const createNextIntlPlugin = require('next-intl/plugin')
+  withNextIntl = createNextIntlPlugin('./i18n/request.ts')
+} catch (_) {
+  console.warn('next-intl/plugin not found — i18n plugin skipped')
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
