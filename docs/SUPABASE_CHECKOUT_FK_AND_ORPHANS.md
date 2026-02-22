@@ -6,6 +6,14 @@
 
 ## 1. Vérifier les orphelins (à exécuter en premier, lecture seule)
 
+**Option A — Script local (recommandé)**  
+À la racine du projet :
+```bash
+npx tsx scripts/checkout-orphans-verify.ts
+```
+Le script utilise le client Supabase (lecture seule) et affiche le nombre d’orphelins. Si les deux comptes sont 0, vous pouvez passer à la section 2.
+
+**Option B — SQL dans Supabase**  
 À exécuter dans **Supabase → SQL Editor**. Tout est en **SELECT**, aucune modification.
 
 ```sql
