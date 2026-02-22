@@ -1,0 +1,273 @@
+
+> inoxya-bijoux@0.1.0 prebuild
+> node scripts/fix-opentelemetry.js
+
+Ô£à Module OpenTelemetry cr├®├®: C:\Users\Basma\Desktop\inoxya-bijoux 2\node_modules\next\dist\compiled\@opentelemetry\api\index.js
+Ô£à package.json cr├®├®: C:\Users\Basma\Desktop\inoxya-bijoux 2\node_modules\next\dist\compiled\@opentelemetry\api\package.json
+Ô£à OpenTelemetry mock cr├®├® avec succ├¿s!
+
+> inoxya-bijoux@0.1.0 build
+> next build
+
+   Ôû▓ Next.js 15.5.12
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of C:\Users\Basma\Desktop\inoxya-bijoux 2\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of C:\Users\Basma\Desktop\inoxya-bijoux 2\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of C:\Users\Basma\Desktop\inoxya-bijoux 2\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+ Ô£ô Compiled successfully in 16.2s
+   Linting and checking validity of types ...
+
+./app/api/admin/packs/initialize/route.ts
+143:9  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+207:9  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+215:26  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+240:27  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+267:13  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+
+./app/api/admin/packs/route.ts
+83:25  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+
+./app/api/admin/packs/verify/route.ts
+56:32  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+68:13  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+80:32  Warning: Unexpected `await` inside a loop.  no-await-in-loop
+
+./app/api/admin/settings/route.ts
+47:36  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+101:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/admin/AdminDashboard.tsx
+44:17  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+45:16  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+46:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/admin/AdminOrders.tsx
+19:17  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/FilterableProductSection.tsx
+10:13  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+11:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+29:44  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+37:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+65:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+69:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+87:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/HomeCategorySection.tsx
+6:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/LanguageSwitcher.tsx
+25:64  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/ProductGrid.tsx
+13:13  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+14:16  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+49:53  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+63:46  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+71:57  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+71:65  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+89:41  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+149:50  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+210:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/ui/drawer.tsx
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+2:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+26:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+27:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./components/ui/hover-card.tsx
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+2:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+21:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+22:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./components/ui/input-otp.tsx
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+2:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+20:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+21:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+24:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+25:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./components/ui/menubar.tsx
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+2:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+32:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+33:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+36:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+37:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./components/ui/navigation-menu.tsx
+21:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+22:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+24:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+25:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+28:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+29:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./components/ui/resizable.tsx
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+2:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+21:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+22:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./components/ui/toggle-group.tsx
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+2:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+19:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+20:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+23:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+24:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+26:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any').
+27:1  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports').
+
+./lib/api-response.ts
+8:41  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+21:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/api-wrapper.ts
+13:55  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/email.ts
+4:17  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+6:16  Warning: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+
+./lib/logger.ts
+96:36  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+122:32  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/monitoring.ts
+139:52  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+139:62  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/pack-management.ts
+7:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+9:14  Warning: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+
+./lib/sqljs-singleton.ts
+18:7  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+19:9  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+64:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+78:24  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+118:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+197:56  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/29) ...
+   Generating static pages (7/29) 
+   Generating static pages (14/29) 
+   Generating static pages (21/29) 
+ Ô£ô Generating static pages (29/29)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+Ôöî ãÆ /                                      321 B         103 kB
+Ôö£ ãÆ /_not-found                            321 B         103 kB
+Ôö£ ÔùÅ /[locale]                            2.35 kB         342 kB
+Ôö£ ÔùÅ /[locale]/a-propos                     179 B         111 kB
+Ôö£ ÔùÅ /[locale]/bijoux                       207 B         339 kB
+Ôö£ ãÆ /[locale]/bijoux/[id]                4.32 kB         211 kB
+Ôö£ ÔùÅ /[locale]/faq                        1.47 kB         104 kB
+Ôö£ ÔùÅ /[locale]/favoris                    6.42 kB         138 kB
+Ôö£ ÔùÅ /[locale]/inscription                4.16 kB         130 kB
+Ôö£ ÔùÅ /[locale]/login                      4.06 kB         130 kB
+Ôö£ ÔùÅ /[locale]/packs                      8.65 kB         149 kB
+Ôö£ ÔùÅ /[locale]/panier                     5.67 kB         137 kB
+Ôö£ ÔùÅ /[locale]/panier/checkout            3.58 kB         196 kB
+Ôö£ ÔùÅ /[locale]/sur-mesure                 18.8 kB         206 kB
+Ôö£ ãÆ /a-propos                              321 B         103 kB
+Ôö£ ãÆ /admin                               11.6 kB         164 kB
+Ôö£ ãÆ /admin/collections                   4.54 kB         118 kB
+Ôö£ ãÆ /admin/database                      4.11 kB         115 kB
+Ôö£ ãÆ /admin/notifications                 2.16 kB         113 kB
+Ôö£ ãÆ /admin/orders                         3.2 kB         117 kB
+Ôö£ ãÆ /admin/orders/[id]                   3.76 kB         118 kB
+Ôö£ ãÆ /admin/packs                         9.11 kB         140 kB
+Ôö£ ãÆ /admin/packs/initialize              3.49 kB         117 kB
+Ôö£ ãÆ /admin/packs/verify                  3.98 kB         123 kB
+Ôö£ ãÆ /admin/paniers                       3.96 kB         123 kB
+Ôö£ ãÆ /admin/payments                      2.47 kB         116 kB
+Ôö£ ãÆ /admin/produits                      6.87 kB         153 kB
+Ôö£ ãÆ /admin/produits/[id]/modifier        7.75 kB         152 kB
+Ôö£ ãÆ /admin/produits/nouveau              8.15 kB         158 kB
+Ôö£ ãÆ /admin/settings                      7.55 kB         127 kB
+Ôö£ ãÆ /api/admin/carts                       321 B         103 kB
+Ôö£ ãÆ /api/admin/database/analyze            321 B         103 kB
+Ôö£ ãÆ /api/admin/import-products             321 B         103 kB
+Ôö£ ãÆ /api/admin/notifications               321 B         103 kB
+Ôö£ ãÆ /api/admin/notifications/[id]/read     321 B         103 kB
+Ôö£ ãÆ /api/admin/packs                       321 B         103 kB
+Ôö£ ãÆ /api/admin/packs/[id]                  321 B         103 kB
+Ôö£ ãÆ /api/admin/packs/initialize            321 B         103 kB
+Ôö£ ãÆ /api/admin/packs/verify                321 B         103 kB
+Ôö£ ãÆ /api/admin/products                    321 B         103 kB
+Ôö£ ãÆ /api/admin/products/trim               321 B         103 kB
+Ôö£ ãÆ /api/admin/settings                    321 B         103 kB
+Ôö£ ãÆ /api/admin/stats                       321 B         103 kB
+Ôö£ ãÆ /api/admin/users                       321 B         103 kB
+Ôö£ ãÆ /api/admin/users/[id]/role             321 B         103 kB
+Ôö£ ãÆ /api/auth/login                        321 B         103 kB
+Ôö£ ãÆ /api/auth/logout                       321 B         103 kB
+Ôö£ ãÆ /api/auth/me                           321 B         103 kB
+Ôö£ ãÆ /api/auth/register                     321 B         103 kB
+Ôö£ ãÆ /api/cart                              321 B         103 kB
+Ôö£ ãÆ /api/categories                        321 B         103 kB
+Ôö£ ãÆ /api/checkout                          321 B         103 kB
+Ôö£ ãÆ /api/csrf-token                        321 B         103 kB
+Ôö£ ãÆ /api/custom-requests                   321 B         103 kB
+Ôö£ ãÆ /api/favorites                         321 B         103 kB
+Ôö£ ãÆ /api/health                            321 B         103 kB
+Ôö£ ãÆ /api/invoices/generate                 321 B         103 kB
+Ôö£ ãÆ /api/invoices/generate-pdf             321 B         103 kB
+Ôö£ ãÆ /api/invoices/send-email               321 B         103 kB
+Ôö£ ãÆ /api/orders                            321 B         103 kB
+Ôö£ ãÆ /api/orders/[id]                       321 B         103 kB
+Ôö£ ãÆ /api/orders/[id]/export                321 B         103 kB
+Ôö£ ãÆ /api/orders/[id]/status                321 B         103 kB
+Ôö£ ãÆ /api/orders/export                     321 B         103 kB
+Ôö£ ãÆ /api/packs                             321 B         103 kB
+Ôö£ ãÆ /api/packs/[id]                        321 B         103 kB
+Ôö£ ãÆ /api/payments                          321 B         103 kB
+Ôö£ ãÆ /api/payments/[id]/status              321 B         103 kB
+Ôö£ ãÆ /api/products                          321 B         103 kB
+Ôö£ ãÆ /api/products/[id]                     321 B         103 kB
+Ôö£ ãÆ /api/test                              321 B         103 kB
+Ôö£ ãÆ /api/upload/product-image              321 B         103 kB
+Ôö£ ãÆ /bijoux                                321 B         103 kB
+Ôö£ ãÆ /bijoux-simple                         321 B         103 kB
+Ôö£ ãÆ /bijoux/[id]                           321 B         103 kB
+Ôö£ ãÆ /faq                                   321 B         103 kB
+Ôö£ ãÆ /favoris                               321 B         103 kB
+Ôö£ Ôùï /icon.svg                                0 B            0 B
+Ôö£ ãÆ /inscription                           321 B         103 kB
+Ôö£ ãÆ /login                                 321 B         103 kB
+Ôö£ ãÆ /packs                                 321 B         103 kB
+Ôö£ ãÆ /packs/[id]                            321 B         103 kB
+Ôö£ ãÆ /panier                                321 B         103 kB
+Ôö£ ãÆ /panier/checkout                       321 B         103 kB
+Ôö£ ãÆ /profile                               321 B         103 kB
+Ôö£ Ôùï /robots.txt                            321 B         103 kB
+Ôö£ Ôùï /sitemap.xml                           321 B         103 kB
+Ôö£ ãÆ /sur-mesure                            321 B         103 kB
+Ôö£ ãÆ /test-produits                         321 B         103 kB
+Ôöö ãÆ /test-simple                           321 B         103 kB
++ First Load JS shared by all             102 kB
+  Ôö£ chunks/1255-a1c02572a6d511aa.js      45.7 kB
+  Ôö£ chunks/4bd1b696-100b9d70ed4e49c1.js  54.2 kB
+  Ôöö other shared chunks (total)          2.27 kB
+
+
+ãÆ Middleware                             44.5 kB
+
+Ôùï  (Static)   prerendered as static content
+ÔùÅ  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ãÆ  (Dynamic)  server-rendered on demand
+

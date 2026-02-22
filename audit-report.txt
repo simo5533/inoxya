@@ -1,0 +1,93 @@
+
+> inoxya-bijoux@0.1.0 audit:complet
+> npx tsx scripts/audit-complet.ts
+
+[dotenv@17.3.1] injecting env (7) from .env.local -- tip: ­ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+­ƒöì AUDIT COMPLET - INOXYA BIJOUX
+
+============================================================
+
+­ƒôï 1. VARIABLES D'ENVIRONNEMENT
+
+   NEXT_PUBLIC_SUPABASE_URL: Ô£à D├®finie
+   SUPABASE_SERVICE_ROLE_KEY: Ô£à D├®finie
+   NEXT_PUBLIC_SUPABASE_ANON_KEY: Ô£à D├®finie
+   DATABASE_URL: Ô£à D├®finie
+
+­ƒôï 2. TEST DE CONNEXION SUPABASE
+
+   Ô£à Connexion r├®ussie
+   Ô£à URL: https://jzcmdwfddjyyawidlzlc.supabase.co
+
+­ƒôï 3. AUDIT DES TABLES
+
+   Ô£à products: 36 enregistrements
+   Ô£à categories: 6 enregistrements
+   Ô£à packs: 13 enregistrements
+   Ô£à users: 2 enregistrements
+   Ô£à orders: 16 enregistrements
+   Ô£à cart_items: 0 enregistrements
+   Ô£à favorites: 0 enregistrements
+   Ô£à payments: 16 enregistrements
+   Ô£à notifications: 0 enregistrements
+
+­ƒôï 4. AUDIT DES PRODUITS
+
+   Ô£à Total produits: 36
+   Ô£à Produits actifs: 36
+   Ô£à Produits vedettes: 0
+   Ô£à Produits avec images: 36
+   Ô£à Cat├®gories trouv├®es: 4
+   ­ƒôª Cat├®gories: Colliers, Bracelets, Bagues, Boucles d'oreilles
+
+   ­ƒôª Exemples de produits:
+      1. Luna Chic - 199 MAD - Image: /images/products/luna-chic-main.jpeg
+      2. Fleur de Lune - 179 MAD - Image: /images/products/fleur-de-lune-main.jpeg
+      3. Panth├®re Royale - 220 MAD - Image: /images/products/panth-re-royale-main.jpeg
+      4. Soleil d'Or - 179 MAD - Image: /images/products/soleil-d-or-main.jpeg
+      5. Douce Harmonie - 189 MAD - Image: /images/products/douce-harmonie-main.jpeg
+
+­ƒôï 5. AUDIT DES CAT├ëGORIES
+
+   Ô£à Total cat├®gories: 6
+      - Bagues (bagues)
+      - Colliers (colliers)
+      - Bracelets (bracelets)
+      - Boucles d'oreilles (boucles-oreilles)
+      - Nos packs (broches)
+      - Montres (montres)
+
+­ƒôï 6. AUDIT DES PACKS
+
+   Ô£à Total packs: 13
+      - Pack Prestige (pack-prestige) - 149 MAD
+      - Pack ├ëmeraude (pack-emeraude) - 219 MAD
+      - Pack Dor├® Luxe (pack-dore-luxe) - 299 MAD
+      - Pack Cloue (pack-cloue) - 449 MAD
+      - Pack Cloue Soft (pack-cloue-soft) - 599 MAD
+
+­ƒôï 7. V├ëRIFICATION DES IMAGES
+
+   Dossier public/images: Ô£à Existe
+   public/images/products: Ô£à Existe
+   public/images/bijoux: Ô£à Existe
+   Fichiers dans products: 105
+
+============================================================
+
+­ƒôè RAPPORT FINAL
+
+Ô£à Configuration Supabase: OK
+Ô£à Connexion Supabase: OK
+Ô£à Base de donn├®es: Accessible
+Ô£à Produits: Disponibles
+Ô£à Images: Configur├®es
+
+­ƒÜÇ PR├èT POUR VERCEL !
+
+Variables ├á v├®rifier sur Vercel:
+   1. NEXT_PUBLIC_SUPABASE_URL
+   2. SUPABASE_SERVICE_ROLE_KEY
+   3. NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+

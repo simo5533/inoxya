@@ -192,3 +192,18 @@ Cette erreur apparaît quand l’email utilisé pour le commit Git ne correspond
    git config user.email "ton-email@verifie-sur-github.com"
    ```
    Puis refaire un commit (amend ou nouveau) et push.
+
+---
+
+## 10. IDE : « Failed to load the ESLint library »
+
+Si Cursor/VS Code affiche **« Failed to load the ESLint library for the document … »** ou **« To use ESLint please install eslint »** :
+
+1. Dans le dossier du projet (`inoxya-bijoux 2`), exécuter :
+   ```bash
+   npm install
+   ```
+2. **Fermer puis rouvrir** le workspace (dossier du projet).
+3. ESLint est déjà dans `package.json` (devDependency) ; `npm install` réinstalle les dépendances et l’extension IDE peut alors trouver `eslint`.
+
+**Warning « Detected package manager() differs from packageManager setting(npm) »** : tu peux l’ignorer ou, si tu n’utilises que npm, supprimer le champ `packageManager` dans `package.json` s’il existe.
