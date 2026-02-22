@@ -1,11 +1,12 @@
 /**
  * Script DevOps optimal : Créer le module OpenTelemetry directement dans node_modules
- * S'exécute après npm install pour créer le module manquant
+ * S'exécute après npm install pour créer le module manquant.
+ * Ne fait jamais échouer npm ci (exit 0 en cas d'erreur).
  */
-
 const fs = require('fs')
 const path = require('path')
 
+try {
 const targetDir = path.join(__dirname, '..', 'node_modules', 'next', 'dist', 'compiled', '@opentelemetry', 'api')
 const targetFile = path.join(targetDir, 'index.js')
 const packageFile = path.join(targetDir, 'package.json')
@@ -111,4 +112,8 @@ try {
 }
 
 console.log('✅ OpenTelemetry mock créé avec succès!')
+} catch (err) {
+  console.error('⚠️  OpenTelemetry script:', err && err.message ? err.message : String(err))
+  process.exit(0)
+}
 

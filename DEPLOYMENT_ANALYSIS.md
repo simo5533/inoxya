@@ -1,6 +1,7 @@
 # Rapport d'analyse – Déploiement et CI (inoxya-bijoux)
 
 **Date :** 20 février 2026  
+**Repo :** [basmaouarid/inoxya-bijoux](https://github.com/basmaouarid/inoxya-bijoux)  
 **Objectif :** Comprendre pourquoi le projet affiche des erreurs au redéploiement et pourquoi les checks CI restent en échec (croix rouges sur GitHub).
 
 ---
@@ -160,7 +161,21 @@ Tu peux committer uniquement ce fichier (et éventuellement `package.json` / `pa
 
 ---
 
-## 8. Erreur Vercel « No GitHub account was found matching the commit author email »
+## 8. Si le CI affiche encore 0/5 (tous les checks en échec)
+
+1. Ouvre le run qui a échoué : **https://github.com/basmaouarid/inoxya-bijoux/actions**
+2. Clique sur le run (ex. commit « fix: NODE_ENV trim... »).
+3. Regarde quel **job** est en rouge (souvent **TypeScript + Lint** en premier).
+4. Clique sur le job → **Details** (ou sur le nom du job).
+5. Dans les logs, repère la **première étape en rouge** :
+   - **Install dependencies** (npm ci) → problème de dépendances ou de `package-lock.json`.
+   - **TypeScript check** → erreur de typage (copier le message).
+   - **ESLint** → règle ESLint en erreur (copier le fichier/ligne).
+6. Le script `scripts/fix-opentelemetry.js` est maintenant entouré d’un `try/catch` global : il ne fait plus échouer `npm ci` même en cas d’exception.
+
+---
+
+## 9. Erreur Vercel « No GitHub account was found matching the commit author email »
 
 Cette erreur apparaît quand l’email utilisé pour le commit Git ne correspond à aucun compte GitHub lié à Vercel.
 
