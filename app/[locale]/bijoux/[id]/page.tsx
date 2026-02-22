@@ -14,7 +14,14 @@ import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
 import { getSiteUrlSync } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 
-const siteUrl = getSiteUrlSync()
+function getSiteUrlSafe(): string {
+  try {
+    return getSiteUrlSync()
+  } catch {
+    return process.env['NEXT_PUBLIC_SITE_URL']?.replace(/\/$/, '') || 'https://inoxya-bijoux.vercel.app'
+  }
+}
+const siteUrl = getSiteUrlSafe()
 
 // Force dynamic rendering - do NOT prerender at build time
 export const runtime = 'nodejs'
@@ -89,14 +96,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     }
   } catch (error) {
-    // En cas d'erreur, retourner des métadonnées par défaut
     const { logger } = await import('@/lib/logger')
     logger.error('[generateMetadata bijoux] Erreur:', error)
-    const { locale } = await params
-    const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
-    return {
-      title: t('default.title'),
-      description: t('default.description'),
+    try {
+      const { locale } = await params
+      const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
+      return { title: t('default.title'), description: t('default.description') }
+    } catch {
+      return { title: 'Produit | INOXYA BIJOUX', description: 'Découvrez nos bijoux.' }
     }
   }
 }
@@ -106,7 +113,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
  */
 export default async function BijouDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { id, locale } = await params
-  const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
+  let t: Awaited<ReturnType<typeof getTranslations>>
+  try {
+    t = await getTranslations({ locale, namespace: 'bijoux.detail' })
+  } catch {
+    notFound()
+  }
 
   // Récupérer le produit avec gestion d'erreur robuste
   let bijou: Awaited<ReturnType<typeof getBijouById>> | null = null

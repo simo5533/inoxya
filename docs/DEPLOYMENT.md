@@ -261,6 +261,20 @@ Pour une URL contenant uniquement **inoxya-bijoux** (ex. `https://inoxya-bijoux.
 
 ## ✅ Vérification avant déploiement
 
+### Checklist avant Redeploy Vercel (tout doit être vert)
+
+| # | Vérification | Commande / action |
+|---|--------------|-------------------|
+| 1 | Tests unitaires | `npm test -- --run` → 37/37 passés |
+| 2 | Build production | `npm run build` → succès, 0 erreur |
+| 3 | Lint | `npm run lint` → warnings OK, 0 erreur |
+| 4 | Connexion Supabase | `npx tsx scripts/test-supabase-connection.ts` → connexion OK |
+| 5 | Variables Vercel | Dans Vercel : `JWT_SECRET`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+
+Si les 5 points sont OK, tu peux cliquer sur **Redeploy** sans risque.
+
+---
+
 Avant de pousser ou de cliquer sur Redeploy, exécuter localement :
 
 | Commande | Rôle |
@@ -271,6 +285,12 @@ Avant de pousser ou de cliquer sur Redeploy, exécuter localement :
 | `npm run smoke:test` | Smoke test des APIs (nécessite `npm run dev` dans un autre terminal) |
 
 Si **tests** et **build** passent, le projet est prêt pour le déploiement.
+
+### Points d'attention Vercel (analyse déploiement)
+
+- **Base de données** : Supabase est utilisé si `NEXT_PUBLIC_SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont définis. Vérifier avec `npx tsx scripts/test-supabase-connection.ts` en local.
+- **Upload admin** : La route `/api/admin/upload-image` enregistre les fichiers dans `public/uploads`. Sur Vercel le système de fichiers est en lecture seule (hors `/tmp`), donc l’upload vers le disque peut échouer en production. Pour des uploads persistants, utiliser **Vercel Blob** (variable `BLOB_READ_WRITE_TOKEN` déjà utilisable).
+- **Images locales** : `/api/admin/serve-local-image` est désactivée en production (retourne 404). Aucun impact sur le déploiement.
 
 ---
 

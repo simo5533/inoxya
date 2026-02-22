@@ -71,36 +71,22 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
   const searchQuery = (searchParamsResolved.search || '').trim()
   const t = await getTranslations({ locale, namespace: 'bijoux' })
 
-  // FORCER la connexion à la base de données
-  const { forceConnection, initSqlJsAsync } = await import('@/lib/sqlite')
-  
-  // Forcer la connexion d'abord
-  let isConnected = forceConnection()
-  
-  // Si forceConnection() retourne false, essayer initSqlJsAsync()
-  if (!isConnected) {
-    isConnected = await initSqlJsAsync()
-    // Réessayer forceConnection après initSqlJsAsync
-    if (isConnected) {
-      isConnected = forceConnection()
+  let allBijoux: Awaited<ReturnType<typeof getAllBijoux>> = []
+  try {
+    const { forceConnection, initSqlJsAsync } = await import('@/lib/sqlite')
+    let isConnected = forceConnection()
+    if (!isConnected) {
+      isConnected = await initSqlJsAsync()
+      if (isConnected) isConnected = forceConnection()
     }
+    if (isConnected) {
+      await new Promise<void>(resolve => { setTimeout(resolve, 100) })
+    }
+    allBijoux = await getAllBijoux(categorySlug)
+  } catch (err) {
+    logger.error('[BijouxPage] Erreur récupération produits:', err)
   }
-  
-  // Attendre un peu pour s'assurer que la DB est complètement chargée
-  if (isConnected) {
-    await new Promise<void>(resolve => {
-      setTimeout(() => {
-        resolve()
-      }, 100)
-    })
-  }
-  
-  // Récupérer les bijoux (filtrés par catégorie si slug fourni)
-  let allBijoux = await getAllBijoux(categorySlug)
-  
-  // Vérifier que les produits sont bien récupérés
   if (!allBijoux || !Array.isArray(allBijoux)) {
-    logger.error('[BijouxPage] Erreur: getAllBijoux() n\'a pas retourné un tableau')
     allBijoux = []
   }
   

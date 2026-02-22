@@ -277,8 +277,7 @@ export async function getAllBijoux(categorySlug?: string) {
     }
   } catch (error) {
     logger.error('Erreur getAllBijoux:', error)
-    // Laisser l'erreur remonter - les routes API et Server Components Next.js la géreront
-    throw error
+    return []
   }
 }
 
