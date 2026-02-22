@@ -29,7 +29,8 @@ export function getSiteUrl(request?: Request): string {
 
   // 3. Fallback final: Placeholder (pour dev/preview)
   // En production, ceci ne devrait jamais être utilisé car NEXT_PUBLIC_SITE_URL sera défini
-  const isProduction = process.env['NODE_ENV'] === 'production'
+  const nodeEnv = (typeof process.env['NODE_ENV'] === 'string' ? process.env['NODE_ENV'].trim() : '')
+  const isProduction = nodeEnv === 'production'
   if (isProduction) {
     // En production, utiliser un placeholder générique
     // L'utilisateur devra définir NEXT_PUBLIC_SITE_URL
@@ -50,9 +51,9 @@ export function getSiteUrlSync(): string {
     return process.env['NEXT_PUBLIC_SITE_URL'].replace(/\/$/, '')
   }
 
-  const isProduction = process.env['NODE_ENV'] === 'production'
-  if (isProduction) {
-    return 'https://your-domain.vercel.app'
+  const nodeEnv = (typeof process.env['NODE_ENV'] === 'string' ? process.env['NODE_ENV'].trim() : '')
+  if (nodeEnv === 'production') {
+    return 'https://inoxya-bijoux.vercel.app'
   }
 
   // En développement, utiliser le port depuis PORT ou NEXT_PUBLIC_PORT

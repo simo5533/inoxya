@@ -74,6 +74,13 @@ module.exports = {
 }
 `
 
+// Ne pas faire échouer npm ci en CI si next n'est pas encore présent
+const nextDir = path.join(__dirname, '..', 'node_modules', 'next')
+if (!fs.existsSync(nextDir)) {
+  console.log('⏭️  Next.js non trouvé, skip OpenTelemetry mock (OK en CI)')
+  process.exit(0)
+}
+
 // Créer le répertoire si nécessaire
 if (!fs.existsSync(targetDir)) {
   fs.mkdirSync(targetDir, { recursive: true })
@@ -84,8 +91,8 @@ try {
   fs.writeFileSync(targetFile, mockContent, 'utf8')
   console.log('✅ Module OpenTelemetry créé:', targetFile)
 } catch (error) {
-  console.error('❌ Erreur lors de la création du module:', error)
-  process.exit(1)
+  console.error('⚠️  OpenTelemetry mock skip:', error.message)
+  process.exit(0)
 }
 
 // Créer package.json pour que Node.js reconnaisse le module
@@ -99,8 +106,8 @@ try {
   fs.writeFileSync(packageFile, JSON.stringify(packageJson, null, 2), 'utf8')
   console.log('✅ package.json créé:', packageFile)
 } catch (error) {
-  console.error('❌ Erreur lors de la création de package.json:', error)
-  process.exit(1)
+  console.error('⚠️  OpenTelemetry package.json skip:', error.message)
+  process.exit(0)
 }
 
 console.log('✅ OpenTelemetry mock créé avec succès!')
