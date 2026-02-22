@@ -32,8 +32,8 @@ export default function Error({
             {error?.message || "Une erreur inattendue s'est produite. Veuillez réessayer."}
           </p>
 
-          {/* Détails en développement */}
-          {process.env.NODE_ENV === 'development' && error?.digest && (
+          {/* Détails en développement (trim NODE_ENV pour éviter espace parasite Vercel) */}
+          {(typeof process.env.NODE_ENV === 'string' ? process.env.NODE_ENV.trim() : '') === 'development' && error?.digest && (
             <p className="text-sm text-gray-500 mt-4 font-mono">
               Digest: {error.digest}
             </p>

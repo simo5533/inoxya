@@ -49,9 +49,9 @@ export const metadata: Metadata = {
     description: "Bijoux en acier inoxydable de qualité premium. Durables, hypoallergéniques et élégants.",
     images: [
       {
-        url: `${siteUrl}/images/og-image.jpg`,
-        width: 1200,
-        height: 630,
+        url: `${siteUrl}/icon.svg`,
+        width: 512,
+        height: 512,
         alt: "INOXYA BIJOUX",
       },
     ],

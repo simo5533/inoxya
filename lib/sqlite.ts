@@ -799,6 +799,7 @@ export function testConnection(): boolean {
  * PHASE 3: Supporte both better-sqlite3 et sql.js
  */
 export function initializeDatabase(): void {
+  if (process.env['VERCEL'] === '1') return
   // PHASE 3: Si better-sqlite3 n'est pas disponible, utiliser sql.js
   if (!db) {
     // Essayer d'initialiser sql.js si pas déjà fait
@@ -2642,6 +2643,7 @@ function escapeSqlValue(value: unknown): string {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function selectRows(query: string, params: unknown[] = []): Record<string, any>[] {
+  if (process.env['VERCEL'] === '1') return []
   const driver = detectDriver()
   
   if (driver === 'better-sqlite3' && db) {
@@ -3002,6 +3004,7 @@ export function select(query: string, params: unknown[] = []): unknown[] {
  * PHASE B: Utilise le singleton sql.js
  */
 export async function selectAsync(query: string, params: unknown[] = []): Promise<unknown[]> {
+  if (process.env['VERCEL'] === '1') return []
   // PHASE 2: S'assurer que sql.js est initialisé si nécessaire
   const driver = detectDriver()
   if (driver === null || driver === 'sqljs') {
