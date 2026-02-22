@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import bcrypt from "bcryptjs"
 import { getDatabaseAdapter } from "@/lib/db"
+import { IS_PRODUCTION, IS_DEVELOPMENT } from "@/lib/env"
 import {
   getUserByPhone as getSqliteUserByPhone,
   getUserById as getSqliteUserById,
@@ -38,25 +39,30 @@ export async function loginUser(phone: string, password: string) {
             },
           }
         } else {
-          if (process.env['NODE_ENV'] === 'development') {
+          if (IS_DEVELOPMENT) {
             console.log('[loginUser] Mot de passe incorrect pour:', { phone: normalizedPhone, userId: user.id })
           }
           return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
         }
       } else if (!user) {
-        if (process.env['NODE_ENV'] === 'development') {
+        if (IS_DEVELOPMENT) {
           console.log('[loginUser] Utilisateur non trouvé:', { phone: normalizedPhone })
         }
         return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
       }
     } catch (adapterError) {
-      // Fallback vers SQLite si l'adapter échoue
-      if (process.env['NODE_ENV'] === 'development') {
+      if (IS_PRODUCTION) {
+        return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
+      }
+      if (IS_DEVELOPMENT) {
         console.log('[loginUser] Erreur adapter, fallback SQLite:', adapterError)
       }
     }
     
-    // FALLBACK: Utiliser SQLite directement si l'adapter n'est pas disponible
+    // FALLBACK: Utiliser SQLite uniquement en développement (pas de fichier .db sur Vercel)
+    if (IS_PRODUCTION) {
+      return { success: false, error: "Utilisateur non trouvé ou mot de passe incorrect" }
+    }
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     if (!isConnected) {

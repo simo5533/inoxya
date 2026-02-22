@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 
-const siteUrl = getSiteUrlSync()
-
-export const metadata: Metadata = {
+function getPacksMetadata(): Metadata {
+  const siteUrl = getSiteUrlSafe()
+  return {
   title: "Packs Exclusifs | INOXYA BIJOUX",
   description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium. Collections complètes à prix avantageux. Bagues, colliers, bracelets et plus.",
   keywords: ["packs bijoux", "collections bijoux", "bijoux pack", "bijoux acier inoxydable", "bijoux premium", "bijoux maroc"],
@@ -32,7 +32,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${siteUrl}/packs`,
   },
+  }
 }
+
+export const metadata: Metadata = getPacksMetadata()
 
 export default function PacksLayout({
   children,

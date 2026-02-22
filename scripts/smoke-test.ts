@@ -1,9 +1,27 @@
 /**
  * Smoke test rapide des endpoints API
  * Vérifie que les routes principales répondent correctement
+ *
+ * Usage:
+ *   npm run smoke:test                                    → teste localhost:3000 (serveur local)
+ *   npm run smoke:test -- --base-url=https://inoxya-bijoux.vercel.app   → teste la prod (recommandé sous PowerShell/Windows)
+ *   Sous PowerShell, préférer --base-url=... car "set VAR=..." ne passe pas au processus enfant.
  */
 
-const SMOKE_TEST_BASE_URL = process.env['NEXT_PUBLIC_SITE_URL'] || 'http://localhost:3000'
+function getBaseUrl(): string {
+  const argv = process.argv.slice(2)
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i]!.startsWith('--base-url=')) {
+      return argv[i]!.replace(/^--base-url=/, '').replace(/\/$/, '')
+    }
+    if (argv[i] === '--base-url' && argv[i + 1]) {
+      return (argv[i + 1] as string).replace(/\/$/, '')
+    }
+  }
+  return process.env['NEXT_PUBLIC_SITE_URL'] || 'http://localhost:3000'
+}
+
+const SMOKE_TEST_BASE_URL = getBaseUrl()
 
 interface SmokeTestResult {
   endpoint: string
@@ -49,16 +67,18 @@ async function testEndpoint(endpoint: string, method: string = 'GET'): Promise<S
 }
 
 async function checkServerReachable(): Promise<boolean> {
+  const isProd = SMOKE_TEST_BASE_URL.includes('vercel.app') || SMOKE_TEST_BASE_URL.includes('https://')
+  const ms = isProd ? 12000 : 3000
   try {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+    const timeout = setTimeout(() => controller.abort(), ms)
     await fetch(`${SMOKE_TEST_BASE_URL}/api/health`, { signal: controller.signal })
     clearTimeout(timeout)
     return true
   } catch {
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 3000)
+      const timeout = setTimeout(() => controller.abort(), ms)
       await fetch(`${SMOKE_TEST_BASE_URL}/`, { signal: controller.signal })
       clearTimeout(timeout)
       return true
@@ -72,6 +92,9 @@ async function runSmokeTest() {
   console.log('🧪 SMOKE TEST - Vérification rapide des APIs\n')
   console.log('='.repeat(60) + '\n')
   console.log(`🌐 URL de base: ${SMOKE_TEST_BASE_URL}\n`)
+  if (SMOKE_TEST_BASE_URL === 'http://localhost:3000') {
+    console.log('   (Pour tester la prod Vercel: npm run smoke:test -- --base-url=https://inoxya-bijoux.vercel.app)\n')
+  }
 
   const serverUp = await checkServerReachable()
   if (!serverUp) {

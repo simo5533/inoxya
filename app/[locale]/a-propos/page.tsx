@@ -23,55 +23,44 @@ import {
   Gem,
   ArrowRight
 } from "lucide-react"
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 
-const siteUrl = getSiteUrlSync()
-
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'about' })
-  
-  return {
-    title: t('title'),
-    description: t('description'),
-    keywords: t('keywords').split(','),
-    openGraph: {
+  const siteUrl = getSiteUrlSafe()
+  try {
+    const { locale } = await params
+    const t = await getTranslations({ locale, namespace: 'about' })
+    return {
       title: t('title'),
       description: t('description'),
-      url: `${siteUrl}/${locale}/a-propos`,
-      siteName: "INOXYA BIJOUX",
-      images: [
-        {
-          url: `${siteUrl}/images/packs/pack-elegancia.jpg`,
-          width: 1200,
-          height: 630,
-          alt: t('title'),
-        },
-      ],
-      locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: t('title'),
-      description: t('description'),
-      images: [`${siteUrl}/images/packs/pack-elegancia.jpg`],
-    },
-    alternates: {
-      canonical: `${siteUrl}/${locale}/a-propos`,
-      languages: {
-        'fr': `${siteUrl}/fr/a-propos`,
-        'ar': `${siteUrl}/ar/a-propos`,
+      keywords: t('keywords').split(','),
+      openGraph: {
+        title: t('title'),
+        description: t('description'),
+        url: `${siteUrl}/${locale}/a-propos`,
+        siteName: "INOXYA BIJOUX",
+        images: [{ url: `${siteUrl}/images/packs/pack-elegancia.jpg`, width: 1200, height: 630, alt: t('title') }],
+        locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
+        type: "website",
       },
-    },
+      twitter: { card: "summary_large_image", title: t('title'), description: t('description'), images: [`${siteUrl}/images/packs/pack-elegancia.jpg`] },
+      alternates: { canonical: `${siteUrl}/${locale}/a-propos`, languages: { fr: `${siteUrl}/fr/a-propos`, ar: `${siteUrl}/ar/a-propos` } },
+    }
+  } catch {
+    return { title: 'À propos | INOXYA BIJOUX', description: 'À propos de nous.', metadataBase: new URL(siteUrl) }
   }
 }
 
 export default async function AProposPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'about' })
-  
+  let t!: Awaited<ReturnType<typeof getTranslations>>
+  try {
+    t = await getTranslations({ locale, namespace: 'about' })
+  } catch {
+    const { notFound } = await import('next/navigation')
+    notFound()
+  }
   return (
     <div className="min-h-screen bg-luxury-ivory">
       {/* 1. HERO SECTION - Premium Editorial */}

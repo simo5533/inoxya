@@ -8,6 +8,7 @@ import { getDatabaseAdapter } from './db'
 import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
 import { getPackById } from './pack-management'
+import { IS_PRODUCTION } from './env'
 
 // Import SQLite direct pour fallback et compatibilité
 import {
@@ -64,9 +65,11 @@ export async function getBijouxVedettes(limit = 8) {
         : activeProducts.slice(0, limit)
       return result
     } catch (adapterError) {
-      // Fallback vers SQLite direct si adapter échoue
+      if (IS_PRODUCTION) {
+        logger.error('[getBijouxVedettes] Adapter failed in production', serializeError(adapterError))
+        return []
+      }
       logger.warn('[getBijouxVedettes] Adapter failed, using SQLite fallback:', serializeError(adapterError))
-      
       const { forceConnection, initSqlJsAsync } = await import('./sqlite')
       let isConnected = forceConnection()
       if (!isConnected) {
@@ -92,12 +95,11 @@ export async function getBijouxVedettes(limit = 8) {
     }
   } catch (error) {
     logger.error('Erreur getBijouxVedettes:', error)
-    // En cas d'erreur, utiliser le fallback SQLite direct
+    if (IS_PRODUCTION) return []
     try {
       return await getSqliteProductsAsync()
     } catch (fallbackError) {
       logger.error('Erreur fallback getBijouxVedettes:', fallbackError)
-      // Retourner un tableau vide plutôt que de faire planter la page
       return []
     }
   }
@@ -155,10 +157,11 @@ export async function getAllBijoux(categorySlug?: string) {
         }
       })
     } catch (adapterError) {
-      // Fallback vers SQLite direct si adapter échoue
+      if (IS_PRODUCTION) {
+        logger.error('[getAllBijoux] Adapter failed in production', serializeError(adapterError))
+        return []
+      }
       logger.warn('[getAllBijoux] Adapter failed, using SQLite fallback:', serializeError(adapterError))
-      
-      // S'assurer que sql.js est initialisé si better-sqlite3 n'est pas disponible
       const { forceConnection, initSqlJsAsync } = await import('./sqlite')
       
       // Forcer la connexion d'abord
@@ -292,26 +295,20 @@ export async function getBijouById(id: string) {
         return product
       }
     } catch (adapterError) {
-      // Fallback vers SQLite si l'adapter échoue
+      if (IS_PRODUCTION) {
+        logger.error('[getBijouById] Adapter failed in production', serializeError(adapterError))
+        return null
+      }
       logger.warn('[getBijouById] Adapter failed, using SQLite fallback:', serializeError(adapterError))
     }
-    
-    // FALLBACK: SQLite direct
+    if (IS_PRODUCTION) return null
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     if (!isConnected) {
       isConnected = await initSqlJsAsync()
-      if (isConnected) {
-        isConnected = forceConnection()
-      }
+      if (isConnected) isConnected = forceConnection()
     }
-    if (isConnected) {
-      await new Promise<void>(resolve => {
-        setTimeout(() => {
-          resolve()
-        }, 50)
-      })
-    }
+    if (isConnected) await new Promise<void>(r => { setTimeout(r, 50) })
     return await getSqliteProductByIdAsync(id)
   } catch (error) {
     logger.error('Erreur getBijouById:', error)
@@ -327,24 +324,24 @@ export async function getAllCategories() {
       const categories = await adapter.getCategories()
       return categories
     } catch (adapterError) {
+      if (IS_PRODUCTION) {
+        logger.error('[getAllCategories] Adapter failed in production', serializeError(adapterError))
+        return []
+      }
       logger.warn('[getAllCategories] Adapter failed, using SQLite fallback:', serializeError(adapterError))
     }
-
-    // FALLBACK: SQLite / sql.js
+    if (IS_PRODUCTION) return []
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
     if (!isConnected) {
       isConnected = await initSqlJsAsync()
-      if (isConnected) {
-        isConnected = forceConnection()
-      }
+      if (isConnected) isConnected = forceConnection()
     }
-    if (isConnected) {
-      return await getSqliteCategories()
-    }
+    if (isConnected) return await getSqliteCategories()
     return []
   } catch (error) {
     logger.error('Erreur getAllCategories:', error)
+    if (IS_PRODUCTION) return []
     try {
       return await getSqliteCategories()
     } catch (fallbackError) {
@@ -374,22 +371,20 @@ export async function getAllPacks() {
         }))
       }
     } catch (adapterError) {
-      // Fallback vers SQLite si l'adapter échoue
+      if (IS_PRODUCTION) {
+        logger.error('[getAllPacks] Adapter failed in production', serializeError(adapterError))
+        return []
+      }
       const errorMsg = adapterError instanceof Error ? adapterError.message : String(adapterError)
       logger.warn('[getAllPacks] Erreur adapter, fallback SQLite', { error: errorMsg })
     }
-    
-    // FALLBACK: Utiliser SQLite directement
+    if (IS_PRODUCTION) return []
     const { forceConnection, initSqlJsAsync } = await import('./sqlite')
     let isConnected = forceConnection()
-    
     if (!isConnected) {
       isConnected = await initSqlJsAsync()
-      if (isConnected) {
-        isConnected = forceConnection()
-      }
+      if (isConnected) isConnected = forceConnection()
     }
-    
     if (!isConnected) {
       // En build-time, retourner un tableau vide plutôt que de lancer une erreur
       if (process.env['NEXT_PHASE'] === 'phase-production-build' || process.env['NEXT_PHASE'] === 'phase-export') {
@@ -408,7 +403,7 @@ export async function getAllPacks() {
     }
     // En runtime, logger l'erreur mais permettre le fallback
     logger.error('Erreur getAllPacks:', error)
-    // Retourner un tableau vide plutôt que de faire planter le sitemap
+    if (IS_PRODUCTION) return []
     try {
       return await getSqlitePacksAsync()
     } catch (fallbackError) {
@@ -419,10 +414,12 @@ export async function getAllPacks() {
 }
 
 export async function getUserByPhone(phone: string) {
+  if (IS_PRODUCTION) return null
   return getSqliteUserByPhone(phone)
 }
 
 export async function getUserById(id: string) {
+  if (IS_PRODUCTION) return null
   return getSqliteUserById(id)
 }
 
@@ -434,6 +431,7 @@ export async function createUser(userData: {
   email?: string
   role?: string
 }) {
+  if (IS_PRODUCTION) throw new Error('createUser not available via SQLite in production')
   const hashedPassword = await bcrypt.hash(userData.password, 10)
   return createSqliteUser({
     phone: userData.phone,
@@ -445,10 +443,12 @@ export async function createUser(userData: {
 }
 
 export async function getAllUsers() {
+  if (IS_PRODUCTION) return []
   return getSqliteAllUsers()
 }
 
 export async function updateUserRole(userId: string, newRole: string) {
+  if (IS_PRODUCTION) return
   return updateSqliteUserRole(userId, newRole)
 }
 
@@ -549,15 +549,25 @@ export async function getDashboardStats() {
         userGrowth: []
       }
     } catch (adapterError) {
-      // Fallback vers SQLite si l'adapter échoue
       if (adapterError instanceof Error) {
-        logger.warn('[getDashboardStats] Erreur adapter, fallback SQLite:', { error: adapterError.message })
+        logger.warn('[getDashboardStats] Erreur adapter:', { error: adapterError.message })
       } else {
-        logger.warn('[getDashboardStats] Erreur adapter, fallback SQLite:', { error: String(adapterError) })
+        logger.warn('[getDashboardStats] Erreur adapter:', { error: String(adapterError) })
       }
     }
-    
-    // FALLBACK: Utiliser SQLite directement
+    if (IS_PRODUCTION) {
+      return {
+        totalBijoux: 0,
+        totalPacks: 0,
+        totalCategories: 0,
+        totalUsers: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        topProducts: [],
+        userGrowth: []
+      }
+    }
     return getSqliteDashboardStats()
   } catch (error) {
     if (error instanceof Error) {
@@ -581,6 +591,7 @@ export async function getDashboardStats() {
 }
 
 export async function getAllOrders() {
+  if (IS_PRODUCTION) return []
   return getSqliteOrders()
 }
 
@@ -609,10 +620,12 @@ export async function createOrder(orderData: {
         return order
       }
     } catch (adapterError) {
+      if (IS_PRODUCTION) {
+        logger.error('[createOrder] Adapter failed in production', serializeError(adapterError))
+        throw adapterError
+      }
       logger.warn('[createOrder] Adapter failed, using SQLite fallback:', serializeError(adapterError))
     }
-    
-    // FALLBACK: SQLite direct
     return createSqliteOrder({
       user_id: orderData.user_id,
       total_amount: orderData.total,
@@ -652,10 +665,12 @@ export async function createOrderItem(itemData: {
         return orderItem
       }
     } catch (adapterError) {
+      if (IS_PRODUCTION) {
+        logger.error('[createOrderItem] Adapter failed in production', serializeError(adapterError))
+        throw adapterError
+      }
       logger.warn('[createOrderItem] Adapter failed, using SQLite fallback:', serializeError(adapterError))
     }
-    
-    // FALLBACK: SQLite direct
     return createSqliteOrderItem({
       order_id: itemData.order_id,
       bijou_id: itemData.product_id,
@@ -738,10 +753,12 @@ export async function createOrderFull(orderData: {
         payment
       }
     } catch (adapterError) {
+      if (IS_PRODUCTION) {
+        logger.error('[createOrderFull] Adapter failed in production', serializeError(adapterError))
+        throw adapterError
+      }
       logger.warn('[createOrderFull] Adapter failed, using SQLite fallback:', serializeError(adapterError))
     }
-    
-    // FALLBACK: SQLite direct
     return createSqliteOrderFull({
       order: {
         user_id: orderData.user_id,
@@ -769,14 +786,17 @@ export async function createOrderFull(orderData: {
 }
 
 export async function getOrderById(orderId: string) {
+  if (IS_PRODUCTION) return null
   return getSqliteOrderById(orderId)
 }
 
 export async function getOrderItems(orderId: string) {
+  if (IS_PRODUCTION) return []
   return getSqliteOrderItems(orderId)
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {
+  if (IS_PRODUCTION) return
   return updateSqliteOrderStatus(orderId, status)
 }
 
@@ -787,6 +807,7 @@ export async function createPayment(paymentData: {
   status: string
   transaction_id?: string
 }) {
+  if (IS_PRODUCTION) throw new Error('createPayment not available via SQLite in production')
   return createSqlitePayment({
     order_id: paymentData.order_id,
     amount: paymentData.amount,
@@ -797,42 +818,52 @@ export async function createPayment(paymentData: {
 }
 
 export async function getPaymentsByOrderId(orderId: string) {
+  if (IS_PRODUCTION) return []
   return getSqlitePaymentsByOrderId(orderId)
 }
 
 export async function updatePaymentStatus(paymentId: string, status: string) {
+  if (IS_PRODUCTION) return
   return updateSqlitePaymentStatus(paymentId, status)
 }
 
 export async function getAllPayments() {
+  if (IS_PRODUCTION) return []
   return getSqliteAllPayments()
 }
 
 export async function getCartItems(userId: string) {
+  if (IS_PRODUCTION) return []
   return getSqliteCartItems(userId)
 }
 
 export async function addToCart(userId: string, productId: string, quantity: number) {
+  if (IS_PRODUCTION) return
   return addSqliteToCart(userId, productId, quantity)
 }
 
 export async function updateCartQuantity(userId: string, productId: string, quantity: number) {
+  if (IS_PRODUCTION) return
   return updateSqliteCartQuantity(userId, productId, quantity)
 }
 
 export async function removeFromCart(userId: string, productId: string) {
+  if (IS_PRODUCTION) return
   return removeSqliteFromCart(userId, productId)
 }
 
 export async function getFavorites(userId: string) {
+  if (IS_PRODUCTION) return []
   return getSqliteFavorites(userId)
 }
 
 export async function addToFavorites(userId: string, productId: string) {
+  if (IS_PRODUCTION) return
   return addSqliteToFavorites(userId, productId)
 }
 
 export async function removeFromFavorites(userId: string, productId: string) {
+  if (IS_PRODUCTION) return
   return removeSqliteFromFavorites(userId, productId)
 }
 
@@ -848,8 +879,8 @@ export async function createNotification(notificationData: {
     const adapter = await getDatabaseAdapter()
     return await adapter.createNotification(notificationData)
   } catch (error) {
-    // Fallback vers SQLite direct si l'adapter échoue
-    logger.warn('Erreur création notification via adapter, fallback SQLite:', serializeError(error))
+    logger.warn('Erreur création notification via adapter:', serializeError(error))
+    if (IS_PRODUCTION) throw error
     return createSqliteNotification(notificationData)
   }
 }
@@ -860,24 +891,28 @@ export async function getNotifications(userId: string | null) {
     const adapter = await getDatabaseAdapter()
     return await adapter.getNotifications(userId ?? undefined)
   } catch (error) {
-    // Fallback vers SQLite direct si l'adapter échoue
-    logger.warn('Erreur récupération notifications via adapter, fallback SQLite:', serializeError(error))
+    logger.warn('Erreur récupération notifications via adapter:', serializeError(error))
+    if (IS_PRODUCTION) return []
     return getSqliteNotifications(userId ?? undefined)
   }
 }
 
 export async function markNotificationAsRead(notificationId: string) {
+  if (IS_PRODUCTION) return
   return markSqliteNotificationAsRead(notificationId)
 }
 
 export async function getAllActiveCarts() {
+  if (IS_PRODUCTION) return []
   return getSqliteAllActiveCarts()
 }
 
 export async function trimProductsToLimit(limit: number) {
+  if (IS_PRODUCTION) return 0
   return trimSqliteProductsToLimit(limit)
 }
 
 export async function testConnection() {
+  if (IS_PRODUCTION) return false
   return testSqliteConnection()
 }

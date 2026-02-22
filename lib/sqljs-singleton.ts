@@ -14,9 +14,14 @@ const DB_PATH = process.env['SQLITE_DB_PATH']
       : path.resolve(process.cwd(), process.env['SQLITE_DB_PATH']))
   : path.resolve(process.cwd(), 'data', 'inoxya_bijoux.db')
 
+/** Minimal type for sql.js Database instance (exec return shape used in this file) */
+interface SqlJsDatabaseInstance {
+  exec(sql: string): { values?: unknown[][] }[]
+}
+
 interface SqlJsDb {
-  db: any
-  init: any
+  db: SqlJsDatabaseInstance
+  init: unknown
   lastModified: number
 }
 
@@ -28,7 +33,9 @@ let cachedDb: SqlJsDb | null = null
  * Garantit une seule initialisation, même en cas d'appels concurrents
  */
 export async function getSqlJsDb(): Promise<SqlJsDb> {
-  // Si déjà initialisé et fichier non modifié, retourner le cache
+  if (process.env['VERCEL'] === '1') {
+    throw new Error('SQLite file not available on Vercel')
+  }
   if (cachedDb) {
     try {
       const absDbPath = path.resolve(DB_PATH)
@@ -61,7 +68,7 @@ export async function getSqlJsDb(): Promise<SqlJsDb> {
       }
 
       // Utiliser import dynamique au lieu de require pour compatibilité Next.js/Webpack
-      let sqlJs: any
+      let sqlJs: unknown
       try {
         sqlJs = await import('sql.js')
       } catch (importError) {
@@ -75,14 +82,15 @@ export async function getSqlJsDb(): Promise<SqlJsDb> {
         throw new Error(`Fichier WASM non trouvé: ${wasmPath}`)
       }
 
-      let sqlJsModule: any = null
+      let sqlJsModule: { Database: new (data?: ArrayBuffer | Uint8Array) => unknown } | null = null
 
       try {
         // sql.js peut être exporté de différentes façons selon la version
-        const initSqlJs = sqlJs.default || sqlJs.initSqlJs || sqlJs
+        const js = sqlJs as { default?: unknown; initSqlJs?: unknown; Database?: unknown }
+        const initSqlJs = js.default || js.initSqlJs || sqlJs
         
         if (typeof initSqlJs === 'function') {
-          sqlJsModule = await initSqlJs({
+          sqlJsModule = await (initSqlJs as (opts: { locateFile: (file: string) => string }) => Promise<{ Database: new (data?: ArrayBuffer | Uint8Array) => unknown }>)({
             locateFile: (file: string) => {
               if (file.endsWith('.wasm')) {
                 return wasmPath
@@ -90,14 +98,12 @@ export async function getSqlJsDb(): Promise<SqlJsDb> {
               return file
             }
           })
-        } else if (sqlJs.Database) {
-          // Format direct (déjà initialisé, rare)
-          sqlJsModule = sqlJs
-        } else if (sqlJs.default && sqlJs.default.Database) {
-          // Format avec default export
-          sqlJsModule = sqlJs.default
+        } else if (js.Database) {
+          sqlJsModule = js as { Database: new (data?: ArrayBuffer | Uint8Array) => unknown }
+        } else if (js.default && (js.default as { Database?: unknown }).Database) {
+          sqlJsModule = js.default as { Database: new (data?: ArrayBuffer | Uint8Array) => unknown }
         } else {
-          const availableKeys = Object.keys(sqlJs).join(', ')
+          const availableKeys = Object.keys(js as object).join(', ')
           throw new Error(`Format sql.js non reconnu. Clés disponibles: ${availableKeys || 'aucune'}`)
         }
       } catch (initError) {
@@ -115,9 +121,9 @@ export async function getSqlJsDb(): Promise<SqlJsDb> {
         throw new Error(`Fichier DB vide ou corrompu: ${absDbPath}`)
       }
       
-      let db: any
+      let db: SqlJsDatabaseInstance
       try {
-        db = new sqlJsModule.Database(fileBuffer)
+        db = new sqlJsModule.Database(fileBuffer) as SqlJsDatabaseInstance
       } catch (dbError) {
         const dbErr = dbError instanceof Error ? dbError : new Error(String(dbError))
         throw new Error(`Erreur lors de la création de la base de données sql.js: ${dbErr.message}`)
@@ -193,16 +199,16 @@ export async function verifyDb(): Promise<{
       ORDER BY name
     `)
     
-    if (tablesResult.length > 0 && tablesResult[0].values) {
-      result.tables = tablesResult[0].values.map((row: any[]) => row[0] as string)
+    const firstTableRow = tablesResult[0]?.values
+    if (firstTableRow) {
+      result.tables = firstTableRow.map((row: unknown[]) => row[0] as string)
     }
 
     // Compter les produits
     try {
       const productsResult = sqlJsDb.db.exec('SELECT COUNT(*) as count FROM products WHERE (is_active = 1 OR is_active IS NULL)')
-      if (productsResult.length > 0 && productsResult[0].values && productsResult[0].values[0]) {
-        result.productsCount = productsResult[0].values[0][0] as number
-      }
+      const countVal = productsResult[0]?.values?.[0]?.[0]
+      if (countVal !== undefined) result.productsCount = countVal as number
     } catch {
       // Table products n'existe pas ou erreur
     }
@@ -210,9 +216,8 @@ export async function verifyDb(): Promise<{
     // Compter les packs
     try {
       const packsResult = sqlJsDb.db.exec('SELECT COUNT(*) as count FROM packs')
-      if (packsResult.length > 0 && packsResult[0].values && packsResult[0].values[0]) {
-        result.packsCount = packsResult[0].values[0][0] as number
-      }
+      const packCountVal = packsResult[0]?.values?.[0]?.[0]
+      if (packCountVal !== undefined) result.packsCount = packCountVal as number
     } catch {
       // Table packs n'existe pas ou erreur
     }

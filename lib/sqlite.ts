@@ -304,7 +304,7 @@ function reloadSqlJsDbIfNeeded(): void {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getBetterSqlite3Db(): any {
   if (db) return db
-  
+  if (process.env['VERCEL'] === '1') return null
   // PHASE 1: Charger better-sqlite3 de manière lazy (seulement quand nécessaire)
   if (!betterSqlite3LoadAttempted) {
     const loadResult = loadBetterSqlite3()
@@ -379,8 +379,8 @@ export function getBetterSqlite3Db(): any {
  * PHASE D: Utilise le singleton avec PRAGMAs
  */
 function ensureDatabaseConnection(): void {
-  if (db) return // Déjà connecté
-  
+  if (db) return
+  if (process.env['VERCEL'] === '1') return
   // PHASE 1: Charger better-sqlite3 de manière lazy si pas encore tenté
   if (!betterSqlite3LoadAttempted) {
     const loadResult = loadBetterSqlite3()
@@ -527,10 +527,10 @@ export function getActiveDriver(): { driver: typeof activeDriver; dbPath: string
  * EXPORTÉ pour utilisation dans les routes API
  */
 export async function initSqlJsAsync(): Promise<boolean> {
+  if (process.env['VERCEL'] === '1') return false
   if (sqlJsInit && sqlJsInit.Database && sqlJsDb) {
-    return true // Déjà initialisé
+    return true
   }
-  
   try {
     // Si une initialisation est déjà en cours, attendre
     if (sqlJsInitPromise) {

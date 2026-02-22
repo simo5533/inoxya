@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { checkRateLimit, recordFailedAttempt, resetRateLimit, sanitizeInput, requireCSRF } from '@/lib/security'
 import { loginSchema, validateWithSchema } from '@/lib/validations'
 import { testConnection } from '@/lib/sqlite'
+import { IS_PRODUCTION } from '@/lib/env'
 import bcrypt from 'bcryptjs'
 import fs from 'fs'
 import path from 'path'
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       const cookieStore = await cookies()
       cookieStore.set("user_id", result.user.id, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: IS_PRODUCTION,
         sameSite: "lax", // "lax" pour permettre la redirection après login (strict bloque la redirection)
         maxAge: 60 * 60 * 24 * 7, // 7 jours
         path: '/' // Explicit path pour garantir la portée
@@ -86,8 +87,8 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    // Si échec et better-sqlite3 n'est pas disponible, essayer avec sql.js directement dans l'API route
-    if (!result.success && !testConnection()) {
+    // Si échec et better-sqlite3 n'est pas disponible, essayer sql.js UNIQUEMENT en dev (pas de fichier .db sur Vercel → ENOENT)
+    if (!result.success && !IS_PRODUCTION && !testConnection()) {
       logger.info('[API Login] better-sqlite3 non disponible, tentative avec sql.js fallback', { phone: sanitizedPhone })
       try {
         const dbPath = path.join(process.cwd(), 'data', 'inoxya_bijoux.db')
@@ -238,7 +239,7 @@ export async function POST(request: NextRequest) {
                 const cookieStore = await cookies()
                 cookieStore.set("user_id", userObj.id, {
                   httpOnly: true,
-                  secure: process.env.NODE_ENV === "production",
+                  secure: IS_PRODUCTION,
                   sameSite: "lax", // "lax" pour permettre la redirection après login (strict bloque la redirection)
                   maxAge: 60 * 60 * 24 * 7, // 7 jours
                   path: '/' // Explicit path pour garantir la portée

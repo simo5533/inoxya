@@ -4,6 +4,7 @@
  */
 
 import { logger } from '../logger'
+import { IS_PRODUCTION } from '../env'
 import type { DatabaseAdapter } from './adapter'
 
 let adapter: DatabaseAdapter | null = null
@@ -103,50 +104,30 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
         }
       }
 
-      // Si pas de Postgres ou échec, utiliser SQLite
-      if (!localAdapter) {
+      // Si pas de Postgres ou échec, utiliser SQLite UNIQUEMENT en développement
+      // En production (Vercel), ne jamais tenter SQLite : pas de fichier .db → ENOENT
+      if (!localAdapter && !IS_PRODUCTION) {
         try {
           const { SqliteAdapter } = await import('./sqlite-adapter')
           localAdapter = new SqliteAdapter()
           localAdapterType = 'sqlite'
           logger.info('[DB] ✅ Utilisation de SQLite')
           
-          // Tester la connexion
           const isConnected = await localAdapter.testConnection()
           if (!isConnected) {
-            // En développement, ne pas logger d'erreur (seulement en mode DEBUG_DB)
-            // Le projet fonctionne avec le fallback sql.js
-            if (process.env['NODE_ENV'] === 'production') {
-              logger.error('[DB] ❌ Échec de connexion SQLite')
-              throw new Error('Impossible de se connecter à la base de données')
-            } else {
-              // Mode développement: logger seulement si DEBUG_DB=1
-              if (process.env['DEBUG_DB'] === '1') {
-                logger.warn('[DB] ⚠️  Mode développement: connexion SQLite échouée, les fonctions utiliseront le fallback sql.js')
-              }
-              localAdapter = null
-              localAdapterType = null
-            }
-          }
-        } catch (error) {
-          // En développement, ne pas logger d'erreur (seulement en mode DEBUG_DB)
-          // Le projet fonctionne avec le fallback sql.js
-          if (process.env['NODE_ENV'] === 'production') {
-            logger.error('[DB] ❌ Erreur lors de l\'initialisation SQLite:', error)
-            throw new Error('Impossible d\'initialiser la base de données')
-          } else {
-            // Mode développement: logger seulement si DEBUG_DB=1
             if (process.env['DEBUG_DB'] === '1') {
-              // logger.warn() n'accepte pas error directement, utiliser logger.error() ou convertir en metadata
-              if (error instanceof Error) {
-                logger.warn('[DB] ⚠️  Mode développement: erreur SQLite, les fonctions utiliseront le fallback sql.js', { error: error.message, stack: error.stack })
-              } else {
-                logger.warn('[DB] ⚠️  Mode développement: erreur SQLite, les fonctions utiliseront le fallback sql.js', { error: String(error) })
-              }
+              logger.warn('[DB] ⚠️  Mode développement: connexion SQLite échouée, les fonctions utiliseront le fallback sql.js')
             }
             localAdapter = null
             localAdapterType = null
           }
+        } catch (error) {
+          if (process.env['DEBUG_DB'] === '1') {
+            const err = error instanceof Error ? error : new Error(String(error))
+            logger.warn('[DB] ⚠️  Mode développement: erreur SQLite, fallback sql.js', { error: err.message })
+          }
+          localAdapter = null
+          localAdapterType = null
         }
       }
 
@@ -195,7 +176,7 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
     // Si timeout ou erreur, lancer l'erreur (les fonctions appelantes géreront avec try-catch)
     adapterInitializing = false
     adapterInitPromise = null
-    if (process.env['NODE_ENV'] !== 'production') {
+    if (!IS_PRODUCTION) {
       logger.warn('[DB] ⚠️  Timeout ou erreur initialisation adapter, fallback activé')
     }
     throw error

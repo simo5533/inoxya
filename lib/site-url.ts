@@ -60,3 +60,15 @@ export function getSiteUrlSync(): string {
   return `http://localhost:${port}`
 }
 
+/**
+ * Version sécurisée qui ne lance jamais : à utiliser dans les Server Components
+ * (generateMetadata, pages) pour éviter les 500 en prod (Vercel).
+ */
+export function getSiteUrlSafe(): string {
+  try {
+    return getSiteUrlSync()
+  } catch {
+    return process.env['NEXT_PUBLIC_SITE_URL']?.replace(/\/$/, '') || 'https://inoxya-bijoux.vercel.app'
+  }
+}
+

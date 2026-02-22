@@ -11,17 +11,8 @@ import { getBijouById, getAllBijoux } from "@/lib/database"
 import OrderForm from "@/components/OrderForm"
 import ProductImageGallery from "@/components/ProductImageGallery"
 import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
-
-function getSiteUrlSafe(): string {
-  try {
-    return getSiteUrlSync()
-  } catch {
-    return process.env['NEXT_PUBLIC_SITE_URL']?.replace(/\/$/, '') || 'https://inoxya-bijoux.vercel.app'
-  }
-}
-const siteUrl = getSiteUrlSafe()
 
 // Force dynamic rendering - do NOT prerender at build time
 export const runtime = 'nodejs'
@@ -32,6 +23,7 @@ export const revalidate = 0
  * Generate metadata for product page
  */
 export async function generateMetadata({ params }: { params: Promise<{ id: string; locale: string }> }): Promise<Metadata> {
+  const siteUrl = getSiteUrlSafe()
   try {
     const { id, locale } = await params
     const bijou = await getBijouById(id)
@@ -112,8 +104,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
  * Dynamic page : /[locale]/bijoux/[id]
  */
 export default async function BijouDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
+  const siteUrl = getSiteUrlSafe()
+  try {
   const { id, locale } = await params
-  let t: Awaited<ReturnType<typeof getTranslations>>
+  let t!: Awaited<ReturnType<typeof getTranslations>>
   try {
     t = await getTranslations({ locale, namespace: 'bijoux.detail' })
   } catch {
@@ -124,8 +118,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
   let bijou: Awaited<ReturnType<typeof getBijouById>> | null = null
   try {
     bijou = await getBijouById(id)
-  } catch (error) {
-    console.error(`[BijouDetailPage] Erreur lors de la récupération du produit ${id}:`, error)
+  } catch {
     notFound()
   }
 
@@ -144,13 +137,19 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     description: bijou.description != null ? String(bijou.description) : '',
   }
   
-  // Récupérer des produits similaires
-  let allBijoux = await getAllBijoux()
-  if (!allBijoux || allBijoux.length === 0) {
+  // Récupérer des produits similaires (ne pas faire échouer la page si erreur)
+  let allBijoux: Awaited<ReturnType<typeof getAllBijoux>> = []
+  try {
+    allBijoux = await getAllBijoux()
+  } catch {
     allBijoux = []
   }
+  if (!allBijoux || !Array.isArray(allBijoux)) {
+    allBijoux = []
+  }
+  const productCategory = product.category_id != null ? String(product.category_id) : ''
   const similarProducts = allBijoux
-    .filter(b => b.id !== id && b.category_id === product.category_id)
+    .filter(b => String(b.id) !== String(id) && String(b.category_id || '') === productCategory)
     .slice(0, 4)
 
   const rating = product.rating ?? 4.5
@@ -599,5 +598,8 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     </div>
     </>
   )
+  } catch {
+    notFound()
+  }
 }
 

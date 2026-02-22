@@ -11,18 +11,11 @@ import type { Metadata } from "next"
 import { Star, Shield, Truck, Heart, Crown, Sparkles, Gem, Instagram } from "lucide-react"
 import { TikTokIcon } from "@/components/ui/tiktok-icon"
 import { socialLinks } from "@/lib/social-links"
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 import type { Category } from "@/lib/types"
 
-// Obtenir l'URL du site avec gestion d'erreur
-const defaultPort = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
-let siteUrl = `http://localhost:${defaultPort}`
-try {
-  siteUrl = getSiteUrlSync()
-} catch {
-  siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] || `http://localhost:${defaultPort}`
-}
+const siteUrl = getSiteUrlSafe()
 
 export const metadata: Metadata = {
   title: "Accueil | INOXYA BIJOUX",

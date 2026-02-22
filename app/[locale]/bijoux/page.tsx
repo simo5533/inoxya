@@ -9,49 +9,33 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { X } from "lucide-react"
 import { CATEGORIES } from "@/lib/category-mapping"
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 
-const siteUrl = getSiteUrlSync()
-
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'bijoux' })
-  
-  return {
-    metadataBase: new URL(siteUrl),
-    title: t('title'),
-    description: t('description'),
-    keywords: t('keywords').split(','),
-    openGraph: {
+  const siteUrl = getSiteUrlSafe()
+  try {
+    const { locale } = await params
+    const t = await getTranslations({ locale, namespace: 'bijoux' })
+    return {
+      metadataBase: new URL(siteUrl),
       title: t('title'),
       description: t('description'),
-      url: `${siteUrl}/${locale}/bijoux`,
-      siteName: "INOXYA BIJOUX",
-      images: [
-        {
-          url: `${siteUrl}/images/og-image.jpg`,
-          width: 1200,
-          height: 630,
-          alt: t('title'),
-        },
-      ],
-      locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: t('title'),
-      description: t('description'),
-      images: [`${siteUrl}/images/og-image.jpg`],
-    },
-    alternates: {
-      canonical: `${siteUrl}/${locale}/bijoux`,
-      languages: {
-        'fr': `${siteUrl}/fr/bijoux`,
-        'ar': `${siteUrl}/ar/bijoux`,
+      keywords: t('keywords').split(','),
+      openGraph: {
+        title: t('title'),
+        description: t('description'),
+        url: `${siteUrl}/${locale}/bijoux`,
+        siteName: "INOXYA BIJOUX",
+        images: [{ url: `${siteUrl}/images/og-image.jpg`, width: 1200, height: 630, alt: t('title') }],
+        locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
+        type: "website",
       },
-    },
+      twitter: { card: "summary_large_image", title: t('title'), description: t('description'), images: [`${siteUrl}/images/og-image.jpg`] },
+      alternates: { canonical: `${siteUrl}/${locale}/bijoux`, languages: { fr: `${siteUrl}/fr/bijoux`, ar: `${siteUrl}/ar/bijoux` } },
+    }
+  } catch {
+    return { title: 'Bijoux | INOXYA BIJOUX', description: 'Découvrez nos bijoux.', metadataBase: new URL(siteUrl) }
   }
 }
 
@@ -69,7 +53,13 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
   const searchParamsResolved = await searchParams
   const categorySlug = searchParamsResolved.category
   const searchQuery = (searchParamsResolved.search || '').trim()
-  const t = await getTranslations({ locale, namespace: 'bijoux' })
+  let t!: Awaited<ReturnType<typeof getTranslations>>
+  try {
+    t = await getTranslations({ locale, namespace: 'bijoux' })
+  } catch {
+    const { notFound } = await import('next/navigation')
+    notFound()
+  }
 
   let allBijoux: Awaited<ReturnType<typeof getAllBijoux>> = []
   try {

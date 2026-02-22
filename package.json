@@ -18,6 +18,8 @@
     "start": "node scripts/start-server.js",
     "start:next": "next start",
     "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "health-check": "npx tsx scripts/health-check.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "test": "vitest",
