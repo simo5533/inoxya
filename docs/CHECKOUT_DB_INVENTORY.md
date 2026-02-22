@@ -50,4 +50,26 @@
 
 ---
 
+## Diagnostic des erreurs Supabase (checkout)
+
+En cas d’échec, les logs contiennent `[SupabaseAdapter] createOrder failed` (ou createOrderItem / createPayment) avec :
+- **table** / **operation** (insert)
+- **message**, **code**, **details**, **hint**
+- **serialized** (forme sérialisée de l’erreur)
+
+Correspondance typique **code / message → cause** :
+
+| Cause probable | Indice (code / message) |
+|----------------|--------------------------|
+| **RLS** | Permission denied, new row violates row-level security policy |
+| **Colonne manquante** | column "xxx" of relation "yyy" does not exist |
+| **Type invalide** | invalid input syntax for type integer/uuid, type mismatch |
+| **Violation FK** | insert or update on table "order_items" violates foreign key constraint |
+| **NOT NULL** | null value in column "xxx" violates not-null constraint |
+| **Unique** | duplicate key value violates unique constraint |
+
+**Note RLS :** L’adapter utilise `SUPABASE_SERVICE_ROLE_KEY`, qui **contourne RLS**. Si le checkout échoue avec un message RLS, vérifier que c’est bien la clé **service_role** qui est utilisée côté serveur (jamais exposée au client).
+
+---
+
 *Document généré dans le cadre du fix checkout Supabase (Phase 0).*
