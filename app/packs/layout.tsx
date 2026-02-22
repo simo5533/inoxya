@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 
-const siteUrl = getSiteUrlSync()
+const siteUrl = getSiteUrlSafe()
 
 export const metadata: Metadata = {
   title: "Packs Exclusifs | INOXYA BIJOUX",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "INOXYA BIJOUX",
     images: [
       {
-        url: `${siteUrl}/images/og-image.jpg`,
+        url: `${siteUrl}/icon.svg`,
         width: 1200,
         height: 630,
         alt: "INOXYA BIJOUX - Packs Exclusifs",

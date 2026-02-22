@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 
-const siteUrl = getSiteUrlSync()
+const siteUrl = getSiteUrlSafe()
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Pages statiques

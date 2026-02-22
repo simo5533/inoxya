@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: "INOXYA BIJOUX",
     images: [
       {
-        url: `${siteUrl}/images/og-image.jpg`,
+        url: `${siteUrl}/icon.svg`,
         width: 1200,
         height: 630,
         alt: "INOXYA BIJOUX - Collection de bijoux",

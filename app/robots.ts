@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
-import { getSiteUrlSync } from '@/lib/site-url'
+import { getSiteUrlSafe } from '@/lib/site-url'
 
-const siteUrl = getSiteUrlSync()
+const siteUrl = getSiteUrlSafe()
 
 export default function robots(): MetadataRoute.Robots {
   return {
