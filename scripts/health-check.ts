@@ -1,13 +1,21 @@
 /**
  * HEALTH CHECK — À exécuter avant déploiement
  * Usage: npx tsx scripts/health-check.ts
+ * Dotenv est optionnel (ex: CI sans module dotenv) : on charge .env.local si dispo.
  */
 
-import * as dotenv from 'dotenv'
 import * as path from 'path'
 import * as fs from 'fs'
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+function loadDotenv(): void {
+  try {
+    const dotenv = require('dotenv') as { config: (opts: { path: string }) => void }
+    dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+  } catch {
+    // dotenv absent (ex: npx tsx hors projet) — on s'appuie sur process.env (CI, Vercel)
+  }
+}
+loadDotenv()
 
 interface Result {
   category: string
