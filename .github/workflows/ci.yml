@@ -86,8 +86,10 @@ jobs:
         env:
           CI: 'true'
           SKIP_POSTINSTALL: '1'
-      - name: Verify postcss/autoprefixer (fail fast)
-        run: node -e "require('autoprefixer'); require('postcss'); console.log('postcss ok')"
+      - name: Verify postcss/autoprefixer/pg (fail fast)
+        run: node -e "require('postcss'); require('autoprefixer'); require('pg'); console.log('deps ok')"
+      - name: List deps (diagnostic)
+        run: npm ls autoprefixer postcss pg || true
       - name: Build Next.js
         run: npm run build
         env:
