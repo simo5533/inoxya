@@ -2,6 +2,7 @@
  * Adapter PostgreSQL - Pour production sur Vercel
  * Utilise pg (node-postgres) pour se connecter à Postgres
  */
+import 'server-only'
 
 import { Pool } from 'pg'
 import type { DatabaseAdapter } from './adapter'
@@ -334,30 +335,33 @@ export class PostgresAdapter implements DatabaseAdapter {
   async createOrderItem(itemData: {
     order_id: string
     bijou_id?: string
+    pack_id?: string
     product_id?: string
     quantity: number
     price: number
     product_name?: string
   }): Promise<OrderItem | null> {
-    const bijou_id = itemData.bijou_id || itemData.product_id || ''
-    if (!bijou_id) {
+    const bijou_id = itemData.bijou_id ?? itemData.product_id ?? ''
+    if (!bijou_id && !itemData.pack_id) {
       return null
     }
-    
+    const pack_id = itemData.pack_id ?? null
+
     const result = await this.pool.query(
-      `INSERT INTO order_items (order_id, bijou_id, quantity, price)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO order_items (order_id, bijou_id, pack_id, quantity, price)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [itemData.order_id, bijou_id, itemData.quantity, itemData.price]
+      [itemData.order_id, bijou_id || null, pack_id, itemData.quantity, itemData.price]
     )
     
     if (result.rows.length === 0) return null
     
-    const row = result.rows[0]
+    const row = result.rows[0] as { id: number; order_id: number; bijou_id: string; pack_id?: string | null; quantity: number; price: number }
     return {
       id: String(row.id),
       order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id: String(row.bijou_id ?? ''),
+      pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
       quantity: Number(row.quantity),
       price: Number(row.price),
     }
@@ -368,10 +372,11 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM order_items WHERE order_id = $1',
       [orderId]
     )
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: number; order_id: number; bijou_id: string; pack_id?: string | null; quantity: number; price: number }) => ({
       id: String(row.id),
       order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id: String(row.bijou_id ?? ''),
+      pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
       quantity: Number(row.quantity),
       price: Number(row.price),
     }))
@@ -431,29 +436,41 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM favorites WHERE user_id = $1',
       [userId]
     )
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: number; user_id: number; bijou_id: number | null; pack_id?: number | null }) => ({
       id: String(row.id),
       user_id: String(row.user_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id: row.bijou_id != null ? String(row.bijou_id) : '',
+      ...(row.pack_id != null ? { pack_id: String(row.pack_id) } : {}),
     }))
   }
 
-  async addToFavorites(userId: string, bijouId: string): Promise<boolean> {
-    const result = await this.pool.query(
-      `INSERT INTO favorites (user_id, bijou_id)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id, bijou_id) DO NOTHING`,
-      [userId, bijouId]
-    )
-    return (result.rowCount ?? 0) > 0
+  async addToFavorites(userId: string, bijouId?: string | null, packId?: string | null): Promise<boolean> {
+    const bid = bijouId != null && bijouId !== '' ? bijouId : null
+    const pid = packId != null && packId !== '' ? packId : null
+    if (!bid && !pid) return false
+    try {
+      const result = await this.pool.query(
+        `INSERT INTO favorites (user_id, bijou_id, pack_id) VALUES ($1, $2, $3)`,
+        [userId, bid, pid]
+      )
+      return (result.rowCount ?? 0) > 0
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code
+      if (code === '23505') return true
+      throw err
+    }
   }
 
-  async removeFromFavorites(userId: string, bijouId: string): Promise<boolean> {
-    const result = await this.pool.query(
-      'DELETE FROM favorites WHERE user_id = $1 AND bijou_id = $2',
-      [userId, bijouId]
-    )
-    return (result.rowCount ?? 0) > 0
+  async removeFromFavorites(userId: string, bijouId?: string | null, packId?: string | null): Promise<boolean> {
+    if (bijouId != null && bijouId !== '') {
+      const result = await this.pool.query('DELETE FROM favorites WHERE user_id = $1 AND bijou_id = $2', [userId, bijouId])
+      return (result.rowCount ?? 0) > 0
+    }
+    if (packId != null && packId !== '') {
+      const result = await this.pool.query('DELETE FROM favorites WHERE user_id = $1 AND pack_id = $2', [userId, packId])
+      return (result.rowCount ?? 0) > 0
+    }
+    return false
   }
 
   // Payments
