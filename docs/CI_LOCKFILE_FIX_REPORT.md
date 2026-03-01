@@ -5,6 +5,14 @@
 
 ---
 
+## Fix ESLint + minimatch ESM (lint vert sans downgrade)
+
+**Cause :** En minimatch v10+ (ESM), il n’y a pas d’export `default`. La chaîne ESLint (`@eslint/config-array` ESM et `@eslint/eslintrc` override-tester) utilisait `import minimatch from 'minimatch'` → erreur en CI.  
+**Correctif :** Script `patch-eslint-minimatch.js` étendu pour patcher les deux fichiers (named import `minimatch` / `Minimatch`). Le script est exécuté **dans le script lint** (`node scripts/patch-eslint-minimatch.js && next lint`) pour que le lint reste fiable même si postinstall est skippé en CI. Override minimatch conservé à `>=10.2.3` (sécurisé, pas de downgrade).  
+**Sécurité :** Aucune vulnérabilité réintroduite ; patch uniquement sur le style d’import.
+
+---
+
 ## Résumé causes racines
 
 | Blocage | Cause racine | Fix appliqué |

@@ -9,7 +9,7 @@
   },
   "overrides": {
     "glob": "^13.0.0",
-    "minimatch": "^9.0.5",
+    "minimatch": ">=10.2.3",
     "esbuild": "^0.25.0",
     "rollup": ">=4.59.0",
     "serialize-javascript": ">=7.0.3"
@@ -21,7 +21,7 @@
     "build": "next build",
     "start": "node scripts/start-server.js",
     "start:next": "next start",
-    "lint": "next lint",
+    "lint": "node scripts/patch-eslint-minimatch.js && next lint",
     "type-check": "tsc --noEmit",
     "health-check": "npx tsx scripts/health-check.ts",
     "full-audit": "node scripts/full-audit.mjs",
