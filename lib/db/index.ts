@@ -2,6 +2,7 @@
  * Point d'entrée pour la couche d'abstraction DB
  * Choisit automatiquement SQLite (dev) ou Postgres (prod) selon DATABASE_URL
  */
+import 'server-only'
 
 import { logger } from '../logger'
 import { IS_PRODUCTION } from '../env'

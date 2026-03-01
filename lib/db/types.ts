@@ -40,6 +40,7 @@ export interface Pack {
   price: number
   image_url?: string
   is_featured: boolean
+  created_by?: number | string | null
 }
 
 export interface User {
@@ -68,6 +69,7 @@ export interface OrderItem {
   id: string
   order_id: string
   bijou_id: string
+  pack_id?: string
   quantity: number
   price: number
 }
@@ -83,6 +85,7 @@ export interface Favorite {
   id: string
   user_id: string
   bijou_id: string
+  pack_id?: string
 }
 
 export interface Payment {

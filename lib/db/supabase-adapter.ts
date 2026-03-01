@@ -19,6 +19,7 @@ import type {
   DashboardStats,
 } from './types'
 import { logger } from '../logger'
+import { serializeError } from '../sqlite'
 import { slugToDbValue } from '../category-mapping'
 import { normalizeImageUrl } from '../image-path'
 
@@ -190,7 +191,9 @@ export class SupabaseAdapter implements DatabaseAdapter {
         .single()
 
       if (error || !data) return null
-      return this.mapProduct(data)
+      const product = this.mapProduct(data)
+      if (!product.id || String(product.id).trim() === '') return null
+      return product
     } catch (err) {
       logger.error('[SupabaseAdapter] getProductById exception:', { id, error: err instanceof Error ? err.message : String(err) })
       return null
@@ -469,11 +472,30 @@ export class SupabaseAdapter implements DatabaseAdapter {
     phone?: string
     notes?: string
   }): Promise<Order | null> {
-    const { data, error } = await this.insertData('orders', orderData)
+    const payload = {
+      user_id: orderData.user_id || null,
+      total_amount: Number(orderData.total_amount),
+      status: orderData.status ?? 'pending',
+      shipping_address: orderData.shipping_address ?? null,
+      phone: orderData.phone ?? null,
+      notes: orderData.notes ?? null
+    }
+    const { data, error } = await this.insertData('orders', payload)
       .select()
       .single()
     
-    if (error || !data) return null
+    if (error || !data) {
+      const errPayload = {
+        table: 'orders',
+        operation: 'insert',
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      }
+      logger.warn('[SupabaseAdapter] createOrder failed', error ? { ...errPayload, serialized: serializeError(error) } : errPayload)
+      return null
+    }
     return this.mapOrder(data)
   }
 
@@ -486,16 +508,30 @@ export class SupabaseAdapter implements DatabaseAdapter {
     product_name?: string
   }): Promise<{ id: string; order_id: string; bijou_id: string; quantity: number; price: number } | null> {
     const bijou_id = itemData.bijou_id || itemData.product_id || ''
+    const orderIdRaw = itemData.order_id
+    const order_id = Number.isFinite(Number(orderIdRaw)) ? Number(orderIdRaw) : orderIdRaw
     const { data, error } = await this.insertData('order_items', {
-      order_id: itemData.order_id,
-      bijou_id: bijou_id,
-      quantity: itemData.quantity,
-      price: itemData.price
+      order_id,
+      bijou_id: bijou_id || null,
+      quantity: Number(itemData.quantity),
+      price: Number(itemData.price)
     })
       .select()
       .single()
     
-    if (error || !data) return null
+    if (error || !data) {
+      const errPayload = {
+        table: 'order_items',
+        operation: 'insert',
+        order_id: itemData.order_id,
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      }
+      logger.warn('[SupabaseAdapter] createOrderItem failed', error ? { ...errPayload, serialized: serializeError(error) } : errPayload)
+      return null
+    }
     
     const row = data as { id: number; order_id: number; bijou_id: string; quantity: number; price: number }
     return {
@@ -624,11 +660,32 @@ export class SupabaseAdapter implements DatabaseAdapter {
     status?: string
     transaction_id?: string
   }): Promise<Payment | null> {
-    const { data, error } = await this.insertData('payments', paymentData)
+    const orderIdRaw = paymentData.order_id
+    const order_id = Number.isFinite(Number(orderIdRaw)) ? Number(orderIdRaw) : orderIdRaw
+    const payload = {
+      order_id,
+      amount: Number(paymentData.amount),
+      payment_method: paymentData.payment_method || 'cash_on_delivery',
+      status: paymentData.status ?? 'pending',
+      transaction_id: paymentData.transaction_id ?? null
+    }
+    const { data, error } = await this.insertData('payments', payload)
       .select()
       .single()
     
-    if (error || !data) return null
+    if (error || !data) {
+      const errPayload = {
+        table: 'payments',
+        operation: 'insert',
+        order_id: paymentData.order_id,
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      }
+      logger.warn('[SupabaseAdapter] createPayment failed', error ? { ...errPayload, serialized: serializeError(error) } : errPayload)
+      return null
+    }
     return this.mapPayment(data)
   }
 
@@ -787,7 +844,23 @@ export class SupabaseAdapter implements DatabaseAdapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapProduct(row: any): Product {
     if (!row || typeof row !== 'object') {
-      throw new Error('mapProduct: row is null or invalid')
+      logger.warn('[SupabaseAdapter] mapProduct: row null or invalid, returning minimal product')
+      return {
+        id: '',
+        name: 'Sans nom',
+        description: undefined,
+        price: 0,
+        image_url: undefined,
+        images: undefined,
+        category: undefined,
+        category_id: undefined,
+        is_available: false,
+        is_active: false,
+        is_featured: false,
+        main_image: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+      }
     }
     // Gérer les images (peut être string JSON ou array)
     let images: string[] = []

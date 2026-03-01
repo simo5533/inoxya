@@ -92,10 +92,11 @@ export function validateEnvironment(): EnvValidationResult {
   const env = parseResult.success ? parseResult.data : null
   
   if (env) {
-    // NEXT_PUBLIC_SITE_URL obligatoire en production
-    if (isProduction && !env.NEXT_PUBLIC_SITE_URL) {
-      errors.push('NEXT_PUBLIC_SITE_URL est obligatoire en production')
-    } else if (!env.NEXT_PUBLIC_SITE_URL) {
+    // NEXT_PUBLIC_SITE_URL obligatoire en production sauf si VERCEL_URL (Option A: domaine par défaut)
+    const hasVercelUrl = Boolean(process.env['VERCEL_URL'])
+    if (isProduction && !env.NEXT_PUBLIC_SITE_URL && !hasVercelUrl) {
+      errors.push('NEXT_PUBLIC_SITE_URL est obligatoire en production (ou déployer sur Vercel pour utiliser VERCEL_URL)')
+    } else if (!env.NEXT_PUBLIC_SITE_URL && !hasVercelUrl) {
       warnings.push('NEXT_PUBLIC_SITE_URL non défini, utilisation de la valeur par défaut')
     }
     

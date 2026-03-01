@@ -122,13 +122,25 @@ export async function POST(request: NextRequest) {
     }
 
     // PHASE 3: Créer la commande complète en transaction (commande + lignes + paiement + notification)
+    const checkoutDebug = process.env['CHECKOUT_DEBUG'] === 'true'
     logger.info('[POST /api/checkout] Début création commande', {
       itemsCount: verifiedItems.length,
       total,
       phone: sanitizedPhone ? sanitizedPhone.substring(0, 4) + '****' : null,
       paymentMethod: validatedData.payment_method || 'cash_on_delivery'
     })
-    
+    if (checkoutDebug) {
+      logger.debug('[POST /api/checkout] CHECKOUT_DEBUG payload (sanitized)', {
+        itemsCount: verifiedItems.length,
+        total,
+        phonePrefix: sanitizedPhone ? sanitizedPhone.substring(0, 4) + '****' : null,
+        cityLength: sanitizedCity?.length ?? 0,
+        addressLength: sanitizedAddress?.length ?? 0,
+        customerNameLength: sanitizedCustomerName?.length ?? 0,
+        itemIds: verifiedItems.map((i) => i.id)
+      })
+    }
+
     // Récupérer l'utilisateur si connecté
     let userId = ''
     try {

@@ -697,6 +697,16 @@ export async function createOrderFull(orderData: {
     product_name: string
   }>
 }) {
+  const checkoutDebug = process.env['CHECKOUT_DEBUG'] === 'true'
+  if (checkoutDebug) {
+    logger.debug('[createOrderFull] CHECKOUT_DEBUG payload (sanitized)', {
+      itemsCount: orderData.items.length,
+      total: orderData.total,
+      hasUserId: Boolean(orderData.user_id),
+      shippingAddressLength: orderData.shipping_address?.length ?? 0,
+      shippingPhoneLength: orderData.shipping_phone?.length ?? 0
+    })
+  }
   try {
     // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
     try {

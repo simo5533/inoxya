@@ -2,6 +2,7 @@
  * Adapter PostgreSQL - Pour production sur Vercel
  * Utilise pg (node-postgres) pour se connecter à Postgres
  */
+import 'server-only'
 
 import { Pool } from 'pg'
 import type { DatabaseAdapter } from './adapter'
@@ -102,7 +103,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     })
 
     // Gérer les erreurs de connexion
-    this.pool.on('error', (err) => {
+    this.pool.on('error', (err: Error) => {
       logger.error('[PostgresAdapter] Pool error:', err)
     })
   }
@@ -157,7 +158,7 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   async getAllUsers(): Promise<User[]> {
     const result = await this.pool.query<UserRow>('SELECT * FROM users ORDER BY created_at DESC')
-    return result.rows.filter((row): row is UserRow => row != null).map(row => this.mapUser(row))
+    return result.rows.filter((row: UserRow | null): row is UserRow => row != null).map((row: UserRow) => this.mapUser(row))
   }
 
   async updateUserRole(userId: string, newRole: string): Promise<boolean> {
@@ -182,7 +183,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     }
 
     const result = await this.pool.query<ProductRow>(query, params)
-    return result.rows.map(row => this.mapProduct(row))
+    return result.rows.map((row: ProductRow) => this.mapProduct(row))
   }
 
   async getProductById(id: string): Promise<Product | null> {
@@ -217,7 +218,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Categories
   async getCategories(): Promise<Category[]> {
     const result = await this.pool.query('SELECT * FROM categories ORDER BY name')
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: unknown; name: string; slug: string; description?: string | null; image_url?: string | null }) => ({
       id: String(row.id),
       name: row.name,
       slug: row.slug,
@@ -241,7 +242,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Packs
   async getPacks(): Promise<Pack[]> {
     const result = await this.pool.query<PackRow>('SELECT * FROM packs ORDER BY created_at DESC')
-    return result.rows.map(row => ({
+    return result.rows.map((row: PackRow) => ({
       id: String(row.id),
       name: row.name,
       slug: row.slug,
@@ -292,7 +293,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Orders
   async getOrders(): Promise<Order[]> {
     const result = await this.pool.query<OrderRow>('SELECT * FROM orders ORDER BY created_at DESC')
-    return result.rows.map(row => this.mapOrder(row))
+    return result.rows.map((row: OrderRow) => this.mapOrder(row))
   }
 
   async getOrderById(id: string): Promise<Order | null> {
@@ -334,30 +335,33 @@ export class PostgresAdapter implements DatabaseAdapter {
   async createOrderItem(itemData: {
     order_id: string
     bijou_id?: string
+    pack_id?: string
     product_id?: string
     quantity: number
     price: number
     product_name?: string
   }): Promise<OrderItem | null> {
-    const bijou_id = itemData.bijou_id || itemData.product_id || ''
-    if (!bijou_id) {
+    const bijou_id = itemData.bijou_id ?? itemData.product_id ?? ''
+    if (!bijou_id && !itemData.pack_id) {
       return null
     }
-    
+    const pack_id = itemData.pack_id ?? null
+
     const result = await this.pool.query(
-      `INSERT INTO order_items (order_id, bijou_id, quantity, price)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO order_items (order_id, bijou_id, pack_id, quantity, price)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [itemData.order_id, bijou_id, itemData.quantity, itemData.price]
+      [itemData.order_id, bijou_id || null, pack_id, itemData.quantity, itemData.price]
     )
     
     if (result.rows.length === 0) return null
     
-    const row = result.rows[0]
+    const row = result.rows[0] as { id: number; order_id: number; bijou_id: string; pack_id?: string | null; quantity: number; price: number }
     return {
       id: String(row.id),
       order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id: String(row.bijou_id ?? ''),
+      pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
       quantity: Number(row.quantity),
       price: Number(row.price),
     }
@@ -368,10 +372,11 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM order_items WHERE order_id = $1',
       [orderId]
     )
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: number; order_id: number; bijou_id: string; pack_id?: string | null; quantity: number; price: number }) => ({
       id: String(row.id),
       order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id: String(row.bijou_id ?? ''),
+      pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
       quantity: Number(row.quantity),
       price: Number(row.price),
     }))
@@ -391,7 +396,7 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM cart_items WHERE user_id = $1',
       [userId]
     )
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: unknown; user_id: unknown; bijou_id: unknown; quantity: string | number }) => ({
       id: String(row.id),
       user_id: String(row.user_id),
       bijou_id: String(row.bijou_id),
@@ -431,29 +436,41 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM favorites WHERE user_id = $1',
       [userId]
     )
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: number; user_id: number; bijou_id: number | null; pack_id?: number | null }) => ({
       id: String(row.id),
       user_id: String(row.user_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id: row.bijou_id != null ? String(row.bijou_id) : '',
+      ...(row.pack_id != null ? { pack_id: String(row.pack_id) } : {}),
     }))
   }
 
-  async addToFavorites(userId: string, bijouId: string): Promise<boolean> {
-    const result = await this.pool.query(
-      `INSERT INTO favorites (user_id, bijou_id)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id, bijou_id) DO NOTHING`,
-      [userId, bijouId]
-    )
-    return (result.rowCount ?? 0) > 0
+  async addToFavorites(userId: string, bijouId?: string | null, packId?: string | null): Promise<boolean> {
+    const bid = bijouId != null && bijouId !== '' ? bijouId : null
+    const pid = packId != null && packId !== '' ? packId : null
+    if (!bid && !pid) return false
+    try {
+      const result = await this.pool.query(
+        `INSERT INTO favorites (user_id, bijou_id, pack_id) VALUES ($1, $2, $3)`,
+        [userId, bid, pid]
+      )
+      return (result.rowCount ?? 0) > 0
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code
+      if (code === '23505') return true
+      throw err
+    }
   }
 
-  async removeFromFavorites(userId: string, bijouId: string): Promise<boolean> {
-    const result = await this.pool.query(
-      'DELETE FROM favorites WHERE user_id = $1 AND bijou_id = $2',
-      [userId, bijouId]
-    )
-    return (result.rowCount ?? 0) > 0
+  async removeFromFavorites(userId: string, bijouId?: string | null, packId?: string | null): Promise<boolean> {
+    if (bijouId != null && bijouId !== '') {
+      const result = await this.pool.query('DELETE FROM favorites WHERE user_id = $1 AND bijou_id = $2', [userId, bijouId])
+      return (result.rowCount ?? 0) > 0
+    }
+    if (packId != null && packId !== '') {
+      const result = await this.pool.query('DELETE FROM favorites WHERE user_id = $1 AND pack_id = $2', [userId, packId])
+      return (result.rowCount ?? 0) > 0
+    }
+    return false
   }
 
   // Payments
@@ -487,12 +504,12 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM payments WHERE order_id = $1',
       [orderId]
     )
-    return result.rows.map(row => this.mapPayment(row))
+    return result.rows.map((row: PaymentRow) => this.mapPayment(row))
   }
 
   async getAllPayments(): Promise<Payment[]> {
     const result = await this.pool.query<PaymentRow>('SELECT * FROM payments ORDER BY created_at DESC')
-    return result.rows.map(row => this.mapPayment(row))
+    return result.rows.map((row: PaymentRow) => this.mapPayment(row))
   }
 
   async updatePaymentStatus(id: string, status: string): Promise<boolean> {
@@ -539,7 +556,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     query += ' ORDER BY created_at DESC'
 
     const result = await this.pool.query(query, params)
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: unknown; user_id?: unknown; title: string; message: string; type?: string | null; is_read?: boolean; created_at?: string | Date; action_url?: string | null }) => ({
       id: String(row.id),
       user_id: row.user_id ? String(row.user_id) : undefined,
       title: row.title,

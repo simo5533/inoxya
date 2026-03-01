@@ -16,7 +16,13 @@ export function getSiteUrl(request?: Request): string {
     return process.env['NEXT_PUBLIC_SITE_URL'].replace(/\/$/, '')
   }
 
-  // 2. Fallback: Headers de requête (si disponible)
+  // 2. Fallback Vercel: VERCEL_URL (preview + prod sans domaine personnalisé)
+  const vercelUrl = process.env['VERCEL_URL']
+  if (vercelUrl && typeof vercelUrl === 'string') {
+    return `https://${vercelUrl.replace(/\/$/, '')}`
+  }
+
+  // 3. Fallback: Headers de requête (si disponible)
   if (request) {
     const protocol = request.headers.get('x-forwarded-proto') || 
                      (request.url.startsWith('https') ? 'https' : 'http')
@@ -27,7 +33,7 @@ export function getSiteUrl(request?: Request): string {
     }
   }
 
-  // 3. Fallback final: Placeholder (pour dev/preview)
+  // 4. Fallback final: Placeholder (pour dev/preview)
   // En production, ceci ne devrait jamais être utilisé car NEXT_PUBLIC_SITE_URL sera défini
   const nodeEnv = (typeof process.env['NODE_ENV'] === 'string' ? process.env['NODE_ENV'].trim() : '')
   const isProduction = nodeEnv === 'production'
@@ -50,7 +56,10 @@ export function getSiteUrlSync(): string {
   if (process.env['NEXT_PUBLIC_SITE_URL']) {
     return process.env['NEXT_PUBLIC_SITE_URL'].replace(/\/$/, '')
   }
-
+  const vercelUrl = process.env['VERCEL_URL']
+  if (vercelUrl && typeof vercelUrl === 'string') {
+    return `https://${vercelUrl.replace(/\/$/, '')}`
+  }
   const nodeEnv = (typeof process.env['NODE_ENV'] === 'string' ? process.env['NODE_ENV'].trim() : '')
   if (nodeEnv === 'production') {
     return 'https://inoxya-bijoux.vercel.app'
