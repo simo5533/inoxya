@@ -11,6 +11,7 @@
 |--------|--------------|--------------|
 | **CI « TypeScript + Lint »** | `npm ci` exige que chaque optionalDependency racine ait une entrée dans `packages` du lockfile. `@opentelemetry/instrumentation@0.212.0` était listé à la racine mais n’avait pas d’entrée top-level `node_modules/@opentelemetry/instrumentation` (uniquement des entrées imbriquées 0.211.0). | Ajout manuel dans `package-lock.json` de l’entrée `node_modules/@opentelemetry/instrumentation` (version 0.212.0, resolved, integrity, optional, deps). |
 | **Vercel « No GitHub account… »** | L’auteur des commits était `aomarlaasri@gmail.com`, non associé au compte GitHub qui possède le projet Vercel. | Config git locale du repo : `user.email = basmaouarid003@gmail.com`, `user.name = Basma Ouarid`. Le dernier commit (lockfile fix) est signé par ce compte. |
+| **CI/Vercel « Cannot find module patch-eslint-minimatch.js »** | Le fichier `scripts/patch-eslint-minimatch.js` existait en local mais n’était **pas versionné** (untracked). En CI et sur Vercel le step postinstall (ou le step explicite du workflow) exécutait ce script → fichier absent → échec. | Ajout du fichier au repo + wrapper `scripts/postinstall.js` qui skip en CI/Vercel et n’appelle le patch que s’il existe. Script patch rendu infaillible (exit 0). Pin Node 20 (engines + .nvmrc). |
 
 ---
 

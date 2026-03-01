@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0",
+    "node": "20.x",
     "npm": ">=9.0.0"
   },
   "overrides": {
@@ -15,8 +15,8 @@
     "serialize-javascript": ">=7.0.3"
   },
   "scripts": {
-    "postinstall": "node scripts/fix-opentelemetry.js && node scripts/patch-eslint-minimatch.js",
-    "prebuild": "node scripts/fix-opentelemetry.js && node scripts/patch-eslint-minimatch.js",
+    "postinstall": "node scripts/postinstall.js",
+    "prebuild": "node scripts/postinstall.js",
     "dev": "node scripts/dev-server.js",
     "build": "next build",
     "start": "node scripts/start-server.js",
@@ -195,7 +195,7 @@
   },
   "optionalDependencies": {
     "@opentelemetry/api": "1.9.0",
-    "@opentelemetry/instrumentation": "^0.212.0",
+    "@opentelemetry/instrumentation": "0.212.0",
     "@opentelemetry/sdk-node": "^0.212.0",
     "better-sqlite3": "^11.7.0",
     "nodemailer": "^8.0.1"
