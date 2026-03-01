@@ -103,7 +103,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     })
 
     // Gérer les erreurs de connexion
-    this.pool.on('error', (err) => {
+    this.pool.on('error', (err: Error) => {
       logger.error('[PostgresAdapter] Pool error:', err)
     })
   }
@@ -158,7 +158,7 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   async getAllUsers(): Promise<User[]> {
     const result = await this.pool.query<UserRow>('SELECT * FROM users ORDER BY created_at DESC')
-    return result.rows.filter((row): row is UserRow => row != null).map(row => this.mapUser(row))
+    return result.rows.filter((row: UserRow | null): row is UserRow => row != null).map((row: UserRow) => this.mapUser(row))
   }
 
   async updateUserRole(userId: string, newRole: string): Promise<boolean> {
@@ -183,7 +183,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     }
 
     const result = await this.pool.query<ProductRow>(query, params)
-    return result.rows.map(row => this.mapProduct(row))
+    return result.rows.map((row: ProductRow) => this.mapProduct(row))
   }
 
   async getProductById(id: string): Promise<Product | null> {
@@ -218,7 +218,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Categories
   async getCategories(): Promise<Category[]> {
     const result = await this.pool.query('SELECT * FROM categories ORDER BY name')
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: unknown; name: string; slug: string; description?: string | null; image_url?: string | null }) => ({
       id: String(row.id),
       name: row.name,
       slug: row.slug,
@@ -242,7 +242,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Packs
   async getPacks(): Promise<Pack[]> {
     const result = await this.pool.query<PackRow>('SELECT * FROM packs ORDER BY created_at DESC')
-    return result.rows.map(row => ({
+    return result.rows.map((row: PackRow) => ({
       id: String(row.id),
       name: row.name,
       slug: row.slug,
@@ -293,7 +293,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   // Orders
   async getOrders(): Promise<Order[]> {
     const result = await this.pool.query<OrderRow>('SELECT * FROM orders ORDER BY created_at DESC')
-    return result.rows.map(row => this.mapOrder(row))
+    return result.rows.map((row: OrderRow) => this.mapOrder(row))
   }
 
   async getOrderById(id: string): Promise<Order | null> {
@@ -396,7 +396,7 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM cart_items WHERE user_id = $1',
       [userId]
     )
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: unknown; user_id: unknown; bijou_id: unknown; quantity: string | number }) => ({
       id: String(row.id),
       user_id: String(row.user_id),
       bijou_id: String(row.bijou_id),
@@ -504,12 +504,12 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM payments WHERE order_id = $1',
       [orderId]
     )
-    return result.rows.map(row => this.mapPayment(row))
+    return result.rows.map((row: PaymentRow) => this.mapPayment(row))
   }
 
   async getAllPayments(): Promise<Payment[]> {
     const result = await this.pool.query<PaymentRow>('SELECT * FROM payments ORDER BY created_at DESC')
-    return result.rows.map(row => this.mapPayment(row))
+    return result.rows.map((row: PaymentRow) => this.mapPayment(row))
   }
 
   async updatePaymentStatus(id: string, status: string): Promise<boolean> {
@@ -556,7 +556,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     query += ' ORDER BY created_at DESC'
 
     const result = await this.pool.query(query, params)
-    return result.rows.map(row => ({
+    return result.rows.map((row: { id: unknown; user_id?: unknown; title: string; message: string; type?: string | null; is_read?: boolean; created_at?: string | Date; action_url?: string | null }) => ({
       id: String(row.id),
       user_id: row.user_id ? String(row.user_id) : undefined,
       title: row.title,
