@@ -9,7 +9,7 @@
   },
   "overrides": {
     "glob": "^13.0.0",
-    "minimatch": ">=10.2.3",
+    "minimatch": "^9.0.5",
     "esbuild": "^0.25.0",
     "rollup": ">=4.59.0",
     "serialize-javascript": ">=7.0.3"
