@@ -29,7 +29,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
         env:
           CI: 'true'
           SKIP_POSTINSTALL: '1'
@@ -37,7 +37,13 @@ jobs:
       - name: Patch ESLint/minimatch (v10 compat)
         run: node scripts/patch-eslint-minimatch.js
 
-      - name: TypeScript check
+      - name: Verify TypeScript (fail fast)
+        run: node -e "require('typescript'); console.log('ts ok')"
+
+      - name: List deps (diagnostic)
+        run: npm ls autoprefixer postcss pg typescript || true
+
+      - name: TypeScript check (project tsconfig)
         run: npx tsc --noEmit
 
       - name: ESLint
@@ -54,7 +60,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      - run: npm ci
+      - run: npm ci --include=dev
         env:
           CI: 'true'
           SKIP_POSTINSTALL: '1'
@@ -86,10 +92,14 @@ jobs:
         env:
           CI: 'true'
           SKIP_POSTINSTALL: '1'
-      - name: Verify postcss/autoprefixer/pg (fail fast)
+      - name: Fail-fast deps
         run: node -e "require('postcss'); require('autoprefixer'); require('pg'); console.log('deps ok')"
-      - name: List deps (diagnostic)
-        run: npm ls autoprefixer postcss pg || true
+      - name: Diagnostics (env + npm config + deps)
+        run: |
+          node -v && npm -v
+          npm config get omit || true
+          npm config get production || true
+          npm ls autoprefixer postcss pg --all || true
       - name: Build Next.js
         run: npm run build
         env:
@@ -108,7 +118,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      - run: npm ci
+      - run: npm ci --include=dev
         env:
           CI: 'true'
           SKIP_POSTINSTALL: '1'
