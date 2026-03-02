@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowRight, Package } from "lucide-react"
@@ -11,44 +10,41 @@ export default function HeroBanner() {
   const t = useTranslations('home.hero')
   const locale = useLocale()
   return (
-    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black flex items-center justify-center">
-      {/* Video background (hidden when prefers-reduced-motion) */}
-      <div className="heroVideo absolute inset-0 h-full w-full">
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          aria-hidden
-        >
-          <source src="/videos/banniere-inoxya.mp4" type="video/mp4" />
-        </video>
-      </div>
-      <div className="absolute inset-0 bg-black/35 z-[1]" aria-hidden />
-
-      {/* Animated background elements (fallback when video hidden) */}
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-orange-400/15 to-yellow-500/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-yellow-500/10 to-orange-600/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+    <section className="relative min-h-screen overflow-hidden flex items-center justify-center">
+      {/* Static glass luxury background (CSS-only, emerald/teal) – no video */}
+      <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden>
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-slate-950 to-teal-950" />
+        <div className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-emerald-400/15 blur-3xl" />
+        <div className="absolute top-1/3 -right-32 h-[520px] w-[520px] rounded-full bg-teal-300/12 blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 h-[520px] w-[520px] rounded-full bg-cyan-200/8 blur-3xl" />
+        <div className="absolute inset-0 bg-black/25" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/35" />
       </div>
 
       {/* Centered content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
         <div className="max-w-4xl mx-auto space-y-12">
-          {/* Logo/Banner Image (above video for branding) */}
-          <div className="relative mx-auto max-w-3xl">
-            <Image
-              src="/banner-inoxya.jpg"
-              alt="INOXYA BIJOUX - Collection de bijoux en acier inoxydable premium - Embellie ton âme"
-              width={800}
-              height={300}
-              className="w-full h-auto rounded-2xl shadow-2xl"
-              priority
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 800px"
+          {/* Carte centrale : vidéo premium + fallback reduced-motion */}
+          <div className="relative mx-auto max-w-3xl w-full overflow-hidden rounded-2xl aspect-[800/300]">
+            {/* Glass panel behind card (no blur on video) */}
+            <div className="pointer-events-none absolute inset-0 bg-white/10 backdrop-blur-2xl ring-1 ring-white/15 shadow-[0_30px_80px_rgba(0,0,0,0.45)] rounded-2xl" aria-hidden />
+            {/* Reduced-motion placeholder (gradient only, no image) */}
+            <div
+              className="absolute inset-0 hidden motion-reduce:block rounded-2xl bg-gradient-to-br from-emerald-900/90 via-teal-900/80 to-slate-900/90"
+              aria-hidden
             />
+            <video
+              className="relative z-10 h-full w-full object-cover rounded-2xl motion-reduce:hidden"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label={t('discoverCollection')}
+            >
+              <source src="/videos/inoxya-center.mp4" type="video/mp4" />
+            </video>
+            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-black/10 z-10" aria-hidden />
           </div>
 
           {/* Buttons */}

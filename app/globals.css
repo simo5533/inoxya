@@ -227,6 +227,7 @@ html {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
+  line-clamp: 1;
 }
 
 .line-clamp-2 {
@@ -234,6 +235,7 @@ html {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* Hover effects pour les cartes produits */
@@ -551,5 +553,12 @@ select::-ms-expand {
 @media (prefers-reduced-motion: reduce) {
   .heroVideo {
     display: none;
+  }
+  .inoxya-center-video,
+  .inoxya-center-ambient {
+    display: none !important;
+  }
+  .inoxya-center-fallback {
+    display: block !important;
   }
 }
