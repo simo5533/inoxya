@@ -546,3 +546,10 @@ select::-ms-expand {
   object-fit: cover;
   object-position: center;
 }
+
+/* Hero vidéo : masquer si l'utilisateur préfère réduire les animations */
+@media (prefers-reduced-motion: reduce) {
+  .heroVideo {
+    display: none;
+  }
+}

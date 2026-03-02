@@ -12,7 +12,23 @@ export default function HeroBanner() {
   const locale = useLocale()
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black flex items-center justify-center">
-      {/* Animated background elements */}
+      {/* Video background (hidden when prefers-reduced-motion) */}
+      <div className="heroVideo absolute inset-0 h-full w-full">
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden
+        >
+          <source src="/videos/banniere-inoxya.mp4" type="video/mp4" />
+        </video>
+      </div>
+      <div className="absolute inset-0 bg-black/35 z-[1]" aria-hidden />
+
+      {/* Animated background elements (fallback when video hidden) */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-orange-400/15 to-yellow-500/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -22,7 +38,7 @@ export default function HeroBanner() {
       {/* Centered content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
         <div className="max-w-4xl mx-auto space-y-12">
-          {/* Logo/Banner Image */}
+          {/* Logo/Banner Image (above video for branding) */}
           <div className="relative mx-auto max-w-3xl">
             <Image
               src="/banner-inoxya.jpg"
