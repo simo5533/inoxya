@@ -1,12 +1,7 @@
 /**
  * Mapping centralisé des images de catégories
- * Priorité: produit réel > image statique > fallback Unsplash spécifique
- * 
- * Règles:
- * - Noms/slug normalisés (lowercase, tirets)
- * - Aucun broken image
- * - Images optimisées (format webp/avif si possible)
- * - Alt text descriptif (important SEO)
+ * Priorité: image statique par slug (assets locaux) > produit réel > fallback
+ * Clés stables par slug (FR + AR), aucune image externe.
  */
 
 import { getProductsAsync } from './sqlite'
@@ -15,18 +10,18 @@ import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
 
 /**
- * Images statiques de fallback pour chaque catégorie
- * Utilisées si aucun produit n'a d'image valide
- * Images haute qualité HD depuis Unsplash (licence libre) ou locales
+ * Images statiques par slug (assets locaux /public/images/categories/)
+ * Bagues, Colliers, Bracelets, Boucles d'oreilles, Montres (parures), Nos packs (broches)
  */
 export const CATEGORY_STATIC_IMAGES: Record<string, string> = {
-  bagues: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920&h=1080&fit=crop&q=90',
-  colliers: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1920&h=1080&fit=crop&q=90',
-  bracelets: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=1920&h=1080&fit=crop&q=90',
-  'boucles-oreilles': 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1920&h=1080&fit=crop&q=90',
-  montres: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1920&h=1080&fit=crop&q=90', // Image spécifique de montre
-  parures: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1920&h=1080&fit=crop&q=90', // Alias pour montres
-  broches: '/images/packs/pack-prestige.jpg',
+  bagues: '/images/categories/bagues.jpg',
+  colliers: '/images/categories/colliers.jpg',
+  bracelets: '/images/categories/bracelets.jpg',
+  'boucles-oreilles': '/images/categories/boucles-oreilles.jpg',
+  montres: '/images/categories/montres.jpg',
+  parures: '/images/categories/montres.jpg',
+  broches: '/images/categories/packs.jpg',
+  packs: '/images/categories/packs.jpg',
 }
 
 /**
@@ -44,17 +39,22 @@ export const CATEGORY_ALT_TEXTS: Record<string, string> = {
 
 /**
  * Obtient l'image de couverture pour une catégorie (SERVER-SIDE ONLY)
- * Priorité: produit réel > image statique > fallback Unsplash
- * 
- * @param categorySlug - Slug de la catégorie (ex: "bracelets", "montres")
+ * Priorité: image statique par slug (assets locaux) > produit réel > fallback
+ *
+ * @param categorySlug - Slug de la catégorie (ex: "bracelets", "parures")
  * @returns URL de l'image garantie (jamais null)
  */
 export async function getCategoryCoverImage(categorySlug: string): Promise<string> {
   try {
-    // Normaliser le slug (lowercase, tirets)
     const normalizedSlug = categorySlug.toLowerCase().trim()
-    
-    // Essayer d'abord de récupérer une image depuis un produit réel
+
+    // Priorité 1: Image statique locale (mapping par slug, FR + AR)
+    const staticImage = CATEGORY_STATIC_IMAGES[normalizedSlug]
+    if (staticImage) {
+      return staticImage
+    }
+
+    // Priorité 2: Image depuis un produit réel (si pas de mapping)
     const dbValue = slugToDbValue(normalizedSlug)
     if (dbValue) {
       try {
@@ -62,22 +62,14 @@ export async function getCategoryCoverImage(categorySlug: string): Promise<strin
         const categoryProducts = allProducts.filter(p => {
           return (p.category === dbValue) || (p.category_id === normalizedSlug)
         })
-
-        if (categoryProducts.length > 0) {
-          // Sélectionner le premier produit avec une image valide
-          for (const product of categoryProducts) {
-            const imageUrl = product.main_image || product.image_url
-            if (imageUrl) {
-              const safeImage = getSafeImageSrc(imageUrl)
-              // Vérifier que ce n'est pas le placeholder
-              if (safeImage && safeImage !== '/placeholder.svg') {
-                return safeImage
-              }
-            }
+        for (const product of categoryProducts) {
+          const imageUrl = product.main_image || product.image_url
+          if (imageUrl) {
+            const safeImage = getSafeImageSrc(imageUrl)
+            if (safeImage && safeImage !== '/placeholder.svg') return safeImage
           }
         }
       } catch (dbError) {
-        // Si erreur DB, continuer vers fallback
         if (process.env.NODE_ENV === 'development') {
           const errorDetails = dbError instanceof Error ? { message: dbError.message } : { error: String(dbError) }
           logger.warn(`[getCategoryCoverImage] Erreur DB pour ${normalizedSlug}:`, errorDetails)
@@ -85,18 +77,10 @@ export async function getCategoryCoverImage(categorySlug: string): Promise<strin
       }
     }
 
-    // Fallback 1: Image statique locale si disponible
-    const staticImage = CATEGORY_STATIC_IMAGES[normalizedSlug]
-    if (staticImage) {
-      return staticImage
-    }
-
-    // Fallback 2: Image par défaut (bagues)
-    return CATEGORY_STATIC_IMAGES['bagues'] || '/images/categories/bagues-category.jpeg'
+    return CATEGORY_STATIC_IMAGES['bagues'] || '/images/categories/bagues.jpg'
   } catch (error) {
     logger.error(`[getCategoryCoverImage] Erreur pour ${categorySlug}:`, error)
-    // Fallback final
-    return CATEGORY_STATIC_IMAGES['bagues'] || '/images/categories/bagues-category.jpeg'
+    return CATEGORY_STATIC_IMAGES['bagues'] || '/images/categories/bagues.jpg'
   }
 }
 
@@ -136,7 +120,6 @@ export function getCategoryImageWithFallback(
     return staticImage
   }
   
-  // Fallback final
-  return CATEGORY_STATIC_IMAGES['bagues'] || '/images/categories/bagues-category.jpeg'
+  return CATEGORY_STATIC_IMAGES['bagues'] || '/images/categories/bagues.jpg'
 }
 
