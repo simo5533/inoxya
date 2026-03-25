@@ -3,7 +3,8 @@ import { getBijouById, createOrderFull } from '@/lib/database'
 import { getPackById } from '@/lib/pack-management'
 import { sendAdminEmail, renderPaymentEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
-import { checkRateLimit, sanitizeInput, requireCSRF } from '@/lib/security'
+import { sanitizeInput, requireCSRF } from '@/lib/security'
+import { consumePublicRateLimit, getClientIp } from '@/lib/public-rate-limit'
 import { checkoutSchema, validateWithSchema } from '@/lib/validations'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
@@ -17,20 +18,6 @@ export async function POST(request: NextRequest) {
       return csrfCheck.error
     }
     
-    // Rate limiting pour prévenir les abus
-    const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown'
-    
-    const rateCheck = await checkRateLimit(`checkout_${clientIP}`)
-    if (!rateCheck.allowed) {
-      logger.warn(`[SECURITY] Checkout rate limit triggered for IP: ${clientIP}`)
-      return NextResponse.json(
-        { error: 'Trop de commandes. Veuillez réessayer plus tard.' },
-        { status: 429 }
-      )
-    }
-
     const body = await request.json()
 
     // SÉCURITÉ: Validation avec Zod
@@ -39,6 +26,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Données invalides', details: validation.errors },
         { status: 400 }
+      )
+    }
+
+    // Rate limiting public après validation (évite de consommer le quota sur JSON invalide)
+    const clientIP = getClientIp(request)
+    const checkoutRl = consumePublicRateLimit(`api:checkout:${clientIP}`, 12, 60 * 60 * 1000)
+    if (!checkoutRl.ok) {
+      logger.warn(`[SECURITY] Checkout rate limit triggered for IP: ${clientIP.slice(0, 8)}…`)
+      return NextResponse.json(
+        { error: 'Trop de commandes. Veuillez réessayer plus tard.' },
+        {
+          status: 429,
+          headers: checkoutRl.retryAfterSec
+            ? { 'Retry-After': String(checkoutRl.retryAfterSec) }
+            : {},
+        }
       )
     }
 

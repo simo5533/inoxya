@@ -35,7 +35,8 @@ function JewelryBanner() {
   }, [bannerImages.length])
 
   return (
-    <div className="relative h-32 md:h-40 overflow-hidden bg-gradient-to-r from-orange-500 to-yellow-600">
+    <div className="relative w-full overflow-hidden">
+      <div className="relative h-32 sm:h-40 md:h-48 w-full overflow-hidden bg-gradient-to-r from-orange-500 to-yellow-600">
       {/* Images de fond avec transition */}
       <div className="absolute inset-0">
         {bannerImages.map((image, index) => (
@@ -60,27 +61,27 @@ function JewelryBanner() {
       <div className="absolute inset-0 bg-gradient-to-r from-orange-600/80 to-yellow-600/80" />
 
       {/* Contenu */}
-      <div className="relative z-10 container mx-auto px-4 h-full flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 h-full flex items-center justify-between">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="hidden md:flex items-center space-x-2">
             <Crown className="w-8 h-8 text-white animate-pulse" />
             <Sparkles className="w-6 h-6 text-yellow-300 animate-bounce" />
             <Gem className="w-7 h-7 text-white animate-pulse delay-300" />
           </div>
 
-          <div className="text-white">
-            <h2 className="text-lg md:text-2xl font-bold mb-1">{bannerImages[currentImage]?.title || ''}</h2>
-            <p className="text-sm md:text-base opacity-90">{bannerImages[currentImage]?.subtitle || ''}</p>
+          <div className="text-white min-w-0">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 leading-tight truncate">{bannerImages[currentImage]?.title || ''}</h2>
+            <p className="text-sm sm:text-base opacity-90 leading-tight truncate">{bannerImages[currentImage]?.subtitle || ''}</p>
           </div>
         </div>
 
         {/* Indicateurs */}
-        <div className="flex space-x-2">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
           {bannerImages.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentImage(index)}
-              className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
+              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
                 index === currentImage ? "bg-white scale-125" : "bg-white/50"
               }`}
             />
@@ -94,6 +95,7 @@ function JewelryBanner() {
         <div className="absolute top-8 right-1/3 w-1 h-1 bg-white rounded-full animate-pulse delay-1000" />
         <div className="absolute bottom-6 left-1/2 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-bounce delay-500" />
         <div className="absolute top-1/2 right-1/4 w-1 h-1 bg-white rounded-full animate-ping delay-700" />
+      </div>
       </div>
     </div>
   )

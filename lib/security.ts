@@ -9,6 +9,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { logger } from './logger'
+import { IS_DEVELOPMENT, IS_PRODUCTION } from './env'
 
 // Configuration de sécurité - Validation paresseuse pour permettre le build
 let _jwtSecret: string | null = null
@@ -30,7 +31,10 @@ const getJwtSecret = (): string => {
   return secret
 }
 
-const JWT_EXPIRES_IN = '7d'
+/** Durée de vie du JWT « accès » (sessions createSecureSession / auth_token) */
+const JWT_ACCESS_EXPIRES_IN = '1h'
+/** Durée de vie du cookie refresh (rotation côté client via /api/auth/refresh) */
+const JWT_REFRESH_EXPIRES_IN = '7d'
 const BCRYPT_ROUNDS = 12
 
 // Rate limiting - Utilise l'adapter (mémoire en dev, Redis en prod)
@@ -45,6 +49,8 @@ export interface JWTPayload {
   userId: string
   phone: string
   role: 'user' | 'moderator' | 'admin'
+  /** access = session JWT court ; refresh = cookie longue durée (path /api/auth) */
+  tokenUse?: 'access' | 'refresh'
   iat?: number
   exp?: number
 }
@@ -86,17 +92,97 @@ export async function verifyPassword(plainPassword: string, hashedPassword: stri
 /**
  * Génération d'un token JWT sécurisé
  */
-export function generateJWT(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
+export function generateJWT(payload: Omit<JWTPayload, 'iat' | 'exp' | 'tokenUse'>): string {
   try {
-    return jwt.sign(payload, getJwtSecret(), {
-      expiresIn: JWT_EXPIRES_IN,
-      issuer: 'inoxya-bijoux',
-      audience: 'inoxya-users'
-    })
+    return jwt.sign(
+      { ...payload, tokenUse: 'access' as const },
+      getJwtSecret(),
+      {
+        expiresIn: JWT_ACCESS_EXPIRES_IN,
+        issuer: 'inoxya-bijoux',
+        audience: 'inoxya-users',
+      }
+    )
   } catch (error) {
     logger.error('Erreur lors de la génération du token JWT:', error)
     throw new Error('Erreur lors de la génération du token')
   }
+}
+
+/**
+ * JWT de rafraîchissement (cookie httpOnly path /api/auth), ne pas utiliser comme auth_token.
+ */
+export function generateRefreshJWT(payload: Omit<JWTPayload, 'iat' | 'exp' | 'tokenUse'>): string {
+  try {
+    return jwt.sign(
+      { ...payload, tokenUse: 'refresh' as const },
+      getJwtSecret(),
+      {
+        expiresIn: JWT_REFRESH_EXPIRES_IN,
+        issuer: 'inoxya-bijoux',
+        audience: 'inoxya-users',
+      }
+    )
+  } catch (error) {
+    logger.error('Erreur lors de la génération du refresh JWT:', error)
+    throw new Error('Erreur lors de la génération du refresh token')
+  }
+}
+
+/** Vérifie un refresh JWT (claim tokenUse === refresh) */
+export function verifyRefreshJWT(token: string): JWTPayload | null {
+  const payload = verifyJWT(token)
+  if (!payload || payload.tokenUse !== 'refresh') {
+    return null
+  }
+  return payload
+}
+
+/** Durée cookie user_id (session courte, renouvelée par /api/auth/refresh) */
+export const WEB_USER_ID_MAX_AGE_SEC = 60 * 60
+/** Durée cookie refresh_token */
+export const WEB_REFRESH_MAX_AGE_SEC = 60 * 60 * 24 * 7
+
+/**
+ * Définit user_id (1h) + refresh_token JWT (7j, path /api/auth) après login / inscription.
+ */
+export async function applyWebSessionCookies(user: {
+  id: string
+  phone: string
+  role: 'user' | 'moderator' | 'admin'
+}): Promise<void> {
+  const cookieStore = await cookies()
+  const refreshToken = generateRefreshJWT({
+    userId: user.id,
+    phone: user.phone,
+    role: user.role,
+  })
+  cookieStore.set('user_id', user.id, {
+    httpOnly: true,
+    secure: IS_PRODUCTION,
+    sameSite: 'lax',
+    maxAge: WEB_USER_ID_MAX_AGE_SEC,
+    path: '/',
+  })
+  cookieStore.set('refresh_token', refreshToken, {
+    httpOnly: true,
+    secure: IS_PRODUCTION,
+    sameSite: 'lax',
+    maxAge: WEB_REFRESH_MAX_AGE_SEC,
+    path: '/api/auth',
+  })
+}
+
+/** Supprime les cookies de session web (paths corrects pour refresh). */
+export async function clearWebSessionCookies(): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.set('user_id', '', { maxAge: 0, path: '/', httpOnly: true, sameSite: 'lax' })
+  cookieStore.set('refresh_token', '', {
+    maxAge: 0,
+    path: '/api/auth',
+    httpOnly: true,
+    sameSite: 'lax',
+  })
 }
 
 /**
@@ -132,7 +218,7 @@ export async function createSecureSession(sessionData: SessionData): Promise<str
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 7 jours
+      maxAge: 60 * 60, // 1h (aligné JWT accès)
       path: '/'
     })
 
@@ -148,7 +234,7 @@ export async function createSecureSession(sessionData: SessionData): Promise<str
       httpOnly: false, // Accessible côté client pour l'UI basique
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 7 jours
+      maxAge: 60 * 60, // 1h
       path: '/'
     })
 
@@ -172,8 +258,8 @@ export async function getCurrentSession(): Promise<SessionData | null> {
     }
 
     const payload = verifyJWT(token)
-    if (!payload) {
-      // Token invalide, nettoyer les cookies
+    if (!payload || payload.tokenUse === 'refresh') {
+      // Token invalide ou mauvais type (refresh ne doit pas être dans auth_token)
       await clearSession()
       return null
     }
@@ -214,6 +300,12 @@ export async function clearSession(): Promise<void> {
     const cookieStore = await cookies()
     cookieStore.delete('auth_token')
     cookieStore.delete('user_data')
+    cookieStore.set('refresh_token', '', {
+      maxAge: 0,
+      path: '/api/auth',
+      httpOnly: true,
+      sameSite: 'lax',
+    })
   } catch (error) {
     logger.error('Erreur lors de la suppression de la session:', error)
   }
@@ -472,11 +564,13 @@ export async function validateCSRFToken(requestToken: string | null): Promise<bo
     return false
   }
   
-  // Comparaison sécurisée (timing-safe)
-  return crypto.timingSafeEqual(
-    Buffer.from(requestToken),
-    Buffer.from(storedToken)
-  )
+  const a = Buffer.from(requestToken, 'utf8')
+  const b = Buffer.from(storedToken, 'utf8')
+  // timingSafeEqual lève si longueurs différentes — ne pas fuiter via exception
+  if (a.length !== b.length) {
+    return false
+  }
+  return crypto.timingSafeEqual(a, b)
 }
 
 /**
@@ -509,12 +603,12 @@ export async function requireCSRF(request: Request): Promise<{ valid: true } | {
   const requestToken = request.headers.get('X-CSRF-Token')
   const storedToken = await getCSRFToken()
   
-  logger.info('[CSRF] Validation du token', {
-    hasRequestToken: !!requestToken,
-    hasStoredToken: !!storedToken,
-    requestTokenPrefix: requestToken ? requestToken.substring(0, 8) + '...' : null,
-    storedTokenPrefix: storedToken ? storedToken.substring(0, 8) + '...' : null
-  })
+  if (IS_DEVELOPMENT) {
+    logger.info('[CSRF] Validation du token', {
+      hasRequestToken: !!requestToken,
+      hasStoredToken: !!storedToken,
+    })
+  }
   
   // Valider le token
   const isValid = await validateCSRFToken(requestToken)
@@ -532,6 +626,8 @@ export async function requireCSRF(request: Request): Promise<{ valid: true } | {
     }
   }
   
-  logger.info('[CSRF] Token valide')
+  if (IS_DEVELOPMENT) {
+    logger.info('[CSRF] Token valide')
+  }
   return { valid: true }
 }

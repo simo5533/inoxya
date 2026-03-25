@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllCategories } from '@/lib/database'
 import { logger } from '@/lib/logger'
+import { IS_PRODUCTION } from '@/lib/env'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,8 +53,8 @@ export async function GET() {
       {
         status: 'error',
         db: 'disconnected',
-        error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        ...(!IS_PRODUCTION && { error: error.message }),
       },
       { status: 503 }
     )

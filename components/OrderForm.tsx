@@ -121,8 +121,8 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
     return (
       <>
         <Confetti trigger={isSuccess} />
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-6 text-center">
+        <Card className="border-green-200 bg-green-50 w-full max-w-full min-w-0 overflow-hidden">
+          <CardContent className="p-4 sm:p-6 text-center min-w-0">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4 animate-bounce" />
             <h3 className="text-xl font-bold text-green-800 mb-2">{t('success.title')}</h3>
           <div className="text-green-700 mb-4">
@@ -146,26 +146,28 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
   }
 
   return (
-    <Card className="border-orange-200">
-      <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50">
-        <CardTitle className={`flex items-center gap-2 text-orange-800 ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
-          <CreditCard className="w-5 h-5" />
+    <Card className="border-orange-200 w-full max-w-full min-w-0 overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 p-4 sm:p-6">
+        <CardTitle className={`flex items-center gap-2 text-orange-800 break-words text-base sm:text-lg md:text-2xl ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
+          <CreditCard className="w-5 h-5 shrink-0" />
           {t('title')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="p-4 sm:p-6 min-w-0">
+        <form onSubmit={handleSubmit} className="space-y-4 min-w-0 max-w-full">
           {/* Informations produit */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-6 min-w-0 max-w-full">
             <h4 className={`font-semibold text-gray-800 mb-2 ${locale === 'ar' ? 'text-right' : ''}`}>{t('order')}</h4>
-            <div className={`flex justify-between items-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
-              <span className="text-gray-700">{productName}</span>
-              <span className="font-bold text-orange-600">{price} MAD</span>
+            <div className={`flex justify-between items-start gap-2 min-w-0 max-w-full ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
+              <span className={`text-gray-700 min-w-0 flex-1 text-sm sm:text-base ${locale === 'ar' ? 'text-right pl-2' : 'pr-2'} truncate`} title={productName}>
+                {productName}
+              </span>
+              <span className="font-bold text-orange-600 shrink-0 whitespace-nowrap text-sm sm:text-base tabular-nums">{price} MAD</span>
             </div>
           </div>
 
         {/* Nom complet */}
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0">
           <Label htmlFor="name" className={`flex items-center gap-2 ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
             <User className="w-4 h-4" />
             {t('fullName')} *
@@ -177,13 +179,13 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
             value={formData.name}
             onChange={(e) => handleInputChange("name", e.target.value)}
             required
-            className="border-orange-200 focus:border-orange-500"
+            className="border-orange-200 focus:border-orange-500 min-h-11 w-full max-w-full"
             dir={locale === 'ar' ? 'rtl' : 'ltr'}
           />
         </div>
 
           {/* Numéro de téléphone */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label htmlFor="phone" className={`flex items-center gap-2 ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
               <Phone className="w-4 h-4" />
               {t('phone')} *
@@ -195,19 +197,21 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
               value={formData.phone}
               onChange={(e) => handleInputChange("phone", e.target.value)}
               required
-              className="border-orange-200 focus:border-orange-500"
+              className="border-orange-200 focus:border-orange-500 min-h-11 w-full max-w-full"
               dir="ltr"
+              inputMode="tel"
             />
           </div>
 
           {/* Ville */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0 w-full">
             <Label htmlFor="city" className={`flex items-center gap-2 ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
               <MapPin className="w-4 h-4" />
               {t('city')} *
             </Label>
+            <div className="w-full min-w-0 max-w-full">
             <Select value={formData.city} onValueChange={(value) => handleInputChange("city", value)}>
-              <SelectTrigger className="border-orange-200 focus:border-orange-500">
+              <SelectTrigger className="border-orange-200 focus:border-orange-500 min-h-11 w-full max-w-full">
                 <SelectValue placeholder={t('selectCity')} />
               </SelectTrigger>
               <SelectContent>
@@ -218,10 +222,11 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
                 ))}
               </SelectContent>
             </Select>
+            </div>
           </div>
 
           {/* Adresse */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label htmlFor="address" className={`flex items-center gap-2 ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
               <MapPin className="w-4 h-4" />
               {t('address')} *
@@ -232,13 +237,13 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
               value={formData.address}
               onChange={(e) => handleInputChange("address", e.target.value)}
               required
-              className="border-orange-200 focus:border-orange-500 min-h-[80px]"
+              className="border-orange-200 focus:border-orange-500 min-h-[80px] w-full max-w-full"
               dir={locale === 'ar' ? 'rtl' : 'ltr'}
             />
           </div>
 
           {/* Notes optionnelles */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label htmlFor="notes" className={`flex items-center gap-2 ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
               <User className="w-4 h-4" />
               {t('notes')}
@@ -248,7 +253,7 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
               placeholder={t('notesPlaceholder')}
               value={formData.notes}
               onChange={(e) => handleInputChange("notes", e.target.value)}
-              className="border-orange-200 focus:border-orange-500 min-h-[60px]"
+              className="border-orange-200 focus:border-orange-500 min-h-[60px] w-full max-w-full"
               dir={locale === 'ar' ? 'rtl' : 'ltr'}
             />
           </div>
@@ -257,7 +262,7 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           <Button
             type="submit"
             disabled={isSubmitting || !formData.phone || !formData.city || !formData.address}
-            className={`w-full bg-gradient-to-r from-orange-500 to-yellow-600 text-white hover:from-orange-600 hover:to-yellow-700 py-3 text-lg font-semibold flex items-center justify-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
+            className={`w-full min-h-12 bg-gradient-to-r from-orange-500 to-yellow-600 text-white hover:from-orange-600 hover:to-yellow-700 py-3 text-lg font-semibold flex items-center justify-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
           >
             {isSubmitting ? (
               <>

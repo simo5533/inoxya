@@ -199,7 +199,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center space-y-4">
-            <Link href={`/${locale}/a-propos#contact`} className="text-sm text-gray-600 hover:text-gray-900">
+            <Link href={`/${locale}/mot-de-passe-oublie`} className="text-sm text-gray-600 hover:text-gray-900">
               {locale === 'ar' ? 'نسيت كلمة المرور؟' : 'Mot de passe oublié ?'}
             </Link>
 

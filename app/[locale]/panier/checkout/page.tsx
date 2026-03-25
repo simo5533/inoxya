@@ -1,5 +1,8 @@
 "use client"
 
+// Force dynamic so build can collect page data (avoids PageNotFoundError on Vercel)
+export const dynamic = "force-dynamic"
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -140,9 +143,9 @@ export default function CheckoutPage() {
     return (
       <>
         <Confetti trigger={isSuccess} />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <Card className="max-w-md w-full">
-            <CardContent className="p-8 text-center">
+        <div className="min-h-screen bg-gray-50 w-full max-w-full min-w-0 overflow-x-hidden flex items-center justify-center px-4 py-8">
+          <Card className="max-w-md w-full min-w-0 overflow-hidden">
+            <CardContent className="p-6 sm:p-8 text-center min-w-0">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4 animate-bounce" />
               <h2 className="text-2xl font-bold mb-2">{t('orderConfirmed')}</h2>
             {orderId && (
@@ -164,26 +167,26 @@ export default function CheckoutPage() {
   const total = calculateTotal()
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
-          <p className="text-gray-700 leading-relaxed">{t('subtitle')}</p>
+    <div className="min-h-screen bg-gray-50 w-full max-w-full min-w-0 overflow-x-hidden">
+      <div className="w-full min-w-0 mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mb-6 sm:mb-8 min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 break-words">{t('title')}</h1>
+          <p className="text-gray-700 leading-relaxed break-words">{t('subtitle')}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 min-w-0">
           {/* Formulaire */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
+          <div className="lg:col-span-2 min-w-0">
+            <Card className="w-full max-w-full min-w-0 overflow-hidden">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl break-words">
+                  <CreditCard className="w-5 h-5 shrink-0" />
                   {t('shippingInfo')}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
+              <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0 min-w-0">
+                <form onSubmit={handleSubmit} className="space-y-4 min-w-0 max-w-full">
+                  <div className="space-y-2 min-w-0">
                     <Label htmlFor="name">Nom complet *</Label>
                     <Input
                       id="name"
@@ -192,36 +195,41 @@ export default function CheckoutPage() {
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
                       required
+                      className="min-h-11 w-full max-w-full"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <Label htmlFor="phone">Numéro de téléphone *</Label>
                     <Input
                       id="phone"
                       type="tel"
                       placeholder="0612345678"
+                      inputMode="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
                       required
+                      className="min-h-11 w-full max-w-full"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0 w-full">
                     <Label htmlFor="city">{t('city')} *</Label>
-                    <Select value={formData.city} onValueChange={(value) => handleInputChange("city", value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('selectCity')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cities.map(city => (
-                          <SelectItem key={city} value={city}>{city}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="w-full min-w-0 max-w-full">
+                      <Select value={formData.city} onValueChange={(value) => handleInputChange("city", value)}>
+                        <SelectTrigger className="min-h-11 w-full max-w-full">
+                          <SelectValue placeholder={t('selectCity')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cities.map(city => (
+                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <Label htmlFor="address">{t('address')} *</Label>
                     <Textarea
                       id="address"
@@ -229,35 +237,39 @@ export default function CheckoutPage() {
                       value={formData.address}
                       onChange={(e) => handleInputChange("address", e.target.value)}
                       required
+                      className="min-h-[80px] w-full max-w-full"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0 w-full">
                     <Label htmlFor="payment_method">{t('paymentMethod')} *</Label>
-                    <Select value={formData.payment_method} onValueChange={(value) => handleInputChange("payment_method", value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash_on_delivery">{t('cashOnDelivery')}</SelectItem>
-                        <SelectItem value="bank_transfer">{t('bankTransfer')}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="w-full min-w-0 max-w-full">
+                      <Select value={formData.payment_method} onValueChange={(value) => handleInputChange("payment_method", value)}>
+                        <SelectTrigger className="min-h-11 w-full max-w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash_on_delivery">{t('cashOnDelivery')}</SelectItem>
+                          <SelectItem value="bank_transfer">{t('bankTransfer')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <Label htmlFor="notes">{t('notes')}</Label>
                     <Textarea
                       id="notes"
                       placeholder={t('notesPlaceholder')}
                       value={formData.notes}
                       onChange={(e) => handleInputChange("notes", e.target.value)}
+                      className="w-full max-w-full"
                     />
                   </div>
 
                   <Button 
                     type="submit" 
-                    className={`w-full bg-orange-600 hover:bg-orange-700 flex items-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
+                    className={`w-full min-h-12 bg-orange-600 hover:bg-orange-700 flex items-center justify-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? t('processing') : t('placeOrder')}
@@ -268,27 +280,27 @@ export default function CheckoutPage() {
           </div>
 
           {/* Résumé */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
+          <div className="lg:col-span-1 min-w-0">
+            <Card className="sticky top-8 w-full max-w-full min-w-0 overflow-hidden">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl break-words">
+                  <ShoppingCart className="w-5 h-5 shrink-0" />
                   {t('orderSummary')}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
+              <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0 min-w-0">
+                <div className="space-y-2 min-w-0">
                   {cartItems.map(item => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>{item.name} x{item.quantity}</span>
-                      <span>{formatCurrency(item.price * item.quantity)}</span>
+                    <div key={item.id} className="flex justify-between gap-2 text-sm min-w-0">
+                      <span className="min-w-0 flex-1 break-words pr-2">{item.name} x{item.quantity}</span>
+                      <span className="shrink-0 whitespace-nowrap tabular-nums">{formatCurrency(item.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="border-t pt-4">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>{t('total')}</span>
-                    <span>{formatCurrency(total)}</span>
+                <div className="border-t pt-4 min-w-0">
+                  <div className="flex justify-between gap-2 text-lg font-bold min-w-0">
+                    <span className="min-w-0">{t('total')}</span>
+                    <span className="shrink-0 whitespace-nowrap tabular-nums">{formatCurrency(total)}</span>
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@ import { getOrderById } from '@/lib/database'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { requireCSRF } from '@/lib/security'
+import { generateInvoiceBodySchema, validateWithSchema } from '@/lib/validations'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -37,23 +38,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const { 
-      order_id, 
-      customer_info, 
-      items, 
-      total_amount 
-    } = body
-    const orderId = String(order_id)
-    const invoiceItems: InvoiceItem[] = Array.isArray(items) ? (items as InvoiceItem[]) : []
-    const totalAmount = Number(total_amount)
-
-    // Validation des données
-    if (!order_id || !customer_info || !Array.isArray(items) || items.length === 0 || Number.isNaN(totalAmount)) {
-      return NextResponse.json({ 
-        error: 'Données de facture incomplètes' 
-      }, { status: 400 })
+    const raw = await request.json().catch(() => null)
+    if (!raw) {
+      return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
     }
+    const validation = validateWithSchema(generateInvoiceBodySchema, raw)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Données invalides' }, { status: 422 })
+    }
+    const { order_id, customer_info, items, total_amount } = validation.data
+    const orderId = String(order_id)
+    const invoiceItems: InvoiceItem[] = items as InvoiceItem[]
+    const totalAmount = total_amount
 
     // Vérifier que la commande existe
     const order = await getOrderById(orderId)

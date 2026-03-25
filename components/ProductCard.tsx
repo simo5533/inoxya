@@ -206,15 +206,19 @@ export default function ProductCard({ product }: ProductCardProps) {
         <Heart className={`w-4 h-4 ${isProductFavorite ? "fill-current" : ""}`} />
       </Button>
 
-      {/* 🖼️ Image du produit - Luxury wrapper with explicit dimensions */}
-      <div className="relative w-full aspect-[4/5] overflow-hidden rounded-t-xl bg-neutral-100/40 min-h-[300px]">
+      {/* 🖼️ Image du produit — zone cliquable (même URL que « Voir ») */}
+      <Link
+        href={`/${locale}/bijoux/${product.id}`}
+        className="group/image relative block w-full aspect-[4/5] overflow-hidden rounded-t-xl bg-neutral-100/40 min-h-[300px] cursor-pointer"
+        aria-label={`Voir ${product.name}`}
+      >
         {!imageError && imageUrl !== "/placeholder.svg" ? (
           <Image
             src={imageUrl}
             alt={`${product.name} - Bijou en acier inoxydable premium INOXYA${product.categories ? ` - ${product.categories.name}` : ''}`}
             fill
             loading="lazy"
-            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            className="object-cover transition-transform duration-300 ease-out group-hover/image:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             placeholder="blur"
             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
@@ -226,7 +230,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={`${product.name} - Bijou en acier inoxydable premium INOXYA${product.categories ? ` - ${product.categories.name}` : ''}`}
             fill
             loading="lazy"
-            className="object-cover"
+            className="object-cover transition-transform duration-300 ease-out group-hover/image:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         )}
@@ -234,7 +238,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         {/* Effet de brillance subtil avec or */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-luxury-gold/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out opacity-0 group-hover:opacity-100 pointer-events-none" />
-      </div>
+      </Link>
 
       <CardContent className="p-4 space-y-3">
         {/* 📝 Nom du bijou */}

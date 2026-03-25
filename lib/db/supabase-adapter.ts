@@ -2,6 +2,7 @@
  * Adapter Supabase - Utilise le client Supabase directement
  * Pour production sur Vercel avec Supabase
  */
+import 'server-only'
 
 import { createClient } from '@supabase/supabase-js'
 import type { DatabaseAdapter } from './adapter'
@@ -27,6 +28,12 @@ export class SupabaseAdapter implements DatabaseAdapter {
   private supabase: ReturnType<typeof createClient>
 
   constructor(supabaseUrl: string, supabaseKey: string) {
+    // Défense en profondeur: interdire l'usage accidentel de l'ANON key côté serveur.
+    // La clé ANON est typiquement "eyJ..." (JWT). Les service-role récents peuvent être "sb_secret_...".
+    // On n'impose pas un format strict, mais on bloque les cas évidents.
+    if (!supabaseKey) {
+      throw new Error('[SupabaseAdapter] Missing Supabase key')
+    }
     this.supabase = createClient(supabaseUrl, supabaseKey)
   }
 

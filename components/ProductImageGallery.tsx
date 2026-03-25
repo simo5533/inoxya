@@ -40,9 +40,9 @@ export default function ProductImageGallery({
   }
   
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 max-w-full space-y-4 overflow-hidden">
       {/* Image principale - Luxury wrapper with explicit dimensions */}
-      <div className="main-image relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-lg bg-neutral-100/40 min-h-[400px]">
+      <div className="main-image relative w-full min-w-0 max-w-full aspect-square sm:aspect-[4/5] rounded-xl overflow-hidden shadow-lg bg-neutral-100/40 min-h-0 sm:min-h-[400px]">
         <Image
           src={selectedMainImage || "/placeholder.svg"}
           alt={`${productName} - Bijou en acier inoxydable premium INOXYA - Vue principale`}
@@ -60,14 +60,14 @@ export default function ProductImageGallery({
       
       {/* Miniatures - affiche uniquement les images du tableau images[] */}
       {imagesUrls.length > 0 && (
-        <div className="thumbnails grid grid-cols-4 gap-2">
+        <div className="thumbnails flex gap-2 overflow-x-auto scrollbar-hide px-1 pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0">
           {imagesUrls.map((image, index) => {
             const isSelected = image === selectedMainImage
             return (
               <button
                 key={index}
                 onClick={() => handleThumbnailClick(image)}
-                className={`thumbnail relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                className={`thumbnail relative flex-shrink-0 w-16 h-16 sm:w-full sm:h-auto sm:aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                   isSelected
                     ? "border-orange-500 shadow-lg"
                     : "border-gray-200 hover:border-orange-300"

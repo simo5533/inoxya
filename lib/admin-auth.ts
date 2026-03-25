@@ -111,8 +111,7 @@ export async function requireAdminApi(): Promise<
         { 
           error: 'Accès non autorisé',
           message: 'Droits administrateur requis pour accéder à cette ressource.',
-          code: 'FORBIDDEN',
-          userRole: user.role
+          code: 'FORBIDDEN'
         },
         { status: 403 }
       )

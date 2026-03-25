@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw, MessageCircle, Star as StarIcon } from "lucide-react"
+import { Star, ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw } from "lucide-react"
 import { getBijouById, getAllBijoux } from "@/lib/database"
 import OrderForm from "@/components/OrderForm"
 import ProductImageGallery from "@/components/ProductImageGallery"
+import ProductReviewsSection from "@/components/ProductReviewsSection"
 import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
+import { selectRows } from "@/lib/sqlite"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 
@@ -151,7 +153,18 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     .slice(0, 4)
 
   const rating = product.rating ?? 4.5
-  const reviews = product.reviews_count ?? 0
+  const reviews = (() => {
+    const tableColumns = selectRows("PRAGMA table_info(reviews)") as Array<{ name?: string }>
+    const hasProductId = tableColumns.some((col) => String(col.name || "").toLowerCase() === "product_id")
+    const hasBijouId = tableColumns.some((col) => String(col.name || "").toLowerCase() === "bijou_id")
+    const idColumn = hasProductId ? "product_id" : (hasBijouId ? "bijou_id" : "product_id")
+    const countRows = selectRows(
+      `SELECT COUNT(*) AS count FROM reviews WHERE CAST(${idColumn} AS TEXT) = ?`,
+      [product.id]
+    ) as Array<{ count?: number | string }>
+    const count = Number(countRows[0]?.count || 0)
+    return Number.isFinite(count) ? count : (product.reviews_count ?? 0)
+  })()
 
   // Préparer les images pour le schema et la galerie
   // Gérer les images qui peuvent être un string JSON, un array, ou undefined
@@ -223,20 +236,20 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
         siteUrl={siteUrl}
       />
       <BreadcrumbSchema items={breadcrumbItems} />
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-4 py-8 md:py-12">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white w-full max-w-full min-w-0 overflow-x-hidden">
+        <div className="container mx-auto min-w-0 max-w-full px-4 py-8 md:py-12">
         {/* back link */}
         <Link 
           href={`/${locale}/bijoux`}
-          className="inline-flex items-center text-sm text-gray-600 hover:text-luxury-gold transition-colors mb-6 group"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-luxury-gold transition-colors mb-6 group w-fit max-w-full min-w-0"
         >
-          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+          <ArrowLeft className="w-4 h-4 flex-shrink-0 group-hover:-translate-x-1 transition-transform" />
           {t('backToCatalog')}
         </Link>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+        <div className="grid w-full min-w-0 max-w-full grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* image gallery */}
-          <div className="space-y-4">
+          <div className="min-w-0 w-full max-w-full space-y-4">
             <ProductImageGallery
               mainImage={mainImage || "/placeholder.svg"}
               images={imagesArray}
@@ -245,7 +258,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
           </div>
 
           {/* details */}
-          <div className="space-y-6">
+          <div className="min-w-0 w-full max-w-full space-y-6 overflow-x-hidden">
             {/* badges (promo, nouveau, …) */}
             <div className="flex flex-wrap gap-2">
               {(() => {
@@ -284,8 +297,8 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               })()}
             </div>
 
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3 tracking-tight leading-tight">{product.name}</h1>
+            <div className="min-w-0 max-w-full">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 tracking-tight leading-tight break-words">{product.name}</h1>
               {product.name_ar && (
                 <div className="font-arabic text-2xl text-gray-600 mb-4 text-right">{product.name_ar}</div>
               )}
@@ -309,8 +322,8 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             </div>
 
             {/* price */}
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-4xl font-bold text-luxury-gold">{Math.round(product.price)} MAD</span>
+            <div className="flex items-center gap-3 mb-6 flex-wrap min-w-0 max-w-full">
+              <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-luxury-gold shrink-0">{Math.round(product.price)} MAD</span>
               {product.original_price && product.original_price !== product.price && (
                 <>
                   <span className="text-xl line-through text-gray-400">{Math.round(product.original_price)} MAD</span>
@@ -334,12 +347,12 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            <div className="text-gray-700 leading-relaxed mb-8 text-lg">
+            <div className="text-gray-700 leading-relaxed mb-8 text-base sm:text-lg min-w-0 max-w-full break-words">
               {product.description || t('defaultDescription', { name: product.name })}
             </div>
 
             {/* Formulaire de commande */}
-            <div className="mb-8 bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+            <div className="mb-8 min-w-0 max-w-full overflow-x-hidden rounded-xl border border-gray-100 bg-white p-3 shadow-lg sm:p-4 md:p-6">
               <OrderForm 
                 productName={product.name}
                 price={Math.round(product.price)}
@@ -348,11 +361,11 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             </div>
 
             {/* Actions secondaires */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button 
                 variant="outline" 
                 size="lg"
-                className="flex-1 border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
+                className="w-full sm:flex-1 min-h-[44px] border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
               >
                 <Heart className="w-5 h-5 mr-2" />
                 {t('actions.addToFavorites')}
@@ -360,16 +373,16 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               <Button 
                 variant="outline" 
                 size="lg"
-                className="border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
+                className="w-full sm:w-auto min-h-[44px] border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
               >
                 <Share2 className="w-5 h-5" />
               </Button>
             </div>
 
             {/* Garanties et services */}
-            <div className="mt-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+            <div className="mt-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4">{t('guarantees.title')}</h3>
-              <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <Truck className="w-5 h-5 text-green-600" />
@@ -405,11 +418,11 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
         {/* Onglets avec informations détaillées */}
         <div className="mt-16">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="description">{t('tabs.description')}</TabsTrigger>
-              <TabsTrigger value="specifications">{t('tabs.specifications')}</TabsTrigger>
-              <TabsTrigger value="reviews">{t('tabs.reviews', { count: reviews })}</TabsTrigger>
-              <TabsTrigger value="shipping">{t('tabs.shipping')}</TabsTrigger>
+            <TabsList className="w-full overflow-x-auto scrollbar-hide whitespace-nowrap justify-start rounded-md h-auto p-1">
+              <TabsTrigger value="description" className="min-h-[44px] px-4">{t('tabs.description')}</TabsTrigger>
+              <TabsTrigger value="specifications" className="min-h-[44px] px-4">{t('tabs.specifications')}</TabsTrigger>
+              <TabsTrigger value="reviews" className="min-h-[44px] px-4">{t('tabs.reviews', { count: reviews })}</TabsTrigger>
+              <TabsTrigger value="shipping" className="min-h-[44px] px-4">{t('tabs.shipping')}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="description" className="mt-6">
@@ -483,38 +496,12 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             
             <TabsContent value="reviews" className="mt-6">
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold">{t('tabs.reviewsTitle')}</h3>
-                    <Button variant="outline" size="sm">
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      {t('tabs.leaveReview')}
-                    </Button>
-                  </div>
-                  
-                  {/* Avis d'exemple */}
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="border-b pb-4 last:border-b-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex">
-                            {[...Array(5)].map((_, j) => (
-                              <StarIcon
-                                key={j}
-                                className={`w-4 h-4 ${
-                                  j < 5 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm text-gray-600">{t('tabs.reviewExample', { name: 'Fatima A.', days: 2 })}</span>
-                        </div>
-                        <p className="text-gray-700">
-                          {t('tabs.reviewText')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                <CardContent className="p-4 sm:p-6">
+                  <ProductReviewsSection
+                    productId={product.id}
+                    title={t('tabs.reviewsTitle')}
+                    leaveReviewLabel={t('tabs.leaveReview')}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

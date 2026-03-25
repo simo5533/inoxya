@@ -40,19 +40,7 @@ export async function POST(request: NextRequest) {
     }
     const { name, email, phone, type, description, budget } = validation.data
 
-    // Créer la demande sur mesure
-    const requestData = {
-      name,
-      email,
-      phone,
-      type,
-      description,
-      budget: budget || 'Non spécifié',
-      status: 'pending',
-      created_at: new Date().toISOString()
-    }
-
-    logger.info('Tentative de création de demande:', requestData)
+    logger.info('Tentative de création de demande sur mesure', { type, hasBudget: Boolean(budget) })
     
     // Sauvegarder en base de données via l'adapter
     try {
@@ -72,7 +60,7 @@ export async function POST(request: NextRequest) {
         logger.warn('Échec de création de notification pour custom request')
       }
       
-      logger.info('Nouvelle demande sur mesure créée:', { name, email, phone, type })
+      logger.info('Nouvelle demande sur mesure créée', { type })
       
       return NextResponse.json({ 
         success: true, 

@@ -11,6 +11,7 @@ import {
   createUser as createSqliteUser,
   getAllUsers as getSqliteUsers,
 } from "@/lib/sqlite"
+import { applyWebSessionCookies, clearWebSessionCookies } from "@/lib/security"
 
 export async function loginUser(phone: string, password: string) {
   try {
@@ -144,13 +145,10 @@ export async function registerUser(phone: string, password: string, firstName: s
         return { success: false, error: "Erreur lors de la création du compte" }
       }
 
-      const cookieStore = await cookies()
-      cookieStore.set("user_id", newUser.id, {
-        httpOnly: true,
-        secure: process.env['NODE_ENV'] === "production",
-        sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 7, // 7 jours
-        path: '/' // Explicit path pour garantir la portée
+      await applyWebSessionCookies({
+        id: newUser.id,
+        phone: newUser.phone,
+        role: newUser.role as "user" | "moderator" | "admin",
       })
 
       return {
@@ -199,13 +197,10 @@ export async function registerUser(phone: string, password: string, firstName: s
       return { success: false, error: "Erreur lors de la création du compte" }
     }
 
-    const cookieStore = await cookies()
-    cookieStore.set("user_id", newUser.id, {
-      httpOnly: true,
-      secure: process.env['NODE_ENV'] === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24 * 7, // 7 jours
-      path: '/' // Explicit path pour garantir la portée
+    await applyWebSessionCookies({
+      id: newUser.id,
+      phone: newUser.phone,
+      role: newUser.role as "user" | "moderator" | "admin",
     })
 
     return {
@@ -227,8 +222,10 @@ export async function registerUser(phone: string, password: string, firstName: s
 
 export async function logoutUser() {
   try {
+    await clearWebSessionCookies()
     const cookieStore = await cookies()
-    cookieStore.delete("user_id")
+    cookieStore.delete("auth_token")
+    cookieStore.delete("user_data")
     redirect("/")
   } catch (error) {
     // Next.js redirect() lance une erreur spéciale NEXT_REDIRECT - ne pas la logger comme erreur

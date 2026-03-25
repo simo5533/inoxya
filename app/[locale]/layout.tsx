@@ -10,12 +10,34 @@ import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import type React from "react"
+import type { Metadata } from 'next'
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import JewelryBanner from "@/components/JewelryBanner"
 import LocaleHtmlAttributes from "@/components/LocaleHtmlAttributes"
 import { Toaster } from "@/components/ui/toaster"
 import { ClientProviders } from "@/components/ClientProviders"
+
+export const metadata: Metadata = {
+  title: {
+    default: 'INOXYA Bijoux | Acier inoxydable 316L',
+    template: '%s | INOXYA Bijoux',
+  },
+  description:
+    'Bijoux en acier inoxydable 316L premium. Artisanat marocain authentique. Livraison gratuite dès 200 MAD.',
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://inoxya-bijoux.vercel.app'
+  ),
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    siteName: 'INOXYA Bijoux',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
 
 // Désactiver complètement la génération statique pour éviter l'erreur dynamicAccess
 // Retourner un tableau vide force Next.js à rendre toutes les pages dynamiquement
@@ -61,7 +83,7 @@ async function LocaleLayout({
         <div dir={dir} lang={lang} className={locale === 'ar' ? 'rtl' : 'ltr'}>
           <Header />
           <JewelryBanner />
-          <main className="min-h-screen">{children}</main>
+          <main className="min-h-screen w-full max-w-full overflow-x-hidden">{children}</main>
           <Footer />
         </div>
         <Toaster />

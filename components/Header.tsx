@@ -75,25 +75,25 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="bg-white shadow-sm border-b w-full max-w-full overflow-hidden">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-orange-500 to-yellow-600 text-white py-2 text-center">
-        <p className="text-sm font-medium">
+      <div className="bg-gradient-to-r from-orange-500 to-yellow-600 text-white text-center py-2 px-3">
+        <p className="text-xs sm:text-sm font-medium leading-snug">
           {t('freeShipping')}
         </p>
       </div>
 
       {/* Main Header */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 w-full max-w-full">
+        <div className="flex items-center justify-between w-full max-w-full overflow-hidden gap-2 sm:gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center group">
+          <Link href="/" className="flex items-center group flex-shrink-0 min-w-0">
             <Image 
               src="/logo-inoxya.svg" 
               alt="INOXYA - Embellie ton âme" 
               width={150} 
               height={60} 
-              className="transition-opacity duration-300 group-hover:opacity-80"
+              className="h-7 sm:h-9 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
               priority
             />
           </Link>
@@ -115,13 +115,13 @@ export default function Header() {
           </nav>
 
           {/* Actions à droite */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0 min-w-0">
             {/* Langue */}
             <LanguageSwitcher />
 
             {/* Recherche */}
             {searchOpen ? (
-              <div className="flex items-center gap-1 bg-gray-100 rounded-md px-2 py-1 min-w-[200px]">
+              <div className="flex items-center gap-1 bg-gray-100 rounded-md px-2 py-1 min-w-0 w-[42vw] max-w-[190px] sm:min-w-[200px] sm:w-auto">
                 <Search className="w-4 h-4 text-gray-500 shrink-0" />
                 <Input
                   ref={searchInputRef}
@@ -149,7 +149,7 @@ export default function Header() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-gray-500 hover:text-orange-600"
+                  className="h-8 px-2 text-gray-500 hover:text-orange-600 min-h-[44px] sm:min-h-0"
                   onClick={() => {
                     const q = searchQuery.trim()
                     setSearchOpen(false)
@@ -164,7 +164,7 @@ export default function Header() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150"
+                className="text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2"
                 onClick={() => {
                   setSearchOpen(true)
                   setSearchQuery('')
@@ -177,7 +177,7 @@ export default function Header() {
 
             {/* Favoris */}
             <Link href={`/${locale}/favoris`}>
-              <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150">
+              <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2">
                 <Heart className="w-5 h-5" />
                 {favoritesCount > 0 && (
                   <Badge className={`absolute ${locale === 'ar' ? '-top-1 -left-1' : '-top-1 -right-1'} w-4 h-4 p-0 flex items-center justify-center text-xs bg-orange-500 text-white`}>
@@ -189,7 +189,7 @@ export default function Header() {
 
             {/* Panier */}
             <Link href={`/${locale}/panier`}>
-              <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150">
+              <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2">
                 <ShoppingCart className="w-5 h-5" />
                 {cartCount > 0 && (
                   <Badge className={`absolute ${locale === 'ar' ? '-top-1 -left-1' : '-top-1 -right-1'} w-4 h-4 p-0 flex items-center justify-center text-xs bg-orange-500 text-white`}>

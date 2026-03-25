@@ -95,7 +95,7 @@ export default function RootLayout({
       <head>
         <OrganizationSchema siteUrl={siteUrl} />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${inter.className} overflow-x-hidden max-w-[100vw]`} suppressHydrationWarning>
         {children}
       </body>
     </html>

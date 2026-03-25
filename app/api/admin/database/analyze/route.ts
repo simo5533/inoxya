@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getBetterSqlite3Db, getDbPath, initializeDatabase } from '@/lib/sqlite'
 import { getSqlJsDb } from '@/lib/sqljs-singleton'
 import { logger } from '@/lib/logger'
+import { requireAdminApi } from '@/lib/admin-auth'
 import * as fs from 'fs'
 
 export const runtime = 'nodejs'
@@ -176,6 +177,11 @@ interface DuplicateSlugRow {
  * Détecte tous les problèmes et affiche les produits réels
  */
 export async function GET(_request: NextRequest) {
+  const auth = await requireAdminApi()
+  if ('error' in auth) {
+    return auth.error
+  }
+
   try {
     const analysis: DatabaseAnalysis = {
       timestamp: new Date().toISOString(),

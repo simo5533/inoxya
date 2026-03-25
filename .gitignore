@@ -6,6 +6,7 @@
 # next.js
 /.next/
 /out/
+dist/
 
 # production
 /build
@@ -18,6 +19,10 @@ yarn-error.log*
 
 # env files
 .env*
+.env
+.env.production
+.env.staging
+.env.*.local
 
 # vercel
 .vercel
@@ -30,11 +35,18 @@ next-env.d.ts
 *.db
 *.sqlite
 *.sqlite3
+data/*.db
+data/*.sqlite
 data/
 
 # logs
 logs/
 *.log
+temp-uploads/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # coverage
 coverage/

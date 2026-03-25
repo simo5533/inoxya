@@ -249,6 +249,16 @@ export const checkoutSchema = z.object({
 })
 
 /**
+ * Création d'avis produit (API publique)
+ */
+export const reviewCreateSchema = z.object({
+  productId: z.string().min(1, 'Produit requis').max(128).trim(),
+  name: z.string().max(80, 'Nom trop long').trim().optional().nullable(),
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().min(5, 'Commentaire trop court (5 caractères min)').max(2000, 'Commentaire trop long').trim(),
+})
+
+/**
  * Schéma pour mettre à jour le statut d'une commande
  */
 export const updateOrderStatusSchema = z.object({
@@ -412,6 +422,36 @@ export const favoriteActionSchema = z.object({
   (data) => data.bijou_id || data.pack_id,
   { message: 'Un produit ou un pack est requis', path: ['bijou_id'] }
 )
+
+// ============================================
+// SCHÉMAS FACTURES (admin)
+// ============================================
+
+export const invoiceCustomerInfoSchema = z.object({
+  name: z.string().max(200).trim().optional(),
+  address: z.string().max(800).trim().optional(),
+  phone: z.string().max(40).trim().optional(),
+})
+
+export const invoiceItemSchema = z.object({
+  name: z.string().max(300).trim().optional(),
+  quantity: z.coerce.number().int().min(1).max(99999).optional(),
+  price: z.coerce.number().min(0).max(1e9).optional(),
+})
+
+export const generateInvoiceBodySchema = z.object({
+  order_id: z.union([z.string().min(1).max(128), z.number()]),
+  customer_info: invoiceCustomerInfoSchema,
+  items: z.array(invoiceItemSchema).min(1).max(500),
+  total_amount: z.coerce.number().finite().min(0).max(1e12),
+})
+
+export const sendInvoiceEmailBodySchema = z.object({
+  order_id: z.union([z.string().min(1).max(128), z.number()]),
+  customer_email: emailSchema,
+  customer_name: z.string().min(1).max(200).trim(),
+  invoice_data: z.record(z.string(), z.unknown()),
+})
 
 // ============================================
 // HELPERS DE VALIDATION

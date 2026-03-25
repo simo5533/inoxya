@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loginUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
-import { checkRateLimit, recordFailedAttempt, resetRateLimit, sanitizeInput, requireCSRF } from '@/lib/security'
+import { applyWebSessionCookies, checkRateLimit, recordFailedAttempt, resetRateLimit, sanitizeInput, requireCSRF } from '@/lib/security'
 import { loginSchema, validateWithSchema } from '@/lib/validations'
 import { testConnection } from '@/lib/sqlite'
 import { IS_PRODUCTION } from '@/lib/env'
 import bcrypt from 'bcryptjs'
 import fs from 'fs'
 import path from 'path'
-import { cookies } from 'next/headers'
-
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
 
@@ -72,13 +70,10 @@ export async function POST(request: NextRequest) {
     // IMPORTANT: Si loginUser réussit, créer le cookie directement dans l'API route
     // car les cookies créés dans les Server Actions peuvent ne pas être propagés correctement
     if (result.success && result.user) {
-      const cookieStore = await cookies()
-      cookieStore.set("user_id", result.user.id, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: "lax", // "lax" pour permettre la redirection après login (strict bloque la redirection)
-        maxAge: 60 * 60 * 24 * 7, // 7 jours
-        path: '/' // Explicit path pour garantir la portée
+      await applyWebSessionCookies({
+        id: result.user.id,
+        phone: result.user.phone,
+        role: result.user.role,
       })
       logger.info('[API Login] ✅ Cookie créé pour utilisateur', { 
         userId: result.user.id,
@@ -235,14 +230,10 @@ export async function POST(request: NextRequest) {
               logger.info('[API Login] Résultat de la vérification du mot de passe', { isValid })
               
               if (isValid) {
-                // Créer le cookie de session
-                const cookieStore = await cookies()
-                cookieStore.set("user_id", userObj.id, {
-                  httpOnly: true,
-                  secure: IS_PRODUCTION,
-                  sameSite: "lax", // "lax" pour permettre la redirection après login (strict bloque la redirection)
-                  maxAge: 60 * 60 * 24 * 7, // 7 jours
-                  path: '/' // Explicit path pour garantir la portée
+                await applyWebSessionCookies({
+                  id: userObj.id,
+                  phone: userObj.phone,
+                  role: userObj.role as 'user' | 'moderator' | 'admin',
                 })
                 
                 // Créer la réponse de succès

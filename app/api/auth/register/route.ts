@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { registerUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { sanitizeInput, checkRateLimit, recordFailedAttempt, requireCSRF } from '@/lib/security'
+import { getClientIp } from '@/lib/public-rate-limit'
 import { registerSchema, validateWithSchema } from '@/lib/validations'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
@@ -15,10 +16,8 @@ export async function POST(request: NextRequest) {
       return csrfCheck.error
     }
 
-    // Rate limiting par IP
-    const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown'
+    // Rate limiting par IP (premier hop X-Forwarded-For)
+    const clientIP = getClientIp(request)
     
     const rateCheck = await checkRateLimit(`register_${clientIP}`)
     if (!rateCheck.allowed) {

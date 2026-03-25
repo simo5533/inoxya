@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { requireCSRF } from '@/lib/security'
+import { clearWebSessionCookies, requireCSRF } from '@/lib/security'
 
 export const runtime = 'nodejs'
 
@@ -9,12 +9,8 @@ export async function POST(request: NextRequest) {
     const csrfCheck = await requireCSRF(request)
     if (!csrfCheck.valid) return csrfCheck.error
 
+    await clearWebSessionCookies()
     const cookieStore = await cookies()
-    
-    // Supprimer le cookie de session
-    cookieStore.delete('user_id')
-    
-    // Supprimer aussi les autres cookies potentiels liés à l'authentification
     cookieStore.delete('auth_token')
     cookieStore.delete('user_data')
     

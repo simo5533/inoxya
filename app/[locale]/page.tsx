@@ -276,7 +276,7 @@ async function HomePage({
       <HeroBanner />
 
       {/* Section Bijoux Vedettes avec grille selon votre spécification */}
-      <section className="py-20 bg-white">
+      <section className="relative z-10 bg-white pt-8 pb-20 sm:pt-12 md:py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <Badge className={`mb-4 bg-luxury-black text-luxury-gold border border-luxury-gold/30 px-4 py-2 font-semibold flex items-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
