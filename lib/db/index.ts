@@ -29,11 +29,11 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
     return await adapterInitPromise
   }
 
-  // Timeout de 10 secondes pour l'initialisation (augmenté pour Vercel)
+  // Timeout global d’init : doit rester > timeout test Supabase (15s) + marge Postgres/SQLite
   const timeoutPromise = new Promise<DatabaseAdapter>((_, reject) => {
     setTimeout(() => {
-      reject(new Error('Timeout initialisation adapter (10s)'))
-    }, 10000)
+      reject(new Error('Timeout initialisation adapter (25s)'))
+    }, 25000)
   })
 
   // Marquer comme en cours d'initialisation
@@ -58,13 +58,16 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
           // Tester la connexion avec timeout
           const connectionTestPromise = localAdapter.testConnection()
           const connectionTimeoutPromise = new Promise<boolean>((_, reject) => {
-            setTimeout(() => reject(new Error('Timeout test connexion Supabase (5s)')), 5000)
+            setTimeout(() => reject(new Error('Timeout test connexion Supabase (15s)')), 15000)
           })
-          
-          const isConnected = await Promise.race([connectionTestPromise, connectionTimeoutPromise]) as boolean
-          
+
+          const isConnected = await Promise.race([
+            connectionTestPromise,
+            connectionTimeoutPromise,
+          ]) as boolean
+
           if (!isConnected) {
-            logger.error('[DB] ❌ Échec de connexion Supabase, fallback vers PostgreSQL/SQLite')
+            logger.warn('[DB] Supabase indisponible ou test échoué, fallback PostgreSQL/SQLite')
             localAdapter = null
             localAdapterType = null
           } else {
@@ -72,11 +75,10 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error)
-          logger.error('[DB] ❌ Erreur lors de l\'initialisation Supabase:', { 
+          logger.warn('[DB] Supabase indisponible, fallback PostgreSQL/SQLite', {
             error: errorMessage,
-            stack: error instanceof Error ? error.stack : undefined
+            stack: error instanceof Error ? error.stack : undefined,
           })
-          logger.warn('[DB] ⚠️  Fallback vers PostgreSQL/SQLite')
           localAdapter = null
           localAdapterType = null
         }
@@ -116,11 +118,10 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
           
           const isConnected = await localAdapter.testConnection()
           if (!isConnected) {
-            if (process.env['DEBUG_DB'] === '1') {
-              logger.warn('[DB] ⚠️  Mode développement: connexion SQLite échouée, les fonctions utiliseront le fallback sql.js')
-            }
-            localAdapter = null
-            localAdapterType = null
+            logger.warn(
+              '[DB] Test SQLite échoué, conservation de l’adapter SQLite en dev (fallback sql.js possible)'
+            )
+            // En dev, garder l’adapter pour éviter un throw inutile ; les appels utiliseront sqlite/sql.js
           }
         } catch (error) {
           if (process.env['DEBUG_DB'] === '1') {
@@ -151,9 +152,9 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
         }
         // Lancer l'erreur pour que les fonctions appelantes utilisent le fallback
         // Silent warning - only log in debug mode
-        if (process.env['DEBUG_DB'] !== '1') {
-          // Ne pas logger en mode normal pour éviter les warnings bruyants
-        }
+        logger.warn(
+          '[DB] Aucun adapter distant (Supabase/Postgres) ; en dev, les appels utiliseront le fallback SQLite/sql.js'
+        )
         throw new Error('Base de données non disponible (mode développement - utilisez le fallback)')
       }
 

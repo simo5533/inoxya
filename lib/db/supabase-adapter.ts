@@ -52,7 +52,12 @@ export class SupabaseAdapter implements DatabaseAdapter {
 
   async testConnection(): Promise<boolean> {
     try {
-      const { error } = await this.supabase.from('products').select('id').limit(1)
+      // Requête légère : 0 ou 1 ligne, pas d’erreur si table vide
+      const { error } = await this.supabase
+        .from('products')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
       if (error) {
         logger.error('[SupabaseAdapter] Connection test failed:', { 
           message: error.message, 
