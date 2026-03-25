@@ -17,12 +17,12 @@ import {
   Eye,
   Sparkles
 } from "lucide-react"
-import { 
-  getFavorites, 
+import {
+  getFavorites,
+  getCartItems,
   removeFromFavorites,
-  type FavoriteItem as FavoriteItemType
+  type FavoriteItem as FavoriteItemType,
 } from "@/lib/cart-favorites"
-import { addToCart } from "@/lib/cart-favorites"
 import type { Product } from "@/lib/types"
 import { logger } from "@/lib/logger"
 import { useToast } from "@/hooks/use-toast"
@@ -32,6 +32,60 @@ interface FavoriteItem extends FavoriteItemType {
   description?: string
   category?: string
   original_price?: number
+}
+
+async function fetchCartCsrfToken(): Promise<string | null> {
+  const r = await fetch('/api/csrf-token')
+  if (!r.ok) return null
+  const d = (await r.json()) as { csrfToken?: string; token?: string }
+  return d.csrfToken ?? d.token ?? null
+}
+
+/** Panier localStorage + POST /api/cart (product_id + CSRF), sans course parallèle sur le storage. */
+async function addFavoriteItemToCart(
+  item: FavoriteItem,
+  products: Product[],
+  csrfToken: string | null
+): Promise<void> {
+  const product = products.find((p) => String(p.id) === String(item.id)) || item
+  const idStr = String(product.id)
+  const name =
+    'name' in product && product.name != null ? String(product.name) : String(item.name)
+  const price = Number(
+    'price' in product && product.price != null ? product.price : item.price
+  )
+  const image_url =
+    (typeof (product as Product).image_url === 'string' && (product as Product).image_url) ||
+    (typeof (product as { main_image?: string }).main_image === 'string' &&
+      (product as { main_image?: string }).main_image) ||
+    item.image_url ||
+    ''
+
+  const cartItems = getCartItems()
+  const existingItem = cartItems.find((ci) => String(ci.id) === idStr)
+  if (existingItem) {
+    existingItem.quantity += 1
+  } else {
+    cartItems.push({
+      id: idStr,
+      name,
+      price,
+      image_url,
+      quantity: 1,
+    })
+  }
+  localStorage.setItem('inoxya_cart', JSON.stringify(cartItems))
+
+  if (csrfToken) {
+    await fetch('/api/cart', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify({ product_id: idStr, quantity: 1 }),
+    })
+  }
 }
 
 export default function FavorisPage() {
@@ -150,24 +204,15 @@ export default function FavorisPage() {
 
   const handleAddToCart = async (item: FavoriteItem) => {
     try {
-      const product = products.find(p => String(p.id) === String(item.id)) || item
-      // Convertir Product en ProductInput si nécessaire
-      const productInput = {
-        id: String(product.id),
-        name: product.name,
-        price: product.price,
-        image_url: ('image_url' in product ? product.image_url : product.image_url) || ('main_image' in product ? product.main_image : '') || '',
-        name_ar: product.name_ar,
-        categories: ('category' in product && product.category) ? { name: product.category, slug: product.category.toLowerCase().replace(/\s+/g, '-') } : undefined
-      }
-      await addToCart(productInput, 1)
+      const csrf = await fetchCartCsrfToken()
+      await addFavoriteItemToCart(item, products, csrf)
       toast({
         title: t('addedToCart'),
         description: t('addedToCartDesc', { name: item.name }),
       })
-      // Rafraîchir le compteur du panier dans le header
       window.dispatchEvent(new CustomEvent('cart-updated'))
-    } catch {
+    } catch (err) {
+      logger.error('Erreur ajout panier (favoris):', err)
       toast({
         title: t('error'),
         description: t('errorAddToCart'),
@@ -377,13 +422,19 @@ export default function FavorisPage() {
                       variant="outline"
                       onClick={async () => {
                         try {
-                          // Ajouter tous les favoris au panier
-                          await Promise.all(favorites.map(item => handleAddToCart(item)))
+                          const csrf = await fetchCartCsrfToken()
+                          for (const item of favorites) {
+                            // Séquentiel : évite les courses sur localStorage (Promise.all écrasait le panier).
+                            // eslint-disable-next-line no-await-in-loop
+                            await addFavoriteItemToCart(item, products, csrf)
+                          }
                           toast({
                             title: "✅ Articles ajoutés",
                             description: `${favorites.length} article(s) ajouté(s) au panier avec succès.`,
                           })
-                        } catch {
+                          window.dispatchEvent(new CustomEvent('cart-updated'))
+                        } catch (err) {
+                          logger.error('Erreur tout ajouter au panier:', err)
                           toast({
                             title: "❌ Erreur",
                             description: "Impossible d'ajouter tous les articles au panier.",
