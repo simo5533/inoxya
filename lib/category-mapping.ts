@@ -22,7 +22,7 @@ export const CATEGORIES: Record<string, CategoryDefinition> = {
     subtitle: 'Collection de bagues berbères et modernes'
   },
   colliers: {
-    label: 'Colliers',
+    label: 'Ensembles et colliers',
     dbValue: 'Colliers',
     slug: 'colliers',
     subtitle: 'Colliers traditionnels et contemporains'
