@@ -3,10 +3,9 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, ArrowLeft, Heart, Share2, Truck, Shield, RotateCcw } from "lucide-react"
+import { Star, ArrowLeft, Truck, Shield, RotateCcw } from "lucide-react"
 import { getBijouById, getAllBijoux } from "@/lib/database"
 import OrderForm from "@/components/OrderForm"
 import ProductImageGallery from "@/components/ProductImageGallery"
@@ -15,6 +14,8 @@ import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
 import { selectRows } from "@/lib/sqlite"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
+import { FavoriteButton } from '@/components/FavoriteButton'
+import { ShareButton } from '@/components/ShareButton'
 
 // Force dynamic rendering - do NOT prerender at build time
 export const runtime = 'nodejs'
@@ -362,21 +363,16 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
 
             {/* Actions secondaires */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="w-full sm:flex-1 min-h-[44px] border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
-              >
-                <Heart className="w-5 h-5 mr-2" />
-                {t('actions.addToFavorites')}
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="w-full sm:w-auto min-h-[44px] border-luxury-gold/30 hover:bg-luxury-gold/10 hover:border-luxury-gold"
-              >
-                <Share2 className="w-5 h-5" />
-              </Button>
+              <FavoriteButton
+                bijouId={product.id}
+                variant="row"
+                labelAdd={t('actions.addToFavorites')}
+                labelRemove={t('actions.removeFromFavorites')}
+              />
+              <ShareButton
+                productName={product.name}
+                className="w-full sm:w-auto min-h-[44px] rounded-xl border border-luxury-gold/30 hover:bg-luxury-gold/10 transition-colors px-6 flex items-center justify-center"
+              />
             </div>
 
             {/* Garanties et services */}

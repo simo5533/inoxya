@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Heart, ShoppingCart, MapPin, User, Phone } from "lucide-react"
+import { ShoppingCart, MapPin, User, Phone } from "lucide-react"
 import type { Product } from "@/lib/types"
 import { useState } from "react"
 import { logger } from "@/lib/logger"
 import { useLocale } from "next-intl"
+import { FavoriteButton } from "@/components/FavoriteButton"
 
 interface BijouCardProps {
   bijou: Product
@@ -22,7 +23,6 @@ interface BijouCardProps {
 
 export default function BijouCard({ bijou }: BijouCardProps) {
   const locale = useLocale()
-  const [isFavorite, setIsFavorite] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -30,41 +30,6 @@ export default function BijouCard({ bijou }: BijouCardProps) {
     phone: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleAddToFavorites = async () => {
-    try {
-      const newFavoriteStatus = !isFavorite
-      setIsFavorite(newFavoriteStatus)
-      
-      // Appel à l'API pour ajouter/retirer des favoris
-      const response = await fetch('/api/favorites', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bijou_id: bijou.id,
-          action: newFavoriteStatus ? 'add' : 'remove'
-        })
-      })
-      
-      if (!response.ok) {
-        // Revert en cas d'erreur
-        setIsFavorite(!newFavoriteStatus)
-        throw new Error('Erreur lors de la mise à jour des favoris')
-      }
-      
-      // Notification de succès
-      if (newFavoriteStatus) {
-        logger.info(`${bijou.name} ajouté aux favoris`)
-      } else {
-        logger.info(`${bijou.name} retiré des favoris`)
-      }
-    } catch (error) {
-      logger.error('Erreur favoris:', error)
-      // Optionnel: afficher une notification d'erreur à l'utilisateur
-    }
-  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -139,14 +104,7 @@ export default function BijouCard({ bijou }: BijouCardProps) {
         {/* Actions overlay */}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <div className="flex space-x-3">
-            <Button
-              size="icon"
-              variant="secondary"
-              onClick={handleAddToFavorites}
-              className={`${isFavorite ? "bg-red-500 text-white" : "bg-white"}`}
-            >
-              <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-            </Button>
+            <FavoriteButton bijouId={bijou.id} variant="icon" />
             <Button
               size="icon"
               onClick={() => setIsOpen(true)}

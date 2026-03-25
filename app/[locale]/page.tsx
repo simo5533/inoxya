@@ -414,14 +414,9 @@ async function HomePage({
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-12 h-12 bg-luxury-gold/10 rounded-full flex items-center justify-center mr-4">
-                <Instagram className="w-6 h-6 text-luxury-gold" />
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-luxury-black tracking-tight">
-                Suivez-nous sur Instagram
-              </h2>
-            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-luxury-black tracking-tight mb-6">
+              Suivez-nous sur Instagram
+            </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
               {socialLinks.instagram.description}
             </p>
@@ -485,14 +480,9 @@ async function HomePage({
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-12 h-12 bg-luxury-gold/20 rounded-full flex items-center justify-center mr-4 border border-luxury-gold/30">
-                <TikTokIcon className="w-6 h-6 text-luxury-gold" />
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-                Suivez-nous sur TikTok
-              </h2>
-            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">
+              Suivez-nous sur TikTok
+            </h2>
             <p className="text-lg text-gray-200 max-w-2xl mx-auto leading-relaxed">
               {socialLinks.tiktok.description}
             </p>

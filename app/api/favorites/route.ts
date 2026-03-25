@@ -7,6 +7,7 @@ import { requireCSRF } from '@/lib/security'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,9 +51,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (result) {
-      return NextResponse.json({ 
-        success: true, 
-        message: action === 'add' ? 'Ajouté aux favoris' : 'Retiré des favoris' 
+      return NextResponse.json({
+        success: true,
+        isFavorite: action === 'add',
+        message: action === 'add' ? 'Ajouté aux favoris' : 'Retiré des favoris',
       })
     } else {
       return NextResponse.json({ error: 'Erreur lors de la mise à jour' }, { status: 500 })
@@ -64,16 +66,31 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const bijouIdParam =
+      request.nextUrl.searchParams.get('bijou_id') ??
+      request.nextUrl.searchParams.get('bijouId')
+
     const user = await getCurrentUser()
+
+    if (bijouIdParam) {
+      if (!user) {
+        return NextResponse.json({ isFavorite: false })
+      }
+      const favorites = await getFavorites(user.id)
+      const isFavorite = favorites.some(
+        (f) => String(f.bijou_id) === String(bijouIdParam)
+      )
+      return NextResponse.json({ isFavorite })
+    }
+
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const favorites = await getFavorites(user.id)
     return NextResponse.json({ favorites })
-
   } catch (error) {
     logger.error('Erreur API favoris GET:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
