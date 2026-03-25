@@ -14,7 +14,6 @@ import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
 import { selectRows } from "@/lib/sqlite"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
-import { ProductDetailFavoriteButton } from '@/components/ProductDetailFavoriteButton'
 import { ShareButton } from '@/components/ShareButton'
 
 // Force dynamic rendering - do NOT prerender at build time
@@ -361,25 +360,8 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               />
             </div>
 
-            {/* Actions secondaires */}
+            {/* Actions secondaires — partage uniquement */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <ProductDetailFavoriteButton
-                productId={product.id}
-                name={product.name}
-                price={product.price}
-                imageUrl={
-                  mainImage ||
-                  (typeof product.image_url === 'string' ? product.image_url : '') ||
-                  '/placeholder.svg'
-                }
-                name_ar={
-                  typeof (product as { name_ar?: string }).name_ar === 'string'
-                    ? (product as { name_ar?: string }).name_ar
-                    : undefined
-                }
-                labelAdd={t('actions.addToFavorites')}
-                labelRemove={t('actions.removeFromFavorites')}
-              />
               <ShareButton
                 productName={product.name}
                 className="w-full sm:w-auto min-h-[44px] rounded-xl border border-luxury-gold/30 hover:bg-luxury-gold/10 transition-colors px-6 flex items-center justify-center"
