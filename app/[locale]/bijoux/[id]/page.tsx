@@ -14,7 +14,7 @@ import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
 import { selectRows } from "@/lib/sqlite"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
-import { FavoriteButton } from '@/components/FavoriteButton'
+import { ProductDetailFavoriteButton } from '@/components/ProductDetailFavoriteButton'
 import { ShareButton } from '@/components/ShareButton'
 
 // Force dynamic rendering - do NOT prerender at build time
@@ -363,9 +363,20 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
 
             {/* Actions secondaires */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <FavoriteButton
-                bijouId={product.id}
-                variant="row"
+              <ProductDetailFavoriteButton
+                productId={product.id}
+                name={product.name}
+                price={product.price}
+                imageUrl={
+                  mainImage ||
+                  (typeof product.image_url === 'string' ? product.image_url : '') ||
+                  '/placeholder.svg'
+                }
+                name_ar={
+                  typeof (product as { name_ar?: string }).name_ar === 'string'
+                    ? (product as { name_ar?: string }).name_ar
+                    : undefined
+                }
                 labelAdd={t('actions.addToFavorites')}
                 labelRemove={t('actions.removeFromFavorites')}
               />
