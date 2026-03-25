@@ -41,7 +41,7 @@ export default function SecurityInfo() {
   const securityAlerts = [
     {
       type: "warning",
-      message: "Assurez-vous que JWT_SECRET est configuré en production",
+      message: "Assurez-vous que la clé secrète de signature JWT est configurée en production",
       icon: AlertTriangle
     },
     {

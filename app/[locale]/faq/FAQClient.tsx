@@ -734,10 +734,14 @@ export default function FAQClient() {
                       size="lg"
                       className="bg-luxury-gold hover:bg-luxury-gold-dark text-luxury-black font-semibold px-8 py-6 text-lg transition-all duration-200 hover:shadow-lg hover:shadow-luxury-gold/30"
                     >
-                      <Link href={`/${locale}/sur-mesure`}>
+                      <a
+                        href="https://wa.me/212717581940"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         Contactez-nous
                         <ArrowRight className="ml-2 w-5 h-5" />
-                      </Link>
+                      </a>
                     </Button>
                   </motion.div>
                   <motion.div

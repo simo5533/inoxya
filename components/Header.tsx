@@ -75,7 +75,7 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="bg-white shadow-sm border-b w-full max-w-full overflow-hidden">
+    <header className="bg-white shadow-sm border-b w-full max-w-full overflow-x-hidden">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-orange-500 to-yellow-600 text-white text-center py-2 px-3">
         <p className="text-xs sm:text-sm font-medium leading-snug">
@@ -85,7 +85,7 @@ export default function Header() {
 
       {/* Main Header */}
       <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 w-full max-w-full">
-        <div className="flex items-center justify-between w-full max-w-full overflow-hidden gap-2 sm:gap-4">
+        <div className="flex items-center justify-between w-full max-w-full overflow-x-hidden gap-2 sm:gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center group flex-shrink-0 min-w-0">
             <Image 
@@ -176,23 +176,23 @@ export default function Header() {
             )}
 
             {/* Favoris */}
-            <Link href={`/${locale}/favoris`}>
-              <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2">
+            <Link href={`/${locale}/favoris`} className="relative shrink-0 overflow-visible inline-flex">
+              <Button variant="ghost" size="icon" className="relative overflow-visible text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2">
                 <Heart className="w-5 h-5" />
                 {favoritesCount > 0 && (
-                  <Badge className={`absolute ${locale === 'ar' ? '-top-1 -left-1' : '-top-1 -right-1'} w-4 h-4 p-0 flex items-center justify-center text-xs bg-orange-500 text-white`}>
+                  <Badge className={`absolute ${locale === 'ar' ? 'top-1 left-1' : 'top-1 right-1'} w-4 h-4 p-0 flex items-center justify-center text-xs bg-orange-500 text-white`}>
                     {favoritesCount}
                   </Badge>
                 )}
               </Button>
             </Link>
 
-            {/* Panier */}
-            <Link href={`/${locale}/panier`}>
-              <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2">
+            {/* Panier — même pattern que Favoris (overflow + badge dans le bouton) */}
+            <Link href={`/${locale}/panier`} className="relative shrink-0 overflow-visible inline-flex">
+              <Button variant="ghost" size="icon" className="relative overflow-visible text-gray-600 hover:text-orange-600 cursor-pointer transition-all duration-150 min-w-[44px] min-h-[44px] p-2">
                 <ShoppingCart className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <Badge className={`absolute ${locale === 'ar' ? '-top-1 -left-1' : '-top-1 -right-1'} w-4 h-4 p-0 flex items-center justify-center text-xs bg-orange-500 text-white`}>
+                  <Badge className={`absolute ${locale === 'ar' ? 'top-1 left-1' : 'top-1 right-1'} w-4 h-4 p-0 flex items-center justify-center text-xs bg-orange-500 text-white`}>
                     {cartCount}
                   </Badge>
                 )}

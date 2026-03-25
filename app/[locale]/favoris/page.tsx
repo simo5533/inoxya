@@ -34,6 +34,18 @@ interface FavoriteItem extends FavoriteItemType {
   original_price?: number
 }
 
+function normalizeProductsResponse(raw: unknown): Product[] {
+  if (Array.isArray(raw)) return raw as Product[]
+  if (raw && typeof raw === 'object') {
+    const o = raw as Record<string, unknown>
+    for (const key of ['products', 'bijoux', 'data'] as const) {
+      const v = o[key]
+      if (Array.isArray(v)) return v as Product[]
+    }
+  }
+  return []
+}
+
 async function fetchCartCsrfToken(): Promise<string | null> {
   const r = await fetch('/api/csrf-token')
   if (!r.ok) return null
@@ -47,7 +59,9 @@ async function addFavoriteItemToCart(
   products: Product[],
   csrfToken: string | null
 ): Promise<void> {
-  const product = products.find((p) => String(p.id) === String(item.id)) || item
+  const productsArray = normalizeProductsResponse(products as unknown)
+  const product =
+    productsArray.find((p) => String(p.id) === String(item.id)) || item
   const idStr = String(product.id)
   const name =
     'name' in product && product.name != null ? String(product.name) : String(item.name)
@@ -128,11 +142,12 @@ export default function FavorisPage() {
         return res.json()
       })
       .then(productsData => {
-        setProducts(productsData)
-        
+        const list = normalizeProductsResponse(productsData)
+        setProducts(list)
+
         // Filtrer les produits qui existent encore et sont disponibles
         const validItems = items.filter(item => {
-          const product = productsData.find((p: Product) => p?.id === item.id)
+          const product = list.find((p: Product) => String(p?.id) === String(item.id))
           return product && product.is_available !== false
         })
         
@@ -149,7 +164,7 @@ export default function FavorisPage() {
         }
         
         const enrichedItems = validItems.map(item => {
-          const product = productsData.find((p: Product) => p?.id === item.id)
+          const product = list.find((p: Product) => String(p?.id) === String(item.id))
           return {
             ...item,
             name: product?.name || item.name,
@@ -184,7 +199,7 @@ export default function FavorisPage() {
       const res = await fetch('/api/products')
       if (!res.ok) throw new Error('Erreur lors du chargement des produits')
       const data = await res.json()
-      setProducts(data)
+      setProducts(normalizeProductsResponse(data))
     } catch (error) {
       logger.error('Erreur chargement produits:', error)
     }

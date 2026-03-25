@@ -49,6 +49,7 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['next-intl'],
   outputFileTracingRoot: process.cwd(),
   async headers() {
     return [
