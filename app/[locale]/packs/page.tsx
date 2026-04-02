@@ -13,6 +13,7 @@ import { Heart } from "lucide-react"
 import { logger } from "@/lib/logger"
 import { addToFavorites as addToFavoritesLib } from "@/lib/cart-favorites"
 import { useTranslations, useLocale } from 'next-intl'
+import Link from "next/link"
 
 interface Pack {
   id: string
@@ -564,13 +565,18 @@ export default function PacksPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6">
             Besoin d'un pack sur mesure ?
           </h2>
-          <p className="text-gray-700 mb-8 max-w-2xl mx-auto">
+          <p className="text-gray-700 mb-4 max-w-2xl mx-auto">
             Nos experts peuvent créer un pack personnalisé selon vos goûts et votre budget. 
             Contactez-nous pour une consultation gratuite.
           </p>
-          <Button className="bg-luxury-gold hover:bg-luxury-gold/90 text-gray-900 shadow-md hover:shadow-lg transition-shadow">
-            <Gift className="w-4 h-4 mr-2" />
-            Créer mon pack
+          <p className="text-sm md:text-base font-medium text-luxury-gold mb-8 max-w-xl mx-auto tracking-wide">
+            {t('ctaPackLine')}
+          </p>
+          <Button asChild className="bg-luxury-gold hover:bg-luxury-gold/90 text-gray-900 shadow-md hover:shadow-lg transition-shadow">
+            <Link href={`/${locale}/packs/creer`}>
+              <Gift className="w-4 h-4 mr-2" />
+              {t('ctaCreatePack')}
+            </Link>
           </Button>
         </div>
       </div>

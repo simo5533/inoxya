@@ -60,17 +60,18 @@ export default function ProductImageGallery({
       
       {/* Miniatures - affiche uniquement les images du tableau images[] */}
       {imagesUrls.length > 0 && (
-        <div className="thumbnails flex gap-2 overflow-x-auto scrollbar-hide px-1 pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0">
+        <div className="thumbnails grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-2.5 w-full max-w-full">
           {imagesUrls.map((image, index) => {
             const isSelected = image === selectedMainImage
             return (
               <button
                 key={index}
+                type="button"
                 onClick={() => handleThumbnailClick(image)}
-                className={`thumbnail relative flex-shrink-0 w-16 h-16 sm:w-full sm:h-auto sm:aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                className={`thumbnail relative aspect-square w-full min-w-0 rounded-xl overflow-hidden border-2 transition-all shadow-sm ${
                   isSelected
-                    ? "border-orange-500 shadow-lg"
-                    : "border-gray-200 hover:border-orange-300"
+                    ? "border-amber-600 ring-2 ring-amber-500/30 shadow-md"
+                    : "border-stone-200/90 hover:border-amber-400/80"
                 }`}
               >
                 <Image
@@ -80,7 +81,7 @@ export default function ProductImageGallery({
                   className={`object-cover transition-opacity ${
                     isSelected ? "opacity-100" : "opacity-70 hover:opacity-100"
                   }`}
-                  sizes="(max-width: 768px) 25vw, 12.5vw"
+                  sizes="(max-width: 640px) 33vw, 18vw"
                   onError={(e) => {
                     // En cas d'erreur, utiliser le placeholder
                     const target = e.target as HTMLImageElement
@@ -88,7 +89,7 @@ export default function ProductImageGallery({
                   }}
                 />
                 {isSelected && (
-                  <div className="absolute inset-0 bg-orange-500/10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-amber-500/10 pointer-events-none" />
                 )}
               </button>
             )

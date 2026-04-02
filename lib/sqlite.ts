@@ -1379,7 +1379,7 @@ export async function getProductsAsync(): Promise<{ id: string; name: string; na
   try {
     // Utiliser selectAsync() qui gère automatiquement better-sqlite3 et sql.js
     // PHASE 4: Gérer les valeurs NULL (is_active = 1 OR is_active IS NULL)
-    const rows = await selectAsync('SELECT id, name, name_ar, description, price, original_price, image_url, images, category, is_active, is_featured, created_at FROM products WHERE (is_active = 1 OR is_active IS NULL) ORDER BY created_at DESC', []) as { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; is_active: number; is_featured: number; created_at?: string }[]
+    const rows = await selectAsync('SELECT id, name, name_ar, description, price, original_price, image_url, images, category, stock, is_active, is_featured, created_at FROM products WHERE (is_active = 1 OR is_active IS NULL) ORDER BY created_at DESC', []) as { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; stock?: number; is_active: number; is_featured: number; created_at?: string }[]
     const cats = await selectAsync('SELECT name, slug FROM categories', []) as { name: string; slug: string }[]
     const nameToSlug = Object.fromEntries(cats.map(c => [c.name, c.slug]))
     
@@ -1423,6 +1423,7 @@ export async function getProductsAsync(): Promise<{ id: string; name: string; na
         images_json: images, // Garder aussi la version JSON pour compatibilité
         category_id: categorySlug || undefined,
         category: r.category, // Garder aussi la catégorie originale
+        stock: typeof r.stock === 'number' ? r.stock : 0,
         is_available: Boolean(r.is_active),
         is_active: Boolean(r.is_active), // Garder aussi pour compatibilité
         is_featured: Boolean(r.is_featured),
@@ -1508,7 +1509,7 @@ export function getProductById(id: string): { id: string; name: string; name_ar?
 /**
  * Récupérer un produit par ID (version asynchrone - supporte better-sqlite3 et sql.js)
  */
-export async function getProductByIdAsync(id: string): Promise<{ id: string; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string | string[]; images_json?: string; main_image?: string; category_id?: string; category?: string; is_available: boolean; is_active?: boolean; is_featured: boolean; rating?: number; reviews_count?: number; created_at?: string } | null> {
+export async function getProductByIdAsync(id: string): Promise<{ id: string; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string | string[]; images_json?: string; main_image?: string; category_id?: string; category?: string; stock?: number; is_available: boolean; is_active?: boolean; is_featured: boolean; rating?: number; reviews_count?: number; created_at?: string } | null> {
   try {
     // PHASE 2: Utiliser les wrappers uniformes (fonctionne avec better-sqlite3 et sql.js)
     // S'assurer que sql.js est initialisé si nécessaire
@@ -1520,16 +1521,16 @@ export async function getProductByIdAsync(id: string): Promise<{ id: string; nam
     
     // Essayer d'abord avec l'ID comme nombre
     const numericId = Number(id)
-    let rows: { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; is_active: number; is_featured: number; created_at?: string }[] = []
+    let rows: { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; stock?: number; is_active: number; is_featured: number; created_at?: string }[] = []
     
     // Essayer d'abord avec l'ID comme nombre
     if (!isNaN(numericId)) {
-      rows = await selectAsync('SELECT id, name, name_ar, description, price, original_price, image_url, images, category, is_active, is_featured, created_at FROM products WHERE id = ?', [numericId]) as { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; is_active: number; is_featured: number; created_at?: string }[]
+      rows = await selectAsync('SELECT id, name, name_ar, description, price, original_price, image_url, images, category, stock, is_active, is_featured, created_at FROM products WHERE id = ?', [numericId]) as { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; stock?: number; is_active: number; is_featured: number; created_at?: string }[]
     }
     
     // Si pas trouvé, essayer avec CAST(id AS TEXT) pour sql.js
     if ((!rows || rows.length === 0) && isNaN(numericId)) {
-      rows = await selectAsync('SELECT id, name, name_ar, description, price, original_price, image_url, images, category, is_active, is_featured, created_at FROM products WHERE CAST(id AS TEXT) = ?', [id]) as { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; is_active: number; is_featured: number; created_at?: string }[]
+      rows = await selectAsync('SELECT id, name, name_ar, description, price, original_price, image_url, images, category, stock, is_active, is_featured, created_at FROM products WHERE CAST(id AS TEXT) = ?', [id]) as { id: number; name: string; name_ar?: string; description?: string; price: number; original_price?: number; image_url?: string; images?: string; category?: string; stock?: number; is_active: number; is_featured: number; created_at?: string }[]
     }
     
     if (!rows || rows.length === 0) {
@@ -1577,6 +1578,7 @@ export async function getProductByIdAsync(id: string): Promise<{ id: string; nam
       images_json: imagesJson,
       category_id: categorySlug || undefined,
       category: r.category,
+      stock: typeof r.stock === 'number' ? r.stock : 0,
       is_available: Boolean(r.is_active),
       is_active: Boolean(r.is_active),
       is_featured: Boolean(r.is_featured),

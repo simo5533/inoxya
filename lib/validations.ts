@@ -119,7 +119,7 @@ export const createProductSchema = z.object({
       z.string().url('URL image invalide'),
       z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/')
     ])
-  ).optional().default([])
+  ).max(6, 'Maximum 6 images secondaires').optional().default([])
 }).refine(
   (data) => {
     // Vérifier que au moins une image principale est fournie (non null et non vide)
@@ -178,7 +178,7 @@ export const updateProductSchema = z.object({
       z.string().url('URL image invalide'),
       z.string().regex(/^\/images\//, 'Chemin relatif doit commencer par /images/')
     ])
-  ).optional()
+  ).max(6, 'Maximum 6 images secondaires').optional()
 }).refine(
   (data) => {
     // Si original_price est fourni, il doit être supérieur à price (si price est fourni)
@@ -207,16 +207,28 @@ export const orderStatusSchema = z.enum([
 ])
 
 /**
+ * Lignes d’un pack personnalisé (−20 % côté serveur)
+ */
+export const customPackLineSchema = z.object({
+  bijou_id: numericIdSchema,
+  quantity: quantitySchema,
+})
+
+/**
  * Item de commande
  */
 export const orderItemSchema = z.object({
   bijou_id: numericIdSchema.optional(),
   pack_id: numericIdSchema.optional(),
   quantity: quantitySchema,
-  price: priceSchema
+  price: priceSchema,
+  custom_pack_lines: z.array(customPackLineSchema).min(1).max(30).optional(),
 }).refine(
-  (data) => data.bijou_id || data.pack_id,
-  { message: 'Un produit ou un pack est requis', path: ['bijou_id'] }
+  (data) =>
+    data.bijou_id != null ||
+    data.pack_id != null ||
+    (Array.isArray(data.custom_pack_lines) && data.custom_pack_lines.length > 0),
+  { message: 'Un produit, un pack ou un pack personnalisé est requis', path: ['bijou_id'] }
 )
 
 /**

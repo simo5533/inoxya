@@ -50,6 +50,10 @@ interface ProductFormData {
   image_url: string
   imageSecondary1: string
   imageSecondary2: string
+  imageSecondary3: string
+  imageSecondary4: string
+  imageSecondary5: string
+  imageSecondary6: string
   images: string[]
   rating: string
   reviews_count: string
@@ -85,6 +89,10 @@ export default function ModifierProduitPage() {
     image_url: "",
     imageSecondary1: "",
     imageSecondary2: "",
+    imageSecondary3: "",
+    imageSecondary4: "",
+    imageSecondary5: "",
+    imageSecondary6: "",
     images: [],
     rating: "4.5",
     reviews_count: "0",
@@ -138,6 +146,10 @@ export default function ModifierProduitPage() {
           image_url: productData.image_url || productData.main_image || "",
           imageSecondary1: imagesArr[0] || "",
           imageSecondary2: imagesArr[1] || "",
+          imageSecondary3: imagesArr[2] || "",
+          imageSecondary4: imagesArr[3] || "",
+          imageSecondary5: imagesArr[4] || "",
+          imageSecondary6: imagesArr[5] || "",
           images: [],
           rating: productData.rating?.toString() || "4.5",
           reviews_count: productData.reviews_count?.toString() || "0",
@@ -249,9 +261,17 @@ export default function ModifierProduitPage() {
         throw new Error("Catégorie invalide. Veuillez sélectionner une catégorie.")
       }
       
-      // Filtrer et valider les images secondaires (doivent être des URLs valides)
-      const secondaryImages = [formData.imageSecondary1, formData.imageSecondary2]
-        .filter(img => img && img.trim() !== '' && img.startsWith('http'))
+      // Filtrer et valider les images secondaires (URL ou chemins /images/…)
+      const secondaryImages = [
+        formData.imageSecondary1,
+        formData.imageSecondary2,
+        formData.imageSecondary3,
+        formData.imageSecondary4,
+        formData.imageSecondary5,
+        formData.imageSecondary6,
+      ]
+        .filter((img) => img && img.trim() !== '' && (img.startsWith('http') || img.startsWith('/')))
+        .slice(0, 6)
       
       // Préparer les données du produit
       // Accepter URL complète, chemin relatif ou chemin local (Windows/Unix)
@@ -661,6 +681,30 @@ export default function ModifierProduitPage() {
                       </div>
                     )}
                     {errors['image_url'] && <p className="text-sm text-red-500 mt-1">{errors['image_url']}</p>}
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-200 space-y-3">
+                    <Label>Images galerie (optionnel, max 6)</Label>
+                    <p className="text-xs text-gray-500">URLs https ou chemins commençant par /images/</p>
+                    {([
+                      'imageSecondary1',
+                      'imageSecondary2',
+                      'imageSecondary3',
+                      'imageSecondary4',
+                      'imageSecondary5',
+                      'imageSecondary6',
+                    ] as const).map((field, idx) => (
+                      <div key={field}>
+                        <Label htmlFor={field} className="text-xs">Image {idx + 1}</Label>
+                        <Input
+                          id={field}
+                          value={formData[field]}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange(field, e.target.value)}
+                          placeholder="https://... ou /images/..."
+                          className="mt-1"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

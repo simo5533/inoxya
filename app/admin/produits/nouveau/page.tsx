@@ -26,6 +26,10 @@ interface ProductFormData {
   image_url: string
   imageSecondary1: string
   imageSecondary2: string
+  imageSecondary3: string
+  imageSecondary4: string
+  imageSecondary5: string
+  imageSecondary6: string
   images: string[]
   rating: string
   reviews_count: string
@@ -46,6 +50,10 @@ const initialFormData: ProductFormData = {
   image_url: "",
   imageSecondary1: "",
   imageSecondary2: "",
+  imageSecondary3: "",
+  imageSecondary4: "",
+  imageSecondary5: "",
+  imageSecondary6: "",
   images: [],
   rating: "4.5",
   reviews_count: "0",
@@ -65,7 +73,7 @@ const categories = [
 
 const availableTags = ["promo", "nouveau", "bestseller", "premium"]
 
-type UploadTarget = 'main' | 'secondary1' | 'secondary2'
+type UploadTarget = 'main' | 'secondary1' | 'secondary2' | 'secondary3' | 'secondary4' | 'secondary5' | 'secondary6'
 
 export default function NouveauProduitPage() {
   const router = useRouter()
@@ -78,6 +86,10 @@ export default function NouveauProduitPage() {
   const fileInputMainRef = useRef<HTMLInputElement>(null)
   const fileInputSecondary1Ref = useRef<HTMLInputElement>(null)
   const fileInputSecondary2Ref = useRef<HTMLInputElement>(null)
+  const fileInputSecondary3Ref = useRef<HTMLInputElement>(null)
+  const fileInputSecondary4Ref = useRef<HTMLInputElement>(null)
+  const fileInputSecondary5Ref = useRef<HTMLInputElement>(null)
+  const fileInputSecondary6Ref = useRef<HTMLInputElement>(null)
   const tempProductSlugRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -141,7 +153,13 @@ export default function NouveauProduitPage() {
         formDataUpload.append('imageType', 'main')
       } else {
         formDataUpload.append('imageType', 'gallery')
-        formDataUpload.append('galleryIndex', target === 'secondary1' ? '0' : '1')
+        const idx =
+          target === 'secondary1' ? 0 :
+          target === 'secondary2' ? 1 :
+          target === 'secondary3' ? 2 :
+          target === 'secondary4' ? 3 :
+          target === 'secondary5' ? 4 : 5
+        formDataUpload.append('galleryIndex', String(idx))
       }
 
       const res = await fetch('/api/upload/product-image', {
@@ -221,9 +239,17 @@ export default function NouveauProduitPage() {
         throw new Error("Catégorie invalide. Veuillez sélectionner une catégorie.")
       }
       
-      // Filtrer et valider les images secondaires (doivent être des URLs valides)
-      const secondaryImages = [formData.imageSecondary1, formData.imageSecondary2]
-        .filter(img => img && img.trim() !== '' && img.startsWith('http'))
+      // Filtrer et valider les images secondaires (URL https ou chemins /images/…)
+      const secondaryImages = [
+        formData.imageSecondary1,
+        formData.imageSecondary2,
+        formData.imageSecondary3,
+        formData.imageSecondary4,
+        formData.imageSecondary5,
+        formData.imageSecondary6,
+      ]
+        .filter((img) => img && img.trim() !== '' && (img.startsWith('http') || img.startsWith('/')))
+        .slice(0, 6)
       
       // Préparer les données du produit
       // IMPORTANT: image_url doit être une URL valide ou null/undefined (pas une chaîne vide)
@@ -631,6 +657,55 @@ export default function NouveauProduitPage() {
                       </div>
                     )}
                   </div>
+
+                  <p className="text-xs text-gray-500">Images secondaires 3 à 6 (optionnel, galerie produit — max 6 au total)</p>
+                  {([
+                    { n: 3, key: 'imageSecondary3' as const, ref: fileInputSecondary3Ref, ut: 'secondary3' as const },
+                    { n: 4, key: 'imageSecondary4' as const, ref: fileInputSecondary4Ref, ut: 'secondary4' as const },
+                    { n: 5, key: 'imageSecondary5' as const, ref: fileInputSecondary5Ref, ut: 'secondary5' as const },
+                    { n: 6, key: 'imageSecondary6' as const, ref: fileInputSecondary6Ref, ut: 'secondary6' as const },
+                  ] as const).map(({ n, key, ref, ut }) => (
+                    <div key={key}>
+                      <Label htmlFor={key}>Image secondaire {n}</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id={key}
+                          value={formData[key]}
+                          onChange={(e) => handleInputChange(key, e.target.value)}
+                          placeholder="URL ou cliquer sur le bouton pour uploader"
+                        />
+                        <input
+                          ref={ref}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, ut)}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleUploadClick(ut)}
+                          disabled={!!uploadingImage}
+                          title={`Upload image secondaire ${n}`}
+                        >
+                          {uploadingImage === ut ? (
+                            <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {formData[key] && (
+                        <div className="mt-2 flex items-center gap-3">
+                          <div className="relative h-16 w-16">
+                            <Image src={formData[key]} alt={`Aperçu ${n}`} fill className="object-cover rounded border" />
+                          </div>
+                          <p className="text-xs text-gray-500 truncate flex-1" title={formData[key]}>{formData[key]}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
 
                   {uploadError && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">

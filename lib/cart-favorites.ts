@@ -3,12 +3,24 @@
 // Gestion du panier et des favoris en localStorage
 // Note: logger remplacé par console pour compatibilité client
 
+import {
+  computePackTotals,
+  saveCustomPackSnapshot,
+  removeCustomPackSnapshot,
+  clearAllCustomPackSnapshots,
+  type PackBuilderLine,
+  type CustomPackSnapshot,
+  isCustomPackLineId,
+} from '@/lib/custom-pack'
+
 export interface CartItem {
   id: string
   name: string
   price: number
   image_url: string
   quantity: number
+  /** Ligne « Pack personnalisé » : prix = total déjà remisé ; détail dans localStorage */
+  lineType?: 'standard' | 'custom_pack'
 }
 
 export interface FavoriteItem {
@@ -95,6 +107,7 @@ export const addToCart = async (product: ProductInput, quantity = 1): Promise<vo
     price: product.price,
     image_url: product.image_url,
     quantity,
+    lineType: 'standard',
   }
 
   const existingItem = cartItems.find((item) => item.id === product.id)
@@ -107,30 +120,70 @@ export const addToCart = async (product: ProductInput, quantity = 1): Promise<vo
   localStorage.setItem("inoxya_cart", JSON.stringify(cartItems))
   
   // Synchroniser avec le serveur pour les notifications admin
-  try {
-    await fetch('/api/cart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        product_id: product.id,
-        quantity,
-        action: 'add'
+  if (!isCustomPackLineId(product.id)) {
+    try {
+      await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: product.id,
+          quantity,
+          action: 'add'
+        })
       })
-    })
-  } catch (error) {
-    console.warn('Erreur synchronisation panier:', error)
+    } catch (error) {
+      console.warn('Erreur synchronisation panier:', error)
+    }
   }
+}
+
+/**
+ * Ajoute une ligne « Pack INOXYA personnalisé » (prix total après −20 %).
+ * Le détail des articles est stocké pour le checkout et l’affichage panier.
+ */
+export function addCustomPackToCart(lines: PackBuilderLine[]): string {
+  const totals = computePackTotals(lines)
+  const lineId = `custom-pack-${Date.now()}`
+  const firstImage = lines[0]?.image_url || '/placeholder.svg'
+
+  const snapshot: CustomPackSnapshot = {
+    items: lines,
+    subtotal: totals.subtotal,
+    discountRate: totals.discountRate,
+    discountAmount: totals.discountAmount,
+    total: totals.total,
+    updatedAt: new Date().toISOString(),
+  }
+
+  const cartItems = getCartItems()
+  cartItems.push({
+    id: lineId,
+    name: 'Pack INOXYA personnalisé (−20 %)',
+    price: totals.total,
+    image_url: firstImage,
+    quantity: 1,
+    lineType: 'custom_pack',
+  })
+  localStorage.setItem('inoxya_cart', JSON.stringify(cartItems))
+  saveCustomPackSnapshot(lineId, snapshot)
+  return lineId
 }
 
 export const removeFromCart = async (productId: string): Promise<void> => {
   const cartItems = getCartItems()
   const updatedCart = cartItems.filter((item) => item.id !== productId)
   localStorage.setItem("inoxya_cart", JSON.stringify(updatedCart))
-  
-  // Synchroniser avec le serveur pour les notifications admin
+  if (isCustomPackLineId(productId)) {
+    removeCustomPackSnapshot(productId)
+  }
+
+  if (isCustomPackLineId(productId)) {
+    return
+  }
+
   try {
-    await fetch(`/api/cart?product_id=${productId}`, {
-      method: 'DELETE'
+    await fetch(`/api/cart?product_id=${encodeURIComponent(productId)}`, {
+      method: 'DELETE',
     })
   } catch (error) {
     console.warn('Erreur synchronisation panier:', error)
@@ -141,6 +194,12 @@ export const updateCartQuantity = async (productId: string, quantity: number): P
   const cartItems = getCartItems()
   const item = cartItems.find((item) => item.id === productId)
   if (item) {
+    if (item.lineType === 'custom_pack') {
+      if (quantity <= 0) {
+        await removeFromCart(productId)
+      }
+      return
+    }
     if (quantity <= 0) {
       await removeFromCart(productId)
     } else {
@@ -148,17 +207,19 @@ export const updateCartQuantity = async (productId: string, quantity: number): P
       localStorage.setItem("inoxya_cart", JSON.stringify(cartItems))
       
       // Synchroniser avec le serveur pour les notifications admin
-      try {
-        await fetch('/api/cart', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            product_id: productId,
-            quantity
+      if (!isCustomPackLineId(productId)) {
+        try {
+          await fetch('/api/cart', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product_id: productId,
+              quantity
+            })
           })
-        })
-      } catch (error) {
-        console.warn('Erreur synchronisation panier:', error)
+        } catch (error) {
+          console.warn('Erreur synchronisation panier:', error)
+        }
       }
     }
   }
@@ -176,4 +237,5 @@ export const getCartCount = (): number => {
 
 export const clearCart = (): void => {
   localStorage.removeItem("inoxya_cart")
+  clearAllCustomPackSnapshots()
 }

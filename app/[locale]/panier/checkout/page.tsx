@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CreditCard, ShoppingCart, CheckCircle, Truck, Shield } from "lucide-react"
 import { getCartItems, clearCart, type CartItem } from "@/lib/cart-favorites"
+import { getCustomPackSnapshot, isCustomPackLineId } from "@/lib/custom-pack"
 import { Confetti } from "@/components/Confetti"
 import { useTranslations, useLocale } from 'next-intl'
 
@@ -105,12 +106,30 @@ export default function CheckoutPage() {
           address: formData.address,
           notes: formData.notes,
           payment_method: formData.payment_method,
-          items: cartItems.map(item => ({
-            bijou_id: item.id,
-            product_id: item.id,
-            price: item.price,
-            quantity: item.quantity
-          }))
+          items: cartItems.map((item) => {
+            if (item.lineType === "custom_pack" || isCustomPackLineId(item.id)) {
+              const snap = getCustomPackSnapshot(item.id)
+              if (!snap || !snap.items.length) {
+                throw new Error(
+                  "Détail du pack personnalisé introuvable. Videz le panier et recréez votre pack."
+                )
+              }
+              return {
+                quantity: 1,
+                price: snap.total,
+                custom_pack_lines: snap.items.map((line) => ({
+                  bijou_id: Number(line.productId),
+                  quantity: line.quantity,
+                })),
+              }
+            }
+            return {
+              bijou_id: item.id,
+              product_id: item.id,
+              price: item.price,
+              quantity: item.quantity,
+            }
+          }),
         })
       })
 

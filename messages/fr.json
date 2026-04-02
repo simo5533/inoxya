@@ -139,7 +139,9 @@
       "freeShipping": "Livraison gratuite au Maroc",
       "qualityGuarantee": "Garantie de qualité",
       "return30Days": "Retour sous 30 jours"
-    }
+    },
+    "customPackCategory": "Pack personnalisé (−20 %)",
+    "packContents": "Contenu du pack"
   },
   "checkout": {
     "title": "Finaliser la commande",
@@ -319,7 +321,30 @@
     "errorAddToFavorites": "Impossible d'ajouter le pack aux favoris.",
     "orderCreated": "✅ Commande créée avec succès",
     "orderCreatedDesc": "Commande {orderId} créée. Nous vous contacterons sous 24h.",
-    "orderError": "❌ Erreur lors de la commande"
+    "orderError": "❌ Erreur lors de la commande",
+    "ctaPackLine": "Composez votre sélection parmi nos bijoux éligibles : −20 % appliqués automatiquement sur votre pack.",
+    "ctaCreatePack": "Créer mon pack",
+    "creer": {
+      "title": "Créer mon pack",
+      "subtitle": "Choisissez vos pièces en acier inoxydable — la remise de 20 % s’applique au total.",
+      "loading": "Chargement de la sélection…",
+      "empty": "Aucun bijou éligible pour le moment.",
+      "emptyHint": "Revenez bientôt ou explorez le catalogue.",
+      "addHint": "Touchez une photo pour l’ajouter à votre pack",
+      "inPack": "Dans votre pack",
+      "remove": "Retirer",
+      "subtotal": "Sous-total",
+      "discount": "Remise pack −20 %",
+      "total": "Total pack",
+      "addToCart": "Ajouter le pack au panier",
+      "needOne": "Ajoutez au moins une pièce pour continuer.",
+      "stockError": "Stock insuffisant pour cette pièce.",
+      "alreadyInPack": "Déjà dans votre pack",
+      "added": "Pack ajouté au panier",
+      "addedDesc": "Votre pack personnalisé avec −20 % est dans le panier.",
+      "backPacks": "Retour aux packs",
+      "browseJewelry": "Voir le catalogue"
+    }
   },
   "orderForm": {
     "title": "Procéder au paiement",

@@ -24,6 +24,7 @@ import {
   removeFromCart,
   type CartItem as CartItemType
 } from "@/lib/cart-favorites"
+import { getCustomPackSnapshot, isCustomPackLineId } from "@/lib/custom-pack"
 import type { Product } from "@/lib/types"
 import { useTranslations, useLocale } from 'next-intl'
 
@@ -32,6 +33,7 @@ interface CartItem extends CartItemType {
   original_price?: number
   category?: string
   description?: string
+  lineType?: 'standard' | 'custom_pack'
 }
 
 export default function PanierPage() {
@@ -97,6 +99,12 @@ export default function PanierPage() {
         const productsArray: Product[] = Array.isArray(raw) ? raw : (raw?.products ?? [])
         
         const enrichedItems = items.map(item => {
+          if (item.lineType === 'custom_pack' || isCustomPackLineId(item.id)) {
+            return {
+              ...item,
+              category: t('customPackCategory'),
+            }
+          }
           const product = productsArray.find((p: Product) => String(p.id) === String(item.id))
           return {
             ...item,
@@ -239,6 +247,11 @@ export default function PanierPage() {
 
   const calculateSavings = () => {
     return cartItems.reduce((sum, item) => {
+      if (isCustomPackLineId(item.id)) {
+        const snap = getCustomPackSnapshot(item.id)
+        if (snap) return sum + snap.discountAmount
+        return sum
+      }
       if (item.original_price) {
         return sum + ((item.original_price - item.price) * item.quantity)
       }
@@ -289,12 +302,15 @@ export default function PanierPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Articles du panier */}
           <div className="lg:col-span-2 space-y-4">
-            {cartItems.map((item) => (
+            {cartItems.map((item) => {
+              const snap = isCustomPackLineId(item.id) ? getCustomPackSnapshot(item.id) : null
+              const isPackLine = item.lineType === 'custom_pack' || isCustomPackLineId(item.id)
+              return (
               <Card key={item.id}>
                 <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     {/* Image du produit */}
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden mx-auto sm:mx-0">
                       <Image 
                         src={item.image_url || '/placeholder.svg'} 
                         alt={item.name}
@@ -315,45 +331,70 @@ export default function PanierPage() {
                       <Badge variant="outline" className="text-xs">
                         {item.category}
                       </Badge>
+                      {isPackLine && snap && snap.items.length > 0 && (
+                        <div className="mt-3 rounded-lg border border-amber-200/60 bg-amber-50/40 px-3 py-2 text-sm">
+                          <p className="text-xs font-medium text-amber-900/90 mb-1.5">{t('packContents')}</p>
+                          <ul className="space-y-1 text-gray-700 text-xs sm:text-sm">
+                            {snap.items.map((line) => (
+                              <li key={line.productId} className="flex justify-between gap-2">
+                                <span className="truncate">{line.name}</span>
+                                <span className="flex-shrink-0 text-gray-600">
+                                  {(line.price * line.quantity).toFixed(0)} MAD
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-2 pt-2 border-t border-amber-200/50 flex justify-between text-xs text-gray-600">
+                            <span>{t('subtotal')}</span>
+                            <span>{snap.subtotal.toFixed(2)} MAD</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-emerald-700">
+                            <span>−20 %</span>
+                            <span>−{snap.discountAmount.toFixed(2)} MAD</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Prix et quantité */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between sm:justify-end gap-4 flex-wrap">
                       <div className="text-right">
                         <div className="text-lg font-bold text-gray-900">
-                          {formatCurrency(item.price)}
+                          {formatCurrency(item.price * item.quantity)}
                         </div>
-                        {item.original_price && item.original_price > item.price && (
+                        {item.original_price && item.original_price > item.price && !isPackLine && (
                           <div className="text-sm text-gray-500 line-through">
                             {formatCurrency(item.original_price)}
                           </div>
                         )}
                       </div>
 
-                      {/* Contrôles de quantité */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-8 h-8 p-0"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-8 h-8 p-0"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      {!isPackLine ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8 p-0"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <span className="w-8 text-center font-medium">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8 p-0"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500 w-8 text-center">×1</span>
+                      )}
 
-                      {/* Bouton supprimer */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -366,7 +407,7 @@ export default function PanierPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
 
           {/* Résumé de la commande */}

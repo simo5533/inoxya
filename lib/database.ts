@@ -150,6 +150,7 @@ export async function getAllBijoux(categorySlug?: string) {
           image_url: normalizedImage,
           main_image: normalizedImage,
           images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
+          stock: typeof product.stock === 'number' ? product.stock : 0,
           is_available: product.is_available !== false,
           is_featured: Boolean(product.is_featured),
           category_id: product.category_id || product.category || 'Général',
@@ -214,6 +215,10 @@ export async function getAllBijoux(categorySlug?: string) {
           image_url: product.image_url || product.main_image || '/placeholder.svg',
           main_image: product.main_image || product.image_url || '/placeholder.svg',
           images: product.images || undefined,
+          stock: (() => {
+            const s = (product as unknown as { stock?: number }).stock
+            return typeof s === 'number' ? s : 0
+          })(),
           is_available: product.is_available !== undefined ? Boolean(product.is_available) : (product.is_active !== undefined ? Boolean(product.is_active) : true),
           is_featured: product.is_featured !== undefined ? Boolean(product.is_featured) : false,
           category_id: product.category_id || product.category || 'Général',
@@ -269,6 +274,10 @@ export async function getAllBijoux(categorySlug?: string) {
         image_url: normalizedImage,
         main_image: normalizedImage,
         images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
+        stock: (() => {
+          const s = (product as unknown as { stock?: number }).stock
+          return typeof s === 'number' ? s : 0
+        })(),
         is_available: product.is_available !== undefined 
           ? Boolean(product.is_available) 
           : (product.is_active !== undefined ? Boolean(product.is_active) : true),

@@ -193,9 +193,13 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
   const allImages = mainImage 
     ? [mainImage, ...imagesArray].filter(Boolean).filter((img, index, arr) => arr.indexOf(img) === index) // Supprimer les doublons
     : imagesArray
+  /** Au plus 6 visuels au total (1 principal + miniatures) pour la galerie premium */
+  const cappedGallery = allImages.slice(0, 6)
+  const galleryMain = cappedGallery[0] || mainImage || '/placeholder.svg'
+  const galleryThumbs = cappedGallery.slice(1)
   
-  // Normaliser les URLs d'images pour le schema
-  const normalizedImages = allImages.map((img: string) => {
+  // Normaliser les URLs d'images pour le schema (aligné sur la galerie ≤ 6 visuels)
+  const normalizedImages = cappedGallery.map((img: string) => {
     if (img.startsWith('http')) return img
     if (img.startsWith('/')) return `${siteUrl}${img}`
     return `${siteUrl}/${img}`
@@ -251,8 +255,8 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
           {/* image gallery */}
           <div className="min-w-0 w-full max-w-full space-y-4">
             <ProductImageGallery
-              mainImage={mainImage || "/placeholder.svg"}
-              images={imagesArray}
+              mainImage={galleryMain || "/placeholder.svg"}
+              images={galleryThumbs}
               productName={product.name}
             />
           </div>

@@ -106,6 +106,7 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
     category_id?: string | null | unknown
     category?: string | null | unknown
     created_at?: string | null | unknown
+    stock?: number
     [key: string]: unknown
   }
   allBijoux = allBijoux.map((product: Product) => {
@@ -158,6 +159,7 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
       is_featured: Boolean(product.is_featured),
       category_id: categoryId,
       created_at: createdAt,
+      stock: typeof product.stock === 'number' ? product.stock : 0,
     }
   })
 

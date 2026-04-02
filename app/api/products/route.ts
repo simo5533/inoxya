@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     // Récupérer le paramètre de filtre category depuis l'URL
     const { searchParams } = new URL(request.url)
     const categorySlug = searchParams.get('category')
+    const forPack = searchParams.get('for_pack') === '1' || searchParams.get('for_pack') === 'true'
 
     let products: DatabaseProduct[] = []
     
@@ -43,16 +44,25 @@ export async function GET(request: NextRequest) {
           main_image: p.main_image || p.image_url || null,
           images: p.images ? (Array.isArray(p.images) ? JSON.stringify(p.images) : (typeof p.images === 'string' ? p.images : JSON.stringify([p.images]))) : null,
           category: p.category_id || (p as { category?: string }).category || 'Général',
-          stock: 0,
+          stock: typeof (p as { stock?: number }).stock === 'number' ? (p as { stock: number }).stock : 0,
           is_active: p.is_available !== false, // Utiliser is_available comme proxy pour is_active
           is_available: p.is_available !== false,
           is_featured: p.is_featured === true,
           created_at: p.created_at || new Date().toISOString(),
           updated_at: (p as { updated_at?: string }).updated_at || new Date().toISOString(),
         }))
+        let listed = dbProducts
+        if (forPack) {
+          const PACKS_CAT = 'Nos packs'
+          listed = dbProducts.filter((p) => {
+            const cat = String(p.category || '')
+            const st = Number(p.stock) || 0
+            return cat !== PACKS_CAT && st > 0 && p.is_active !== false
+          })
+        }
         return NextResponse.json({
-          products: dbProducts,
-          total: dbProducts.length,
+          products: listed,
+          total: listed.length,
         })
       }
     } catch (adapterError) {
@@ -153,7 +163,16 @@ export async function GET(request: NextRequest) {
     }
     
     // Normaliser le format de réponse : toujours retourner { products: [...], total: ... }
-    const normalizedProducts = Array.isArray(products) ? products : []
+    let normalizedProducts = Array.isArray(products) ? products : []
+    if (forPack) {
+      const PACKS_CAT = 'Nos packs'
+      normalizedProducts = normalizedProducts.filter((p) => {
+        const cat = String((p as { category?: string }).category || '')
+        const st = Number((p as { stock?: number }).stock) || 0
+        const active = (p as { is_active?: boolean }).is_active !== false
+        return cat !== PACKS_CAT && st > 0 && active
+      })
+    }
     return NextResponse.json({
       products: normalizedProducts,
       total: normalizedProducts.length,

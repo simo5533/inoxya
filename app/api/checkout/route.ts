@@ -61,6 +61,61 @@ export async function POST(request: NextRequest) {
     for (const item of validatedData.items) {
       // Quantité déjà validée par Zod
       const qty = item.quantity
+
+      /** Pack personnalisé (−20 %) : prix recalculé côté serveur, plusieurs lignes commande */
+      if (item.custom_pack_lines && item.custom_pack_lines.length > 0) {
+        const lines = item.custom_pack_lines
+        const resolved: { product: NonNullable<Awaited<ReturnType<typeof getBijouById>>>; qty: number; lineSub: number }[] = []
+        let subtotal = 0
+        for (const line of lines) {
+          const pid = String(line.bijou_id)
+          // eslint-disable-next-line no-await-in-loop
+          const product = await getBijouById(pid)
+          if (!product) {
+            return NextResponse.json({ error: `Produit ${pid} introuvable` }, { status: 404 })
+          }
+          if (!product.is_available) {
+            return NextResponse.json({ error: `Produit « ${product.name} » non disponible` }, { status: 400 })
+          }
+          const rawStock = (product as { stock?: number; stock_quantity?: number }).stock ?? (product as { stock_quantity?: number }).stock_quantity
+          const available = typeof rawStock === 'number' ? rawStock : 999
+          if (available < line.quantity) {
+            return NextResponse.json(
+              { error: `Stock insuffisant pour « ${product.name} »` },
+              { status: 400 }
+            )
+          }
+          const p = Number(product.price) || 0
+          const lineSub = p * line.quantity
+          subtotal += lineSub
+          resolved.push({ product, qty: line.quantity, lineSub })
+        }
+        const targetTotal = Math.round(subtotal * 0.8 * 100) / 100
+        let allocated = 0
+        for (let i = 0; i < resolved.length; i++) {
+          const row = resolved[i]
+          if (!row) continue
+          const { product, qty, lineSub } = row
+          const isLast = i === resolved.length - 1
+          const lineTotal = isLast
+            ? Math.round((targetTotal - allocated) * 100) / 100
+            : Math.round((lineSub / subtotal) * targetTotal * 100) / 100
+          allocated += lineTotal
+          const unitPrice = qty > 0 ? lineTotal / qty : 0
+          verifiedItems.push({
+            id: String(product.id),
+            price: unitPrice,
+            quantity: qty,
+            name: `${product.name} (pack −20 %)`,
+            isPack: false,
+          })
+          total += lineTotal
+        }
+        if (Math.abs(item.price - targetTotal) > 0.02) {
+          logger.warn(`[SECURITY] Prix pack perso: client=${item.price}, serveur=${targetTotal}`)
+        }
+        continue
+      }
       
       // SÉCURITÉ: Récupérer le prix RÉEL depuis la base de données
       // Vérifier d'abord si c'est un pack (pack_id présent) ou un bijou
