@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -44,6 +44,9 @@ export default function PanierPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
+  /** Évite que useCallback([t]) change à chaque rendu → boucle infinie useEffect + spam /api/csrf-token */
+  const tRef = useRef(t)
+  tRef.current = t
 
   const loadCart = useCallback(async () => {
     try {
@@ -82,7 +85,7 @@ export default function PanierPage() {
           if (item.lineType === 'custom_pack' || isCustomPackLineId(item.id)) {
             return {
               ...item,
-              category: t('customPackCategory'),
+              category: tRef.current('customPackCategory'),
             }
           }
           const product = productsArray.find((p: Product) => String(p.id) === String(item.id))
@@ -118,25 +121,32 @@ export default function PanierPage() {
       setCartItems([])
       setLoading(false)
     }
-  }, [t])
+    // t via tRef (stable) ; locale change remonte en général la page via next-intl
+  }, [])
 
   useEffect(() => {
-    loadCart()
-    const fetchCsrfToken = async () => {
+    void loadCart()
+  }, [loadCart])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
       try {
-        const response = await fetch('/api/csrf-token')
-        if (response.ok) {
+        const response = await fetch('/api/csrf-token', { credentials: 'same-origin' })
+        if (!cancelled && response.ok) {
           const data = await response.json()
-          setCsrfToken(data.csrfToken)
+          setCsrfToken(data.csrfToken ?? null)
         }
       } catch (err) {
         if (process.env.NODE_ENV === 'development') {
           console.error('Erreur lors de la récupération du token CSRF:', err)
         }
       }
+    })()
+    return () => {
+      cancelled = true
     }
-    fetchCsrfToken()
-  }, [loadCart])
+  }, [])
 
   const updateQuantity = async (id: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -201,7 +211,7 @@ export default function PanierPage() {
       })
       // Essayer de récupérer le token
       try {
-        const response = await fetch('/api/csrf-token')
+        const response = await fetch('/api/csrf-token', { credentials: 'same-origin' })
         if (response.ok) {
           const data = await response.json()
           setCsrfToken(data.csrfToken)

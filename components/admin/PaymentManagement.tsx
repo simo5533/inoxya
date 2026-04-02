@@ -57,6 +57,7 @@ export default function PaymentManagement({ orderId: _orderId }: PaymentManageme
       // Appel à l'API pour récupérer les paiements
       const response = await fetch('/api/payments', {
         method: 'GET',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         }
@@ -66,59 +67,13 @@ export default function PaymentManagement({ orderId: _orderId }: PaymentManageme
         throw new Error('Erreur lors du chargement des paiements')
       }
 
-      const paymentsData = await response.json() as Payment[]
-      setPayments(paymentsData)
+      const raw = (await response.json()) as { payments?: Payment[] } | Payment[]
+      const list = Array.isArray(raw) ? raw : (raw.payments ?? [])
+      setPayments(Array.isArray(list) ? list : [])
       
     } catch (error) {
       logger.error("Erreur lors du chargement des paiements:", error)
-      // Fallback vers des données simulées en cas d'erreur
-      const mockPayments: Payment[] = [
-        {
-          id: "1",
-          order_id: "order-1",
-          amount: 2999,
-          payment_method: "cash_on_delivery",
-          status: "completed",
-          transaction_id: "TXN123456789",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          order: {
-            id: "order-1",
-            phone: "0612345678",
-            total_amount: 2999
-          }
-        },
-        {
-          id: "2",
-          order_id: "order-2",
-          amount: 1890,
-          payment_method: "bank_transfer",
-          status: "pending",
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          updated_at: new Date(Date.now() - 86400000).toISOString(),
-          order: {
-            id: "order-2",
-            phone: "0698765432",
-            total_amount: 1890
-          }
-        },
-        {
-          id: "3",
-          order_id: "order-3",
-          amount: 890,
-          payment_method: "paypal",
-          status: "failed",
-          transaction_id: "TXN987654321",
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          updated_at: new Date(Date.now() - 172800000).toISOString(),
-          order: {
-            id: "order-3",
-            phone: "0654321098",
-            total_amount: 890
-          }
-        }
-      ]
-      setPayments(mockPayments)
+      setPayments([])
     } finally {
       setLoading(false)
     }

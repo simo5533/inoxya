@@ -9,6 +9,7 @@ import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
 import { getPackById } from './pack-management'
 import { IS_PRODUCTION } from './env'
+import { STOCK_UNKNOWN } from './custom-pack'
 
 // Import SQLite direct pour fallback et compatibilité
 import {
@@ -150,7 +151,7 @@ export async function getAllBijoux(categorySlug?: string) {
           image_url: normalizedImage,
           main_image: normalizedImage,
           images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
-          stock: typeof product.stock === 'number' ? product.stock : 0,
+          stock: typeof product.stock === 'number' ? product.stock : STOCK_UNKNOWN,
           is_available: product.is_available !== false,
           is_featured: Boolean(product.is_featured),
           category_id: product.category_id || product.category || 'Général',
@@ -600,8 +601,14 @@ export async function getDashboardStats() {
 }
 
 export async function getAllOrders() {
-  if (IS_PRODUCTION) return []
-  return getSqliteOrders()
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.getOrders()
+  } catch (error) {
+    logger.warn('[getAllOrders] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return []
+    return getSqliteOrders()
+  }
 }
 
 export async function createOrder(orderData: {
@@ -805,18 +812,36 @@ export async function createOrderFull(orderData: {
 }
 
 export async function getOrderById(orderId: string) {
-  if (IS_PRODUCTION) return null
-  return getSqliteOrderById(orderId)
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.getOrderById(orderId)
+  } catch (error) {
+    logger.warn('[getOrderById] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return null
+    return getSqliteOrderById(orderId)
+  }
 }
 
 export async function getOrderItems(orderId: string) {
-  if (IS_PRODUCTION) return []
-  return getSqliteOrderItems(orderId)
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.getOrderItems(orderId)
+  } catch (error) {
+    logger.warn('[getOrderItems] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return []
+    return getSqliteOrderItems(orderId)
+  }
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
-  if (IS_PRODUCTION) return
-  return updateSqliteOrderStatus(orderId, status)
+export async function updateOrderStatus(orderId: string, status: string): Promise<boolean> {
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.updateOrderStatus(orderId, status)
+  } catch (error) {
+    logger.warn('[updateOrderStatus] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return false
+    return updateSqliteOrderStatus(orderId, status)
+  }
 }
 
 export async function createPayment(paymentData: {
@@ -826,29 +851,63 @@ export async function createPayment(paymentData: {
   status: string
   transaction_id?: string
 }) {
-  if (IS_PRODUCTION) throw new Error('createPayment not available via SQLite in production')
+  try {
+    const adapter = await getDatabaseAdapter()
+    const payment = await adapter.createPayment({
+      order_id: paymentData.order_id,
+      amount: paymentData.amount,
+      payment_method: paymentData.method,
+      status: paymentData.status,
+      transaction_id: paymentData.transaction_id,
+    })
+    if (payment) return payment
+    if (IS_PRODUCTION) {
+      throw new Error('Échec création paiement via adapter')
+    }
+  } catch (error) {
+    logger.warn('[createPayment] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) throw error instanceof Error ? error : new Error(String(error))
+  }
   return createSqlitePayment({
     order_id: paymentData.order_id,
     amount: paymentData.amount,
     payment_method: paymentData.method,
     status: paymentData.status,
-    transaction_id: paymentData.transaction_id
+    transaction_id: paymentData.transaction_id,
   })
 }
 
 export async function getPaymentsByOrderId(orderId: string) {
-  if (IS_PRODUCTION) return []
-  return getSqlitePaymentsByOrderId(orderId)
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.getPaymentsByOrderId(orderId)
+  } catch (error) {
+    logger.warn('[getPaymentsByOrderId] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return []
+    return getSqlitePaymentsByOrderId(orderId)
+  }
 }
 
-export async function updatePaymentStatus(paymentId: string, status: string) {
-  if (IS_PRODUCTION) return
-  return updateSqlitePaymentStatus(paymentId, status)
+export async function updatePaymentStatus(paymentId: string, status: string): Promise<boolean> {
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.updatePaymentStatus(paymentId, status)
+  } catch (error) {
+    logger.warn('[updatePaymentStatus] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return false
+    return updateSqlitePaymentStatus(paymentId, status)
+  }
 }
 
 export async function getAllPayments() {
-  if (IS_PRODUCTION) return []
-  return getSqliteAllPayments()
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.getAllPayments()
+  } catch (error) {
+    logger.warn('[getAllPayments] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return []
+    return getSqliteAllPayments()
+  }
 }
 
 export async function getCartItems(userId: string) {
@@ -916,9 +975,15 @@ export async function getNotifications(userId: string | null) {
   }
 }
 
-export async function markNotificationAsRead(notificationId: string) {
-  if (IS_PRODUCTION) return
-  return markSqliteNotificationAsRead(notificationId)
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.markNotificationAsRead(notificationId)
+  } catch (error) {
+    logger.warn('[markNotificationAsRead] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return false
+    return markSqliteNotificationAsRead(notificationId)
+  }
 }
 
 export async function getAllActiveCarts() {
