@@ -3,7 +3,6 @@
  * Utilise SQLite (dev) ou Postgres (prod) selon DATABASE_URL
  */
 
-import bcrypt from 'bcryptjs'
 import { getDatabaseAdapter } from './db'
 import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
@@ -442,6 +441,7 @@ export async function createUser(userData: {
   role?: string
 }) {
   if (IS_PRODUCTION) throw new Error('createUser not available via SQLite in production')
+  const { default: bcrypt } = await import('bcryptjs')
   const hashedPassword = await bcrypt.hash(userData.password, 10)
   return createSqliteUser({
     phone: userData.phone,
@@ -987,8 +987,14 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
 }
 
 export async function getAllActiveCarts() {
-  if (IS_PRODUCTION) return []
-  return getSqliteAllActiveCarts()
+  try {
+    const adapter = await getDatabaseAdapter()
+    return await adapter.getAllActiveCarts()
+  } catch (error) {
+    logger.warn('[getAllActiveCarts] Erreur adapter:', serializeError(error))
+    if (IS_PRODUCTION) return []
+    return getSqliteAllActiveCarts()
+  }
 }
 
 export async function trimProductsToLimit(limit: number) {

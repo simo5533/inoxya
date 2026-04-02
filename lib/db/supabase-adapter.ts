@@ -627,6 +627,20 @@ export class SupabaseAdapter implements DatabaseAdapter {
     return !error
   }
 
+  async getAllActiveCarts(): Promise<{ user_id: string; bijou_id: string; quantity: number }[]> {
+    const { data, error } = await this.supabase
+      .from('cart_items')
+      .select('user_id, bijou_id, quantity')
+    if (error || !data) return []
+    return (data as Array<{ user_id: string | number; bijou_id: string | number; quantity: string | number }>).map(
+      (row) => ({
+        user_id: String(row.user_id),
+        bijou_id: String(row.bijou_id),
+        quantity: Number(row.quantity),
+      })
+    )
+  }
+
   // Favorites
   async getFavorites(userId: string): Promise<Favorite[]> {
     const { data, error } = await this.supabase

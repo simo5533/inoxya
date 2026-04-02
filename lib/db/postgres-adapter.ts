@@ -430,6 +430,17 @@ export class PostgresAdapter implements DatabaseAdapter {
     return (result.rowCount ?? 0) > 0
   }
 
+  async getAllActiveCarts(): Promise<{ user_id: string; bijou_id: string; quantity: number }[]> {
+    const result = await this.pool.query(
+      'SELECT user_id, bijou_id, quantity FROM cart_items'
+    )
+    return result.rows.map((row: { user_id: unknown; bijou_id: unknown; quantity: string | number }) => ({
+      user_id: String(row.user_id),
+      bijou_id: String(row.bijou_id),
+      quantity: Number(row.quantity),
+    }))
+  }
+
   // Favorites
   async getFavorites(userId: string): Promise<Favorite[]> {
     const result = await this.pool.query(

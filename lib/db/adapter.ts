@@ -77,6 +77,8 @@ export interface DatabaseAdapter {
   addToCart(userId: string, bijouId: string, quantity: number): Promise<boolean>
   updateCartQuantity(userId: string, bijouId: string, quantity: number): Promise<boolean>
   removeFromCart(userId: string, bijouId: string): Promise<boolean>
+  /** Tous les paniers persistés (admin) */
+  getAllActiveCarts(): Promise<{ user_id: string; bijou_id: string; quantity: number }[]>
 
   // Favorites
   getFavorites(userId: string): Promise<Favorite[]>

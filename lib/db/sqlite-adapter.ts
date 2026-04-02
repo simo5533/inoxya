@@ -37,6 +37,7 @@ import {
   addToCart,
   updateCartQuantity,
   removeFromCart,
+  getAllActiveCarts,
   getFavorites,
   addToFavorites,
   removeFromFavorites,
@@ -237,6 +238,10 @@ export class SqliteAdapter implements DatabaseAdapter {
 
   async removeFromCart(userId: string, bijouId: string): Promise<boolean> {
     return removeFromCart(userId, bijouId)
+  }
+
+  async getAllActiveCarts(): Promise<{ user_id: string; bijou_id: string; quantity: number }[]> {
+    return getAllActiveCarts()
   }
 
   // Favorites

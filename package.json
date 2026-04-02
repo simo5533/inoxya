@@ -18,6 +18,7 @@
     "postinstall": "node scripts/postinstall.js",
     "prebuild": "node scripts/postinstall.js",
     "dev": "node scripts/dev-server.js",
+    "clean:next": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true}); console.log('.next supprimé — relancez npm run dev')\"",
     "build": "next build",
     "start": "node scripts/start-server.js",
     "start:next": "next start",
@@ -164,6 +165,7 @@
     "sonner": "^1.7.1",
     "sql.js": "^1.14.0",
     "tailwind-merge": "^2.6.0",
+    "tslib": "^2.8.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"
   },
