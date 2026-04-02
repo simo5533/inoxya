@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -45,27 +45,7 @@ export default function PanierPage() {
   const [loading, setLoading] = useState(true)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadCart()
-    // Récupérer le token CSRF au chargement
-    const fetchCsrfToken = async () => {
-      try {
-        const response = await fetch('/api/csrf-token')
-        if (response.ok) {
-          const data = await response.json()
-          setCsrfToken(data.csrfToken)
-        }
-      } catch (err) {
-        // Logger seulement en développement, pas d'erreur bloquante
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Erreur lors de la récupération du token CSRF:', err)
-        }
-      }
-    }
-    fetchCsrfToken()
-  }, [])
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     try {
       const items = getCartItems()
       
@@ -138,8 +118,25 @@ export default function PanierPage() {
       setCartItems([])
       setLoading(false)
     }
-  }
+  }, [t])
 
+  useEffect(() => {
+    loadCart()
+    const fetchCsrfToken = async () => {
+      try {
+        const response = await fetch('/api/csrf-token')
+        if (response.ok) {
+          const data = await response.json()
+          setCsrfToken(data.csrfToken)
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Erreur lors de la récupération du token CSRF:', err)
+        }
+      }
+    }
+    fetchCsrfToken()
+  }, [loadCart])
 
   const updateQuantity = async (id: string, newQuantity: number) => {
     if (newQuantity <= 0) {
