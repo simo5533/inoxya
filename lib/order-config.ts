@@ -1,11 +1,24 @@
 /**
  * Configuration pour le système de commandes
  */
+import { socialLinks } from './social-links'
+
+function resolveWhatsAppDigits(): string {
+  const fromEnv =
+    (typeof process !== 'undefined' && process.env['NEXT_PUBLIC_WHATSAPP_ORDER']) ||
+    (typeof process !== 'undefined' && process.env['NEXT_PUBLIC_WHATSAPP'])
+  if (fromEnv) {
+    const d = String(fromEnv).replace(/\D/g, '')
+    if (d.length >= 8) return d
+  }
+  const m = socialLinks.whatsapp.url.match(/(\d{10,15})/)
+  return m ? m[1] : ''
+}
 
 export const ORDER_CONFIG = {
-  // Numéro WhatsApp pour recevoir les commandes
-  whatsappNumber: "212661234567", // Remplacez par votre vrai numéro
-  
+  /** Chiffres uniquement (format wa.me), aligné sur le footer / env */
+  whatsappNumber: resolveWhatsAppDigits(),
+
   // Email de contact (optionnel)
   contactEmail: "contact@inoxya-bijoux.com",
   
@@ -63,6 +76,8 @@ ${ORDER_CONFIG.messages.orderFooter.replace('{date}', new Date().toLocaleString(
  * Génère l'URL WhatsApp pour une commande
  */
 export function generateWhatsAppUrl(message: string) {
+  const n = ORDER_CONFIG.whatsappNumber?.replace(/\D/g, '') ?? ''
+  if (n.length < 8) return '#'
   const encodedMessage = encodeURIComponent(message)
-  return `https://wa.me/${ORDER_CONFIG.whatsappNumber}?text=${encodedMessage}`
+  return `https://wa.me/${n}?text=${encodedMessage}`
 }

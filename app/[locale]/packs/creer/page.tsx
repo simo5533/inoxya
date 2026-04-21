@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, ShoppingBag, Sparkles, Trash2 } from "lucide-react"
 import {
   computePackTotals,
+  PACK_BUILDER_MAX_ITEMS,
+  STOCK_UNKNOWN,
   type PackBuilderLine,
 } from "@/lib/custom-pack"
 import { addCustomPackToCart } from "@/lib/cart-favorites"
@@ -30,33 +32,46 @@ function productImage(p: ApiProduct): string {
   return getSafeImageSrc(String(raw))
 }
 
+function stockValue(p: ApiProduct): number {
+  return typeof p.stock === "number" ? p.stock : STOCK_UNKNOWN
+}
+
 export default function CreerPackPage() {
   const t = useTranslations("packs.creer")
-  const tPacks = useTranslations("packs")
   const tProducts = useTranslations("products")
   const locale = useLocale()
   const { toast } = useToast()
   const [products, setProducts] = useState<ApiProduct[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [lines, setLines] = useState<PackBuilderLine[]>([])
+  const linesRef = useRef<PackBuilderLine[]>([])
+  linesRef.current = lines
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
+      setFetchError(false)
       try {
         const res = await fetch("/api/products?for_pack=1", {
           cache: "no-store",
           headers: { "Cache-Control": "no-cache" },
         })
         if (!res.ok) {
-          setProducts([])
+          if (!cancelled) {
+            setProducts([])
+            setFetchError(true)
+          }
           return
         }
         const data = await res.json()
         const list: ApiProduct[] = Array.isArray(data) ? data : data?.products ?? []
         if (!cancelled) setProducts(list)
       } catch {
-        if (!cancelled) setProducts([])
+        if (!cancelled) {
+          setProducts([])
+          setFetchError(true)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -67,29 +82,31 @@ export default function CreerPackPage() {
     }
   }, [])
 
+  const eligibleProducts = useMemo(() => {
+    return products.filter((p) => {
+      const pr = Number(p.price)
+      return Number.isFinite(pr) && pr > 0
+    })
+  }, [products])
+
   const totals = useMemo(() => computePackTotals(lines), [lines])
 
   const stockFor = useCallback(
     (productId: string) => {
       const p = products.find((x) => String(x.id) === productId)
-      return typeof p?.stock === "number" ? p.stock : 0
+      if (!p) return 0
+      const st = stockValue(p)
+      if (st === STOCK_UNKNOWN) return 9999
+      return st
     },
     [products]
   )
 
-  const addFromProduct = useCallback(
+  const toggleProduct = useCallback(
     (p: ApiProduct) => {
       const id = String(p.id)
-      const existing = lines.find((l) => l.productId === id)
-      if (existing) {
-        toast({
-          title: t("alreadyInPack"),
-          variant: "default",
-        })
-        return
-      }
-      const st = typeof p.stock === "number" ? p.stock : 0
-      if (st < 1) {
+      const st = stockValue(p)
+      if (st === 0) {
         toast({
           title: t("stockError"),
           variant: "destructive",
@@ -97,9 +114,28 @@ export default function CreerPackPage() {
         return
       }
       const price = Number(p.price) || 0
+      if (price <= 0 || !Number.isFinite(price)) return
+
+      const prev = linesRef.current
+      const existing = prev.find((l) => l.productId === id)
+      if (existing) {
+        setLines((cur) => cur.filter((l) => l.productId !== id))
+        toast({
+          title: t("removedFromPack"),
+          description: p.name,
+        })
+        return
+      }
+      if (prev.length >= PACK_BUILDER_MAX_ITEMS) {
+        toast({
+          title: t("packFull"),
+          description: t("packFullHint"),
+        })
+        return
+      }
       const img = productImage(p)
-      setLines((prev) => [
-        ...prev,
+      setLines((cur) => [
+        ...cur,
         {
           productId: id,
           name: p.name,
@@ -108,8 +144,12 @@ export default function CreerPackPage() {
           quantity: 1,
         },
       ])
+      toast({
+        title: t("addedToPack"),
+        description: p.name,
+      })
     },
-    [lines, toast, t]
+    [toast, t]
   )
 
   const removeLine = (productId: string) => {
@@ -155,9 +195,14 @@ export default function CreerPackPage() {
         </Link>
 
         <div className="mb-8 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-white/80 px-3 py-1 text-xs font-medium text-amber-900/90 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            −20 % {tPacks("discount").toLowerCase()}
+          <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-white/80 px-3 py-1 text-xs font-medium text-amber-900/90">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              {t("discountAuto")}
+            </div>
+            <div className="inline-flex items-center rounded-full border border-stone-200/90 bg-white/70 px-3 py-1 text-xs text-stone-700">
+              {t("chooseUpTo6")}
+            </div>
           </div>
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-stone-900 mb-2">
             {t("title")}
@@ -168,11 +213,21 @@ export default function CreerPackPage() {
           <p className="text-xs text-stone-500 mt-2">{t("addHint")}</p>
         </div>
 
+        {fetchError && !loading && (
+          <div
+            role="alert"
+            className="mb-6 rounded-xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-900"
+          >
+            {t("fetchError")}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-24">
             <div className="h-10 w-10 rounded-full border-2 border-amber-600/30 border-t-amber-700 animate-spin" />
+            <span className="sr-only">{t("loading")}</span>
           </div>
-        ) : products.length === 0 ? (
+        ) : eligibleProducts.length === 0 ? (
           <div className="text-center py-16 rounded-2xl border border-stone-200 bg-white/60">
             <p className="text-stone-700 mb-2">{t("empty")}</p>
             <p className="text-sm text-stone-500 mb-6">{t("emptyHint")}</p>
@@ -184,21 +239,26 @@ export default function CreerPackPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
             <div className="lg:col-span-7 xl:col-span-8">
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                {products.map((p) => {
+                {eligibleProducts.map((p) => {
                   const id = String(p.id)
                   const inPack = lines.some((l) => l.productId === id)
-                  const st = typeof p.stock === "number" ? p.stock : 0
-                  const disabled = st < 1
+                  const st = stockValue(p)
+                  const disabled = st === 0
                   return (
                     <button
                       key={id}
                       type="button"
                       disabled={disabled}
-                      onClick={() => addFromProduct(p)}
+                      aria-pressed={inPack}
+                      onClick={() => toggleProduct(p)}
                       className={`group text-left rounded-2xl border overflow-hidden bg-white shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 ${
+                        inPack
+                          ? "ring-2 ring-amber-500/70 border-amber-400/90 shadow-md"
+                          : "border-stone-200/80"
+                      } ${
                         disabled
                           ? "opacity-50 cursor-not-allowed border-stone-200"
-                          : "border-stone-200/80 hover:border-amber-300/80 hover:shadow-md active:scale-[0.99]"
+                          : "hover:border-amber-300/80 hover:shadow-md active:scale-[0.99]"
                       }`}
                     >
                       <div className="relative aspect-square bg-stone-100">
@@ -210,14 +270,14 @@ export default function CreerPackPage() {
                           sizes="(max-width:640px) 50vw, 33vw"
                         />
                         {inPack && (
-                          <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
-                            <Badge className="bg-amber-600 text-white border-0">
-                              {t("inPack")}
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+                            <Badge className="bg-amber-600 text-white border-0 shadow-lg">
+                              {t("selectedBadge")}
                             </Badge>
                           </div>
                         )}
                         {disabled && (
-                          <div className="absolute bottom-2 left-2 right-2">
+                          <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
                             <Badge variant="secondary" className="text-[10px]">
                               {tProducts("outOfStock")}
                             </Badge>
@@ -242,8 +302,12 @@ export default function CreerPackPage() {
               <div className="sticky top-24 rounded-2xl border border-stone-200/90 bg-white/95 backdrop-blur shadow-lg p-5 space-y-4">
                 <h2 className="text-lg font-semibold text-stone-900 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-amber-700" />
-                  {t("inPack")}
+                  {t("summaryTitle")}
                 </h2>
+                <p className="text-sm font-medium text-amber-900/90 tabular-nums">
+                  {t("selectionCount", { count: lines.length })}
+                </p>
+                <p className="text-xs text-stone-500">{t("discountAuto")}</p>
                 {lines.length === 0 ? (
                   <p className="text-sm text-stone-500">{t("needOne")}</p>
                 ) : (
@@ -315,28 +379,28 @@ export default function CreerPackPage() {
         )}
       </div>
 
-      {/* Récap mobile : sticky bas */}
-      {!loading && products.length > 0 && (
+      {!loading && eligibleProducts.length > 0 && (
         <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 backdrop-blur-md px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
           <div className="flex items-end justify-between gap-3 max-w-lg mx-auto">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] uppercase tracking-wide text-stone-500">
-                {t("inPack")} ({lines.length})
+                {t("summaryTitle")} · {t("selectionCount", { count: lines.length })}
               </p>
               <p className="text-lg font-semibold text-stone-900 truncate">
                 {lines.length === 0 ? "—" : `${totals.total.toFixed(2)} MAD`}
               </p>
-              <p className="text-[11px] text-emerald-700">
-                −{totals.discountAmount.toFixed(2)} MAD · {t("discount")}
+              <p className="text-[11px] text-emerald-700 line-clamp-2">
+                {t("discountAuto")} · −{totals.discountAmount.toFixed(2)} MAD
               </p>
             </div>
             <Button
               type="button"
-              className="shrink-0 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-5"
+              className="shrink-0 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 sm:px-5 text-sm"
               disabled={lines.length === 0}
               onClick={handleAddToCart}
             >
-              {t("addToCart")}
+              <span className="hidden sm:inline">{t("addToCart")}</span>
+              <span className="sm:hidden">{t("addToCartShort")}</span>
             </Button>
           </div>
         </div>

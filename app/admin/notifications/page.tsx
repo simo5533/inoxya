@@ -247,7 +247,7 @@ export default function AdminNotificationsPage() {
                                   </div>
                                   {details.payments[0] && (
                                     <p className="text-xs text-stone-500">
-                                      Paiement : {details.payments[0].payment_method === 'cash_on_delivery' ? 'À la livraison' : details.payments[0].payment_method}
+                                      Paiement : {details.payments[0].payment_method === 'cod' || details.payments[0].payment_method === 'cash_on_delivery' ? 'À la livraison' : details.payments[0].payment_method === 'bank_transfer' ? 'Virement bancaire' : details.payments[0].payment_method}
                                     </p>
                                   )}
                                   <Link

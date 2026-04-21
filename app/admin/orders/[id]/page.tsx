@@ -145,8 +145,28 @@ export default function AdminOrderDetailPage() {
       case 'shipped': return 'bg-blue-100 text-blue-800 border-blue-300'
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-300'
       case 'pending': return 'bg-orange-100 text-orange-800 border-orange-300'
+      case 'awaiting_bank_transfer': return 'bg-amber-100 text-amber-900 border-amber-300'
       default: return 'bg-gray-100 text-gray-800 border-gray-300'
     }
+  }
+
+  const orderStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'En attente'
+      case 'awaiting_bank_transfer': return 'En attente de virement'
+      case 'confirmed': return 'Confirmée'
+      case 'processing': return 'En traitement'
+      case 'shipped': return 'Expédiée'
+      case 'delivered': return 'Livrée'
+      case 'cancelled': return 'Annulée'
+      default: return status
+    }
+  }
+
+  const paymentMethodLabel = (m: string) => {
+    if (m === 'cod' || m === 'cash_on_delivery') return 'Paiement à la livraison'
+    if (m === 'bank_transfer') return 'Virement bancaire'
+    return m
   }
 
   return (
@@ -194,7 +214,7 @@ export default function AdminOrderDetailPage() {
         <div className="bg-white rounded-lg border p-4">
           <div className="flex items-center gap-2 mb-4">
             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
-              {order.status}
+              {orderStatusLabel(order.status)}
             </span>
             <span className="text-2xl font-bold text-orange-600">{formatCurrency(order.total_amount)}</span>
           </div>
@@ -251,7 +271,7 @@ export default function AdminOrderDetailPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Statut:</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
-                  {order.status}
+                  {orderStatusLabel(order.status)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -307,7 +327,7 @@ export default function AdminOrderDetailPage() {
               payments.map(p => (
                 <div key={p.id} className="flex justify-between items-center border-b pb-3 last:border-0">
                   <div className="flex-1">
-                    <div className="font-medium">{p.payment_method}</div>
+                    <div className="font-medium">{paymentMethodLabel(p.payment_method)}</div>
                     <div className="text-sm text-gray-500">
                       {new Date(p.created_at).toLocaleString('fr-FR')}
                     </div>

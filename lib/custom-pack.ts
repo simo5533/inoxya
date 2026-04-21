@@ -4,6 +4,14 @@
 
 export const PACK_BUILDER_DISCOUNT = 0.2
 
+/**
+ * Stock non renvoyé par certains adapters — éligible au builder ; le checkout revalide en base.
+ */
+export const STOCK_UNKNOWN = -1
+
+/** Nombre maximum de références produit distinctes dans un pack personnalisé */
+export const PACK_BUILDER_MAX_ITEMS = 6
+
 const SNAPSHOT_KEY = 'inoxya_custom_pack_snapshots'
 
 export type PackBuilderLine = {

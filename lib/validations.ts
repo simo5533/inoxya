@@ -31,10 +31,11 @@ export const phoneSchema = z.string()
     (val) => {
       // Accepter admin_phone comme identifiant spécial
       if (val === 'admin_phone') return true
-      // Accepter le format téléphone marocain standard
-      // Format: +212[5-7][0-9]{8} ou 0[5-7][0-9]{8}
-      // Exemples valides: +212612345678, 0612345678, 0712345678, 0512345678
-      return /^(\+212|0)[5-7][0-9]{8}$/.test(val)
+      // Format: +212[5-7][0-9]{8} (mobile MA) ou national 0 puis 9 chiffres (5–9 en 2e position pour tolérance saisie)
+      // Exemples: +212612345678, 0612345678, 0855555555 (saisie fréquente)
+      if (val.startsWith('+212')) return /^\+212[5-7][0-9]{8}$/.test(val)
+      if (val.startsWith('0')) return /^0[5-9][0-9]{8}$/.test(val)
+      return false
     },
     {
       message: 'Format téléphone invalide (ex: +212612345678 ou 0612345678)'
@@ -199,6 +200,7 @@ export const updateProductSchema = z.object({
  */
 export const orderStatusSchema = z.enum([
   'pending',
+  'awaiting_bank_transfer',
   'confirmed',
   'processing',
   'shipped',
@@ -207,10 +209,23 @@ export const orderStatusSchema = z.enum([
 ])
 
 /**
+ * Référence produit pack perso (SQLite: chiffres ; adapter: UUID ou texte)
+ */
+export const bijouRefIdSchema = z.preprocess((val) => {
+  if (val === null || val === undefined) return val
+  if (typeof val === 'number') {
+    if (!Number.isFinite(val) || val <= 0) return undefined
+    return String(Math.trunc(val))
+  }
+  if (typeof val === 'string') return val.trim()
+  return String(val)
+}, z.string().min(1).max(128))
+
+/**
  * Lignes d’un pack personnalisé (−20 % côté serveur)
  */
 export const customPackLineSchema = z.object({
-  bijou_id: numericIdSchema,
+  bijou_id: bijouRefIdSchema,
   quantity: quantitySchema,
 })
 
@@ -247,6 +262,16 @@ export const createOrderSchema = z.object({
   { message: 'Un produit ou un pack est requis', path: ['bijou_id'] }
 )
 
+/** Méthodes checkout canoniques : `cod` (livraison), `bank_transfer` (virement). Anciennes valeurs acceptées puis normalisées. */
+const checkoutPaymentMethodSchema = z
+  .enum(['cod', 'bank_transfer', 'cash_on_delivery', 'cash', 'card'])
+  .optional()
+  .default('cod')
+  .transform((v): 'cod' | 'bank_transfer' => {
+    if (v === 'cash_on_delivery' || v === 'cash' || v === 'card') return 'cod'
+    return v
+  })
+
 /**
  * Schéma pour checkout
  */
@@ -255,7 +280,7 @@ export const checkoutSchema = z.object({
   city: z.string().min(1, 'La ville est requise').max(100, 'La ville est trop longue'),
   address: z.string().min(1, 'L\'adresse est requise').max(500, 'L\'adresse est trop longue'),
   notes: z.string().max(1000, 'Les notes sont trop longues').optional().nullable(),
-  payment_method: z.enum(['cash', 'card', 'bank_transfer', 'cash_on_delivery']).optional().default('cash_on_delivery'),
+  payment_method: checkoutPaymentMethodSchema,
   customer_name: z.string().max(100, 'Le nom est trop long').optional().nullable(),
   items: z.array(orderItemSchema).min(1, 'Le panier ne peut pas être vide').max(50, 'Trop d\'articles dans la commande')
 })
@@ -282,9 +307,11 @@ export const updateOrderStatusSchema = z.object({
  */
 export const createPaymentSchema = z.object({
   order_id: numericIdSchema,
-  payment_method: z.enum(['cash', 'card', 'bank_transfer', 'cash_on_delivery'], {
-    errorMap: () => ({ message: 'Méthode de paiement invalide' })
-  }),
+  payment_method: z
+    .enum(['cod', 'bank_transfer', 'cash', 'card', 'cash_on_delivery'], {
+      errorMap: () => ({ message: 'Méthode de paiement invalide' })
+    })
+    .transform((v): 'cod' | 'bank_transfer' => (v === 'bank_transfer' ? 'bank_transfer' : 'cod')),
   transaction_id: z.string().max(255, 'ID transaction trop long').optional().nullable(),
   amount: priceSchema.optional() // Optionnel car montant vérifié depuis la commande
 })

@@ -300,7 +300,7 @@ export default function PackCard({ pack }: PackCardProps) {
           city: formData.city,
           address: formData.address,
           notes: formData.notes,
-          payment_method: 'cash_on_delivery',
+          payment_method: 'cod',
           items: [
             { pack_id: pack.id, price: pack.price, quantity: 1 }
           ]

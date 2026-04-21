@@ -159,7 +159,21 @@ export default function AdminOrdersPage() {
       case 'shipped': return 'bg-blue-100 text-blue-800 border-blue-300'
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-300'
       case 'pending': return 'bg-orange-100 text-orange-800 border-orange-300'
+      case 'awaiting_bank_transfer': return 'bg-amber-100 text-amber-900 border-amber-300'
       default: return 'bg-gray-100 text-gray-800 border-gray-300'
+    }
+  }
+
+  const orderStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'En attente'
+      case 'awaiting_bank_transfer': return 'En attente de virement'
+      case 'confirmed': return 'Confirmée'
+      case 'processing': return 'En traitement'
+      case 'shipped': return 'Expédiée'
+      case 'delivered': return 'Livrée'
+      case 'cancelled': return 'Annulée'
+      default: return status
     }
   }
 
@@ -204,7 +218,7 @@ export default function AdminOrdersPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="font-semibold text-lg">Commande #{String(o.id).slice(-8)}</div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(o.status)}`}>
-                        {o.status}
+                        {orderStatusLabel(o.status)}
                       </span>
                     </div>
                     <div className="text-xl font-bold text-orange-600 mb-1">{formatCurrency(o.total_amount)}</div>

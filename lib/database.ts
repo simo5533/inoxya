@@ -9,6 +9,7 @@ import { logger } from './logger'
 import { getPackById } from './pack-management'
 import { IS_PRODUCTION } from './env'
 import { STOCK_UNKNOWN } from './custom-pack'
+import { normalizeCheckoutPaymentMethod, orderStatusForCheckoutPayment } from './payment-methods'
 
 // Import SQLite direct pour fallback et compatibilité
 import {
@@ -323,6 +324,40 @@ export async function getBijouById(id: string) {
     logger.error('Erreur getBijouById:', error)
     return null
   }
+}
+
+/**
+ * Résout un pack pour le checkout : même couche DB que le catalogue (adapter Supabase/Postgres/SQLite),
+ * puis repli optionnel sur `pack-management` (SQLite fichier + better-sqlite3) en dev uniquement.
+ * Évite le throw « better-sqlite3 is not available » quand seul sql.js / l’adapter est utilisé.
+ */
+export async function getPackForCheckoutOrder(
+  packId: string
+): Promise<{ id: string; name: string; price: number } | null> {
+  try {
+    const adapter = await getDatabaseAdapter()
+    const p = await adapter.getPackById(packId)
+    if (p) {
+      return { id: String(p.id), name: p.name, price: Number(p.price) }
+    }
+  } catch (adapterError) {
+    if (IS_PRODUCTION) {
+      logger.error('[getPackForCheckoutOrder] Adapter indisponible', serializeError(adapterError))
+      return null
+    }
+    logger.warn('[getPackForCheckoutOrder] Adapter échoué, repli pack-management:', serializeError(adapterError))
+  }
+  if (IS_PRODUCTION) return null
+  try {
+    const { getPackById } = await import('./pack-management')
+    const p = await getPackById(packId)
+    if (p) {
+      return { id: String(p.id), name: p.name, price: Number(p.price) }
+    }
+  } catch (e) {
+    logger.warn('[getPackForCheckoutOrder] pack-management indisponible:', serializeError(e))
+  }
+  return null
 }
 
 export async function getAllCategories() {
@@ -699,13 +734,19 @@ export async function createOrderItem(itemData: {
   }
 }
 
+/**
+ * Crée commande + lignes + paiement.
+ * Persistance : adapter Supabase/Postgres/SQLite (`getDatabaseAdapter`) ; en dev, si l’adapter échoue,
+ * repli sur `createSqliteOrderFull` (fichier SQLite / sql.js selon `lib/sqlite.ts`). Pas de mock mémoire.
+ */
 export async function createOrderFull(orderData: {
   user_id: string
   total: number
-  status: string
   shipping_address?: string
   shipping_phone?: string
   shipping_name?: string
+  /** `cod` = livraison, `bank_transfer` = virement (voir `lib/payment-methods.ts`) */
+  payment_method?: string
   items: Array<{
     product_id: string
     quantity: number
@@ -713,6 +754,9 @@ export async function createOrderFull(orderData: {
     product_name: string
   }>
 }) {
+  const pm = normalizeCheckoutPaymentMethod(orderData.payment_method)
+  const orderStatus = orderStatusForCheckoutPayment(pm)
+
   const checkoutDebug = process.env['CHECKOUT_DEBUG'] === 'true'
   if (checkoutDebug) {
     logger.debug('[createOrderFull] CHECKOUT_DEBUG payload (sanitized)', {
@@ -720,7 +764,9 @@ export async function createOrderFull(orderData: {
       total: orderData.total,
       hasUserId: Boolean(orderData.user_id),
       shippingAddressLength: orderData.shipping_address?.length ?? 0,
-      shippingPhoneLength: orderData.shipping_phone?.length ?? 0
+      shippingPhoneLength: orderData.shipping_phone?.length ?? 0,
+      paymentMethod: pm,
+      orderStatus
     })
   }
   try {
@@ -732,7 +778,7 @@ export async function createOrderFull(orderData: {
       const order = await adapter.createOrder({
         user_id: orderData.user_id || null,
         total_amount: orderData.total,
-        status: orderData.status,
+        status: orderStatus,
         shipping_address: orderData.shipping_address,
         phone: orderData.shipping_phone,
         notes: orderData.shipping_name
@@ -765,7 +811,7 @@ export async function createOrderFull(orderData: {
       const payment = await adapter.createPayment({
         order_id: order.id,
         amount: orderData.total,
-        payment_method: 'cash_on_delivery',
+        payment_method: pm,
         status: 'pending'
       })
       
@@ -789,7 +835,7 @@ export async function createOrderFull(orderData: {
       order: {
         user_id: orderData.user_id,
         total_amount: orderData.total,
-        status: orderData.status,
+        status: orderStatus,
         shipping_address: orderData.shipping_address,
         phone: orderData.shipping_phone,
         notes: orderData.shipping_name
@@ -801,7 +847,7 @@ export async function createOrderFull(orderData: {
       })),
       payment: {
         amount: orderData.total,
-        payment_method: 'cash',
+        payment_method: pm,
         status: 'pending'
       }
     })

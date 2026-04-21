@@ -87,6 +87,7 @@ const nextConfig = {
     return config
   },
   images: {
+    // Sécurité : éviter d’élargir `hostname` sans besoin (URLs optimisées = requêtes serveur).
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
       {

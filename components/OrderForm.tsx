@@ -8,9 +8,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Phone, User, CreditCard, CheckCircle } from "lucide-react"
+import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector"
+import { BankTransferInstructions } from "@/components/checkout/BankTransferInstructions"
+import { PAYMENT_METHOD_BANK_TRANSFER, PAYMENT_METHOD_COD } from "@/lib/config/payment"
 import { ORDER_CONFIG } from "@/lib/order-config"
 import { Confetti } from "@/components/Confetti"
 import { useTranslations, useLocale } from "next-intl"
+import type { CheckoutPaymentMethod } from "@/lib/config/payment"
 
 interface OrderFormProps {
   productName: string
@@ -20,17 +24,20 @@ interface OrderFormProps {
 
 export default function OrderForm({ productName, price, productId }: OrderFormProps) {
   const t = useTranslations('orderForm')
+  const tc = useTranslations('checkout')
   const locale = useLocale()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
+  const [successPaymentMethod, setSuccessPaymentMethod] = useState<CheckoutPaymentMethod | null>(null)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     city: "",
     address: "",
-    notes: ""
+    notes: "",
+    payment_method: PAYMENT_METHOD_COD as CheckoutPaymentMethod,
   })
 
   // Récupérer le token CSRF au chargement
@@ -80,7 +87,7 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           city: formData.city,
           address: formData.address,
           notes: formData.notes,
-          payment_method: 'cash_on_delivery',
+          payment_method: formData.payment_method,
           items: [
             { bijou_id: productId, price, quantity: 1 }
           ]
@@ -94,15 +101,24 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
       }
       const data = await response.json()
       setOrderId(data.order_id || null)
-      
+      setSuccessPaymentMethod(formData.payment_method)
+
       setIsSubmitting(false)
       setIsSuccess(true)
-      
+
       // Réinitialiser le formulaire après 5 secondes
       setTimeout(() => {
         setIsSuccess(false)
-        setFormData({ name: "", phone: "", city: "", address: "", notes: "" })
+        setFormData({
+          name: "",
+          phone: "",
+          city: "",
+          address: "",
+          notes: "",
+          payment_method: PAYMENT_METHOD_COD,
+        })
         setOrderId(null)
+        setSuccessPaymentMethod(null)
       }, 5000)
       
     } catch (error) {
@@ -113,8 +129,8 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
     }
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  const handleInputChange = (field: string, value: string | CheckoutPaymentMethod) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   if (isSuccess) {
@@ -139,6 +155,9 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           <div className="mt-4 text-xs text-green-600">
             <div>⏰ {t('success.responseTime', { time: ORDER_CONFIG.responseTime })}</div>
           </div>
+          {successPaymentMethod === PAYMENT_METHOD_BANK_TRANSFER && (
+            <p className="mt-3 text-sm text-green-800 text-left">{tc('successBankExtra')}</p>
+          )}
         </CardContent>
       </Card>
       </>
@@ -165,6 +184,35 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
               <span className="font-bold text-orange-600 shrink-0 whitespace-nowrap text-sm sm:text-base tabular-nums">{price} MAD</span>
             </div>
           </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+            <PaymentMethodSelector
+              sectionLabel={tc('paymentModeHeading')}
+              value={formData.payment_method}
+              onChange={(v) => handleInputChange('payment_method', v)}
+              labelCod={tc('paymentCodLabel')}
+              hintCod={tc('paymentCodHint')}
+              labelBank={tc('paymentBankLabel')}
+              hintBank={tc('paymentBankHint')}
+            />
+          </div>
+
+          {formData.payment_method === PAYMENT_METHOD_BANK_TRANSFER && (
+            <BankTransferInstructions
+              title={tc('bankPanelTitle')}
+              shortIntro={tc('bankReassuring')}
+              mainInstruction={tc('bankMainInstruction')}
+              motifHint={tc('bankMotif')}
+              securityNote={tc('bankSecurityNote')}
+              copyLabel={tc('copyRib')}
+              copiedLabel={tc('copiedRib')}
+              whatsappCta={tc('whatsappCta')}
+              whatsappFooterHint={tc('whatsappAfterTransfer')}
+              whatsappNoNumberText={tc('whatsappNoNumber')}
+              orderId={null}
+              locale={locale}
+            />
+          )}
 
         {/* Nom complet */}
         <div className="space-y-2 min-w-0">
@@ -272,7 +320,9 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
             ) : (
               <>
                 <CreditCard className={`w-5 h-5 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                {t('submitOrder', { price })}
+                {formData.payment_method === PAYMENT_METHOD_BANK_TRANSFER
+                  ? tc('submitOrderBank')
+                  : tc('submitOrderCod')}
               </>
             )}
           </Button>

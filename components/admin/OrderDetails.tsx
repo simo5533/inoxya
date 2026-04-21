@@ -33,7 +33,7 @@ interface Order {
   city?: string
   postal_code?: string
   total_amount: number
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+  status: 'pending' | 'awaiting_bank_transfer' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   payment_method: string
   payment_status: 'pending' | 'completed' | 'failed'
   created_at: string
@@ -73,6 +73,8 @@ export default function OrderDetails({ order, isOpen, onClose, onStatusChange: _
     switch (status) {
       case 'pending':
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">En attente</Badge>
+      case 'awaiting_bank_transfer':
+        return <Badge variant="secondary" className="bg-amber-100 text-amber-900">En attente de virement</Badge>
       case 'confirmed':
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Confirmée</Badge>
       case 'shipped':
@@ -101,6 +103,7 @@ export default function OrderDetails({ order, isOpen, onClose, onStatusChange: _
 
   const getPaymentMethodLabel = (method: string) => {
     switch (method) {
+      case 'cod':
       case 'cash_on_delivery':
         return "Paiement à la livraison"
       case 'bank_transfer':

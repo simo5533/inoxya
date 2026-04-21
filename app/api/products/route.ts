@@ -10,6 +10,7 @@ import { slugToDbValue } from '@/lib/category-mapping'
 import { getAllBijoux } from '@/lib/database'
 import { getDatabaseAdapter } from '@/lib/db'
 import type { Product } from '@/lib/db/types'
+import { STOCK_UNKNOWN } from '@/lib/custom-pack'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -56,8 +57,13 @@ export async function GET(request: NextRequest) {
           const PACKS_CAT = 'Nos packs'
           listed = dbProducts.filter((p) => {
             const cat = String(p.category || '')
-            const st = Number(p.stock) || 0
-            return cat !== PACKS_CAT && st > 0 && p.is_active !== false
+            const price = Number(p.price)
+            if (!Number.isFinite(price) || price <= 0) return false
+            if (cat === PACKS_CAT) return false
+            if (p.is_active === false) return false
+            const st = Number(p.stock)
+            if (st === 0) return false
+            return st === STOCK_UNKNOWN || st > 0
           })
         }
         return NextResponse.json({
@@ -168,9 +174,14 @@ export async function GET(request: NextRequest) {
       const PACKS_CAT = 'Nos packs'
       normalizedProducts = normalizedProducts.filter((p) => {
         const cat = String((p as { category?: string }).category || '')
-        const st = Number((p as { stock?: number }).stock) || 0
+        const price = Number((p as { price?: number }).price)
+        if (!Number.isFinite(price) || price <= 0) return false
+        if (cat === PACKS_CAT) return false
         const active = (p as { is_active?: boolean }).is_active !== false
-        return cat !== PACKS_CAT && st > 0 && active
+        if (active === false) return false
+        const st = Number((p as { stock?: number }).stock)
+        if (st === 0) return false
+        return st === STOCK_UNKNOWN || st > 0
       })
     }
     return NextResponse.json({

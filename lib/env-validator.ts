@@ -22,8 +22,13 @@ const envSchema = z.object({
   // JWT_SECRET (obligatoire en production, min 32 chars)
   JWT_SECRET: z.string().min(32, 'JWT_SECRET doit contenir au moins 32 caractères').optional(),
   
-  // DATABASE_URL (obligatoire sur Vercel, optionnel ailleurs)
+  // DATABASE_URL (PostgreSQL direct — optionnel si Supabase complet)
   DATABASE_URL: z.string().url().optional(),
+
+  // Supabase (alternative à DATABASE_URL seul pour l’adapter DB)
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
   
   // SMTP (optionnel, mais si un champ est défini, tous doivent l'être)
   SMTP_HOST: z.string().optional(),
@@ -64,6 +69,9 @@ export function validateEnvironment(): EnvValidationResult {
     NEXT_PUBLIC_SITE_URL: process.env['NEXT_PUBLIC_SITE_URL'],
     JWT_SECRET: process.env['JWT_SECRET'],
     DATABASE_URL: process.env['DATABASE_URL'],
+    NEXT_PUBLIC_SUPABASE_URL: process.env['NEXT_PUBLIC_SUPABASE_URL'],
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+    SUPABASE_SERVICE_ROLE_KEY: process.env['SUPABASE_SERVICE_ROLE_KEY'],
     SMTP_HOST: process.env['SMTP_HOST'],
     SMTP_PORT: process.env['SMTP_PORT'],
     SMTP_USER: process.env['SMTP_USER'],
@@ -107,11 +115,39 @@ export function validateEnvironment(): EnvValidationResult {
       warnings.push('JWT_SECRET devrait contenir au moins 32 caractères pour la sécurité')
     }
     
-    // DATABASE_URL obligatoire sur Vercel
-    if (isVercel && !env.DATABASE_URL) {
-      errors.push('DATABASE_URL est obligatoire sur Vercel (SQLite non supporté)')
-    } else if (isProduction && !env.DATABASE_URL) {
-      warnings.push('DATABASE_URL non défini, utilisation de SQLite (non recommandé en production)')
+    // Sur Vercel : PostgreSQL (DATABASE_URL) OU couple Supabase URL + service role
+    const dbUrl = env.DATABASE_URL
+    const hasPostgresUrl =
+      typeof dbUrl === 'string' &&
+      (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://'))
+    const hasSupabaseServerPair = Boolean(
+      env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    if (isVercel && !hasPostgresUrl && !hasSupabaseServerPair) {
+      errors.push(
+        'Sur Vercel : définir DATABASE_URL (postgresql://…) ou NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (SQLite non supporté)'
+      )
+    } else if (isProduction && !hasPostgresUrl && !hasSupabaseServerPair) {
+      warnings.push(
+        'Aucune base distante : ni DATABASE_URL Postgres ni Supabase — SQLite possible uniquement hors Vercel (non recommandé en production)'
+      )
+    }
+
+    if (hasSupabaseServerPair && !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      warnings.push(
+        'NEXT_PUBLIC_SUPABASE_ANON_KEY recommandé lorsque Supabase est utilisé (client / API publiques)'
+      )
+    }
+
+    if (
+      env.SUPABASE_SERVICE_ROLE_KEY &&
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      env.SUPABASE_SERVICE_ROLE_KEY === env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) {
+      errors.push(
+        'SUPABASE_SERVICE_ROLE_KEY et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être deux clés distinctes'
+      )
     }
     
     // Validation format DATABASE_URL si présent

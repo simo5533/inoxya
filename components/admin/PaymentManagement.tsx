@@ -132,6 +132,7 @@ export default function PaymentManagement({ orderId: _orderId }: PaymentManageme
 
   const getPaymentMethodLabel = (method: string) => {
     switch (method) {
+      case 'cod':
       case 'cash_on_delivery':
         return "Paiement à la livraison"
       case 'bank_transfer':

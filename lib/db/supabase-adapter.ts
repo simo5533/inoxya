@@ -691,7 +691,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
     const payload = {
       order_id,
       amount: Number(paymentData.amount),
-      payment_method: paymentData.payment_method || 'cash_on_delivery',
+      payment_method: paymentData.payment_method || 'cod',
       status: paymentData.status ?? 'pending',
       transaction_id: paymentData.transaction_id ?? null
     }

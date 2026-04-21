@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getBijouById, createOrderFull } from '@/lib/database'
-import { getPackById } from '@/lib/pack-management'
+import { getBijouById, createOrderFull, getPackForCheckoutOrder } from '@/lib/database'
 import { sendAdminEmail, renderPaymentEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { sanitizeInput, requireCSRF } from '@/lib/security'
 import { consumePublicRateLimit, getClientIp } from '@/lib/public-rate-limit'
 import { checkoutSchema, validateWithSchema } from '@/lib/validations'
+import {
+  formatPaymentMethodLabelFr,
+  normalizeCheckoutPaymentMethod,
+  orderStatusForCheckoutPayment,
+} from '@/lib/payment-methods'
+import { STOCK_UNKNOWN } from '@/lib/custom-pack'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -46,7 +51,8 @@ export async function POST(request: NextRequest) {
     }
 
     const validatedData = validation.data
-    
+    const paymentMethod = normalizeCheckoutPaymentMethod(validatedData.payment_method as string | undefined)
+
     // SÉCURITÉ: Sanitization des entrées (après validation Zod)
     const sanitizedPhone = sanitizeInput(validatedData.phone)
     const sanitizedCity = sanitizeInput(validatedData.city)
@@ -78,7 +84,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: `Produit « ${product.name} » non disponible` }, { status: 400 })
           }
           const rawStock = (product as { stock?: number; stock_quantity?: number }).stock ?? (product as { stock_quantity?: number }).stock_quantity
-          const available = typeof rawStock === 'number' ? rawStock : 999
+          const unknownStock =
+            rawStock === STOCK_UNKNOWN ||
+            rawStock === undefined ||
+            rawStock === null ||
+            typeof rawStock !== 'number'
+          const available = unknownStock ? 999 : rawStock
           if (available < line.quantity) {
             return NextResponse.json(
               { error: `Stock insuffisant pour « ${product.name} »` },
@@ -126,23 +137,21 @@ export async function POST(request: NextRequest) {
       
       // Si pack_id est présent, c'est un pack
       if (item.pack_id) {
-        // Essayer d'abord comme pack
+        // Même source de vérité que /api/packs (adapter), pas seulement better-sqlite3 local
         // eslint-disable-next-line no-await-in-loop
-        const pack = await getPackById(String(productId))
+        const pack = await getPackForCheckoutOrder(String(productId))
         if (pack) {
-          // Utiliser le prix de la BDD, pas celui envoyé par le client
           const verifiedPrice = pack.price
           total += verifiedPrice * qty
-          
+
           verifiedItems.push({
-            id: productId.toString(),
+            id: pack.id,
             price: verifiedPrice,
             quantity: qty,
             name: pack.name,
-            isPack: true
+            isPack: true,
           })
-          
-          // Log si le prix client diffère du prix réel (tentative de fraude potentielle)
+
           if (Math.abs(item.price - verifiedPrice) > 0.01) {
             logger.warn(`[SECURITY] Prix manipulé détecté (pack): client=${item.price}, réel=${verifiedPrice}, pack=${productId}`)
           }
@@ -185,7 +194,7 @@ export async function POST(request: NextRequest) {
       itemsCount: verifiedItems.length,
       total,
       phone: sanitizedPhone ? sanitizedPhone.substring(0, 4) + '****' : null,
-      paymentMethod: validatedData.payment_method || 'cash_on_delivery'
+      paymentMethod
     })
     if (checkoutDebug) {
       logger.debug('[POST /api/checkout] CHECKOUT_DEBUG payload (sanitized)', {
@@ -213,7 +222,7 @@ export async function POST(request: NextRequest) {
       const result = await createOrderFull({
         user_id: userId,
         total: total,
-        status: 'pending',
+        payment_method: paymentMethod,
         shipping_address: `${sanitizedCity}, ${sanitizedAddress}`,
         shipping_phone: sanitizedPhone,
         shipping_name: sanitizedCustomerName || undefined,
@@ -232,7 +241,7 @@ export async function POST(request: NextRequest) {
           await createNotification({
             user_id: null,
             title: 'Nouvelle commande',
-            message: `Client: ${sanitizedCustomerName || 'N/A'} - ${sanitizedPhone}\nCommande - ${total} MAD - ${validatedData.payment_method || 'cash_on_delivery'}`,
+            message: `Client: ${sanitizedCustomerName || 'N/A'} - ${sanitizedPhone}\nCommande - ${total} MAD - ${formatPaymentMethodLabelFr(paymentMethod)}`,
             type: 'info',
             link: `/admin/orders/${result.orderId}`
           })
@@ -255,7 +264,13 @@ export async function POST(request: NextRequest) {
       try {
         await sendAdminEmail(
           `Nouvelle commande ${orderId}`,
-          renderPaymentEmail({ orderId, amount: total, method: validatedData.payment_method || 'cash_on_delivery', status: 'pending', transactionId: null })
+          renderPaymentEmail({
+            orderId,
+            amount: total,
+            method: paymentMethod,
+            orderStatus: orderStatusForCheckoutPayment(paymentMethod),
+            transactionId: null
+          })
         )
       } catch (emailError) {
         const emailErrorDetails = emailError instanceof Error ? {
@@ -279,8 +294,15 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
   } catch (error) {
-    logger.error('[POST /api/checkout] Erreur checkout:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    const errDetails = error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : { message: String(error) }
+    logger.error('[POST /api/checkout] Erreur non gérée (hors création commande):', errDetails)
+    return NextResponse.json(
+      {
+        error: 'Erreur serveur',
+        ...(process.env.NODE_ENV === 'development' ? { details: errDetails } : {}),
+      },
+      { status: 500 }
+    )
   }
 }
 

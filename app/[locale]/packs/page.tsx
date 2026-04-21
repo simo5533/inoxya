@@ -5,7 +5,10 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector"
+import { BankTransferInstructions } from "@/components/checkout/BankTransferInstructions"
+import { PAYMENT_METHOD_BANK_TRANSFER, PAYMENT_METHOD_COD } from "@/lib/config/payment"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { ShoppingCart, Gift, Sparkles, Crown, Gem, Package, Star, Eye } from "lucide-react"
@@ -31,12 +34,20 @@ interface Pack {
 export default function PacksPage() {
   const { toast } = useToast()
   const t = useTranslations('packs')
+  const tc = useTranslations('checkout')
   const locale = useLocale()
   const [packs, setPacks] = useState<Pack[]>([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
   const [detailsId, setDetailsId] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: "", phone: "", city: "", address: "", notes: "" })
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    city: "",
+    address: "",
+    notes: "",
+    payment_method: PAYMENT_METHOD_COD as "cod" | "bank_transfer",
+  })
   const [submitting, setSubmitting] = useState(false)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
 
@@ -211,13 +222,17 @@ export default function PacksPage() {
           city: form.city,
           address: form.address,
           notes: form.notes,
-          payment_method: 'cash_on_delivery',
-          items: [ { id: pack.id, pack_id: pack.id, price: pack.price, quantity: 1 } ]
+          payment_method: form.payment_method,
+          items: [{ id: pack.id, pack_id: pack.id, price: pack.price, quantity: 1 }],
         })
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || 'Erreur lors de la commande')
+        const data = (await res.json().catch(() => ({}))) as { error?: string; details?: unknown }
+        const extra =
+          typeof data.details === "object" && data.details !== null && "message" in data.details
+            ? ` (${String((data.details as { message?: string }).message)})`
+            : ""
+        throw new Error((data?.error || "Erreur lors de la commande") + extra)
       }
       const data = await res.json()
       toast({
@@ -229,7 +244,14 @@ export default function PacksPage() {
       // Déclencher un événement pour le confetti (si nécessaire)
       window.dispatchEvent(new CustomEvent('order-success', { detail: { orderId: data.order_id } }))
       setOpenId(null)
-      setForm({ name: "", phone: "", city: "", address: "", notes: "" })
+      setForm({
+        name: "",
+        phone: "",
+        city: "",
+        address: "",
+        notes: "",
+        payment_method: PAYMENT_METHOD_COD,
+      })
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'Erreur lors de la commande'
       logger.error('Erreur commande pack:', e)
@@ -243,7 +265,7 @@ export default function PacksPage() {
     }
   }
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const formatCurrency = (amount: number) => {
@@ -425,11 +447,41 @@ export default function PacksPage() {
                           <span className="break-words">{t('proceedToPayment')}</span>
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg">
+                      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>{t('order')}: {pack.name}</DialogTitle>
+                          <DialogDescription className="sr-only">
+                            {tc('paymentProceedTitle')} — {tc('paymentModeHeading')}
+                          </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
+                          <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                            <PaymentMethodSelector
+                              sectionLabel={tc('paymentModeHeading')}
+                              value={form.payment_method}
+                              onChange={(v) => setForm((prev) => ({ ...prev, payment_method: v }))}
+                              labelCod={tc('paymentCodLabel')}
+                              hintCod={tc('paymentCodHint')}
+                              labelBank={tc('paymentBankLabel')}
+                              hintBank={tc('paymentBankHint')}
+                            />
+                          </div>
+                          {form.payment_method === PAYMENT_METHOD_BANK_TRANSFER && (
+                            <BankTransferInstructions
+                              title={tc('bankPanelTitle')}
+                              shortIntro={tc('bankReassuring')}
+                              mainInstruction={tc('bankMainInstruction')}
+                              motifHint={tc('bankMotif')}
+                              securityNote={tc('bankSecurityNote')}
+                              copyLabel={tc('copyRib')}
+                              copiedLabel={tc('copiedRib')}
+                              whatsappCta={tc('whatsappCta')}
+                              whatsappFooterHint={tc('whatsappAfterTransfer')}
+                              whatsappNoNumberText={tc('whatsappNoNumber')}
+                              orderId={null}
+                              locale={locale}
+                            />
+                          )}
                           <div>
                             <label className="text-sm">{t('fullName')} *</label>
                             <Input name="name" value={form.name} onChange={onChange} required />
@@ -451,7 +503,11 @@ export default function PacksPage() {
                             <textarea name="notes" value={form.notes} onChange={onChange} className="border rounded w-full p-2 min-h-[60px]" />
                           </div>
                           <Button disabled={submitting} onClick={() => submitOrder(pack)} className={`w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-black flex items-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
-                            {submitting ? t('ordering') : t('submitOrder')}
+                            {submitting
+                              ? t('ordering')
+                              : form.payment_method === PAYMENT_METHOD_BANK_TRANSFER
+                                ? tc('submitOrderBank')
+                                : tc('submitOrderCod')}
                           </Button>
                         </div>
                       </DialogContent>

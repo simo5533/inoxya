@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           orderId: orderIdStr,
           amount: payment.amount,
           method: payment.payment_method,
-          status: payment.status,
+          orderStatus: typeof order.status === 'string' ? order.status : payment.status,
           transactionId: payment.transaction_id || null
         })
       )

@@ -1,4 +1,5 @@
 import { logger } from './logger'
+import { formatPaymentMethodDetailHtml, formatPaymentMethodLabelFr, normalizeCheckoutPaymentMethod, PAYMENT_METHOD_BANK_TRANSFER } from './payment-methods'
 
 // Import conditionnel de nodemailer (optionnel)
 let nodemailer: any = null
@@ -53,17 +54,30 @@ export async function sendAdminEmail(subject: string, htmlBody: string) {
 export function renderPaymentEmail(params: {
   orderId: string
   amount: number
+  /** Code technique ou libellé ; affichage détaillé via helpers */
   method: string
-  status: string
+  /** Statut commande (ex. pending, awaiting_bank_transfer) */
+  orderStatus?: string
+  /** @deprecated Utiliser orderStatus */
+  status?: string
   transactionId?: string | null
 }) {
-  const { orderId, amount, method, status, transactionId } = params
+  const { orderId, amount, method, transactionId } = params
+  const orderStatus = params.orderStatus ?? params.status ?? 'pending'
+  const methodLine = formatPaymentMethodDetailHtml(method)
+  const methodShort = formatPaymentMethodLabelFr(method)
+  const isBank = normalizeCheckoutPaymentMethod(method) === PAYMENT_METHOD_BANK_TRANSFER
+  const bankNote = isBank
+    ? '<p><em>Virement : le client doit envoyer capture de commande + preuve de paiement (WhatsApp) pour validation.</em></p>'
+    : ''
   return `
-    <h2>Nouvelle tentative de paiement</h2>
+    <h2>Nouvelle commande Inoxya</h2>
     <p><strong>Commande:</strong> ${orderId}</p>
     <p><strong>Montant:</strong> ${amount} MAD</p>
-    <p><strong>Méthode:</strong> ${method}</p>
-    <p><strong>Statut:</strong> ${status}</p>
+    <p><strong>Méthode de paiement:</strong> ${methodShort}</p>
+    <p><strong>Détail:</strong> ${methodLine}</p>
+    <p><strong>Statut commande:</strong> ${orderStatus}</p>
+    ${bankNote}
     ${transactionId ? `<p><strong>Transaction:</strong> ${transactionId}</p>` : ''}
     <p>Consultez l'espace admin pour plus de détails.</p>
   `
