@@ -145,6 +145,7 @@ function startServer(port) {
     env: {
       ...process.env,
       PORT: port.toString(),
+      NEXT_TELEMETRY_DISABLED: '1',
     }
   })
   
