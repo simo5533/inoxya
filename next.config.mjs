@@ -37,7 +37,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
-      "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://vercel.com",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.public.blob.vercel-storage.com https://images.unsplash.com https://vercel.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
       "media-src 'self' blob:",
       "frame-ancestors 'none'",

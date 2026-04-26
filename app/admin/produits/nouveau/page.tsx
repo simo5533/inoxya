@@ -170,13 +170,16 @@ export default function NouveauProduitPage() {
       })
 
       const text = await res.text()
-      let data: { imageUrl?: string; error?: string }
+      let data: { imageUrl?: string; error?: string; details?: string }
       try {
         data = text ? JSON.parse(text) : {}
       } catch {
         data = { error: res.ok ? 'Réponse invalide' : (text || 'Erreur lors de l\'upload') }
       }
-      if (!res.ok) throw new Error(data.error || text || 'Erreur lors de l\'upload')
+      if (!res.ok) {
+        const msg = [data.error, data.details].filter(Boolean).join(' — ') || text || "Erreur lors de l'upload"
+        throw new Error(msg)
+      }
 
       const imageUrl = data.imageUrl as string
       if (target === 'main') handleInputChange('image_url', imageUrl)

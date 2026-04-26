@@ -118,13 +118,16 @@ export async function uploadImage(
   const hasBlobToken = !!process.env['BLOB_READ_WRITE_TOKEN']
   const isVercel = !!process.env['VERCEL']
 
-  // En production sur Vercel avec token: utiliser Blob
+  // En production sur Vercel: Blob obligatoire (le FS du conteneur n’est pas persistant / souvent en lecture seule)
   if (isProduction && (isVercel || hasBlobToken)) {
     try {
       return await uploadToBlob(buffer, filename, config)
     } catch (error) {
+      if (isVercel) {
+        logger.error('[STORAGE] Upload Blob requis sur Vercel, pas de fallback disque:', serializeError(error))
+        throw error
+      }
       logger.warn('[STORAGE] Échec upload Blob, fallback filesystem:', serializeError(error))
-      // Fallback vers filesystem si Blob échoue
       return uploadToFilesystem(buffer, filePath, config)
     }
   }

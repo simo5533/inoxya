@@ -14,7 +14,8 @@ export const dynamic = 'force-dynamic'
 
 // Types MIME autorisés (whitelist stricte)
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB (réduit de 10MB)
+// Vercel (Blob + function) : rester < ~4,5 Mo côté requête / put serveur
+const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4 Mo
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +70,12 @@ export async function POST(request: NextRequest) {
 
     // SÉCURITÉ: Validation de la taille
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'Fichier trop volumineux (max 5MB)' }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'Fichier trop volumineux (max 4 Mo) — Vercel limite les gros envois; compressez l’image.',
+        },
+        { status: 400 }
+      )
     }
 
     // Générer les chemins
@@ -146,8 +152,16 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.error('Erreur upload image:', { error: error instanceof Error ? error.message : String(error) })
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+    let hint = ''
+    if (/BLOB_READ_WRITE_TOKEN|vercel.*blob|@vercel\/blob/i.test(errorMessage)) {
+      hint =
+        ' Vérifiez Vercel → Projet → Storage (Blob) connecté, variable BLOB_READ_WRITE_TOKEN, puis Redeploy.'
+    }
     return NextResponse.json(
-      { error: 'Erreur lors de l\'upload de l\'image', details: errorMessage },
+      {
+        error: "Erreur lors de l'upload de l'image",
+        details: errorMessage + hint,
+      },
       { status: 500 }
     )
   }

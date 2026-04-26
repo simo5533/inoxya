@@ -79,10 +79,10 @@ export default function ImageUpload({
       // Filtrer les fichiers valides
       const validFiles = filesToUpload.filter((file) => {
         if (!file || !file.type.startsWith('image/')) return false
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > 4 * 1024 * 1024) {
           toast({
             title: "Fichier trop volumineux",
-            description: `${file.name} dépasse 10MB`,
+            description: `${file.name} dépasse 4 Mo (limite Vercel / API)`,
             variant: "destructive"
           })
           return false
@@ -115,8 +115,8 @@ export default function ImageUpload({
           })
 
           if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.error || 'Erreur upload')
+            const error = (await response.json()) as { error?: string; details?: string }
+            throw new Error([error.error, error.details].filter(Boolean).join(' — ') || 'Erreur upload')
           }
 
           const data = await response.json()
