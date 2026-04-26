@@ -60,6 +60,10 @@ let adapter: DatabaseAdapter | null = null
 let adapterType: 'sqlite' | 'postgres' | 'supabase' | null = null
 let adapterInitializing = false
 let adapterInitPromise: Promise<DatabaseAdapter> | null = null
+/** Après échec définitif en prod (pas d’URL/clé valides), évite de relancer l’init à chaque page (build SSG). */
+let productionAdapterUnavailable = false
+let loggedKeyInUrlHint = false
+let loggedInvalidSupabasePairHint = false
 
 /**
  * Initialise et retourne l'adapter approprié
@@ -70,6 +74,10 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
   // Si déjà initialisé, retourner immédiatement
   if (adapter) {
     return adapter
+  }
+
+  if (productionAdapterUnavailable) {
+    throw new Error('Impossible de se connecter à la base de données')
   }
 
   // Si en cours d'initialisation, attendre la promesse existante
@@ -92,7 +100,8 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
       const databaseUrl = normalizeEnvString(process.env['DATABASE_URL'])
       const supabaseUrlRaw = process.env['NEXT_PUBLIC_SUPABASE_URL']
       const supabaseKeyRaw = process.env['SUPABASE_SERVICE_ROLE_KEY']
-      if (looksLikeApiKeyNotProjectUrl(supabaseUrlRaw)) {
+      if (looksLikeApiKeyNotProjectUrl(supabaseUrlRaw) && !loggedKeyInUrlHint) {
+        loggedKeyInUrlHint = true
         logger.error(
           '[DB] NEXT_PUBLIC_SUPABASE_URL ne doit pas contenir une clé (sb_secret_ / sb_publishable_ / eyJ…). ' +
             'Mets ici l’URL du projet : Supabase → Settings → API → Project URL (ex. https://xxxxx.supabase.co). ' +
@@ -107,7 +116,8 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
       const userTriedSupabase = Boolean(
         normalizeEnvString(supabaseUrlRaw) || normalizeEnvString(supabaseKeyRaw)
       )
-      if (userTriedSupabase && (!supabaseUrl || !supabaseKey)) {
+      if (userTriedSupabase && (!supabaseUrl || !supabaseKey) && !loggedInvalidSupabasePairHint) {
+        loggedInvalidSupabasePairHint = true
         logger.error(
           '[DB] Supabase: URL ou clé service_role invalides. ' +
             'Vercel → Environment Variables: NEXT_PUBLIC_SUPABASE_URL = URL complète type https://xxxx.supabase.co (sans guillemets) ; ' +
@@ -205,6 +215,7 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
       // En développement, permettre aux fonctions appelantes d'utiliser le fallback sql.js
       if (!localAdapter) {
         if (process.env['NODE_ENV'] === 'production') {
+          productionAdapterUnavailable = true
           throw new Error('Impossible de se connecter à la base de données')
         }
         // En développement, vérifier si sql.js est disponible avant de lancer l'erreur
@@ -266,5 +277,10 @@ export function getAdapterType(): 'sqlite' | 'postgres' | 'supabase' | null {
 export function resetAdapter(): void {
   adapter = null
   adapterType = null
+  adapterInitializing = false
+  adapterInitPromise = null
+  productionAdapterUnavailable = false
+  loggedKeyInUrlHint = false
+  loggedInvalidSupabasePairHint = false
 }
 

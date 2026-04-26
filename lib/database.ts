@@ -6,6 +6,10 @@
 import { getDatabaseAdapter } from './db'
 import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
+
+/** Évite de répéter la même erreur [getAllBijoux]/[getAllPacks] pendant le build SSG (30 pages). */
+let loggedProdAdapterFailureBijoux = false
+let loggedProdAdapterFailurePacks = false
 import { getPackById } from './pack-management'
 import { IS_PRODUCTION } from './env'
 import { STOCK_UNKNOWN } from './custom-pack'
@@ -160,7 +164,10 @@ export async function getAllBijoux(categorySlug?: string) {
       })
     } catch (adapterError) {
       if (IS_PRODUCTION) {
-        logger.error('[getAllBijoux] Adapter failed in production', serializeError(adapterError))
+        if (!loggedProdAdapterFailureBijoux) {
+          loggedProdAdapterFailureBijoux = true
+          logger.error('[getAllBijoux] Adapter failed in production', serializeError(adapterError))
+        }
         return []
       }
       logger.warn('[getAllBijoux] Adapter failed, using SQLite fallback:', serializeError(adapterError))
@@ -416,7 +423,10 @@ export async function getAllPacks() {
       }
     } catch (adapterError) {
       if (IS_PRODUCTION) {
-        logger.error('[getAllPacks] Adapter failed in production', serializeError(adapterError))
+        if (!loggedProdAdapterFailurePacks) {
+          loggedProdAdapterFailurePacks = true
+          logger.error('[getAllPacks] Adapter failed in production', serializeError(adapterError))
+        }
         return []
       }
       const errorMsg = adapterError instanceof Error ? adapterError.message : String(adapterError)
