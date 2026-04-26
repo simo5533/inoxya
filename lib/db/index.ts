@@ -49,6 +49,13 @@ function parseServiceRoleKey(raw: string | undefined): string | null {
   return k
 }
 
+/** Erreur fréquente : coller la clé secret/anon à la place de l’URL projet. */
+function looksLikeApiKeyNotProjectUrl(s: string | undefined): boolean {
+  const t = normalizeEnvString(s)
+  if (!t) return false
+  return t.startsWith('sb_secret_') || t.startsWith('sb_publishable_') || t.startsWith('eyJ')
+}
+
 let adapter: DatabaseAdapter | null = null
 let adapterType: 'sqlite' | 'postgres' | 'supabase' | null = null
 let adapterInitializing = false
@@ -85,6 +92,13 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
       const databaseUrl = normalizeEnvString(process.env['DATABASE_URL'])
       const supabaseUrlRaw = process.env['NEXT_PUBLIC_SUPABASE_URL']
       const supabaseKeyRaw = process.env['SUPABASE_SERVICE_ROLE_KEY']
+      if (looksLikeApiKeyNotProjectUrl(supabaseUrlRaw)) {
+        logger.error(
+          '[DB] NEXT_PUBLIC_SUPABASE_URL ne doit pas contenir une clé (sb_secret_ / sb_publishable_ / eyJ…). ' +
+            'Mets ici l’URL du projet : Supabase → Settings → API → Project URL (ex. https://xxxxx.supabase.co). ' +
+            'La clé service_role va dans la variable séparée SUPABASE_SERVICE_ROLE_KEY (sans NEXT_PUBLIC_).'
+        )
+      }
       const supabaseUrl = parseSupabaseProjectUrl(supabaseUrlRaw)
       const supabaseKey = parseServiceRoleKey(supabaseKeyRaw)
       let localAdapter: DatabaseAdapter | null = null
