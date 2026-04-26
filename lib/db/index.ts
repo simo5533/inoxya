@@ -8,6 +8,47 @@ import { logger } from '../logger'
 import { IS_PRODUCTION } from '../env'
 import type { DatabaseAdapter } from './adapter'
 
+/** Trim + retire guillemets collés par erreur (copier-coller Vercel / .env). */
+function normalizeEnvString(v: string | undefined): string | undefined {
+  if (v == null) return undefined
+  let t = String(v).trim()
+  if (t.length >= 2 && ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))) {
+    t = t.slice(1, -1).trim()
+  }
+  return t || undefined
+}
+
+/**
+ * URL acceptée par @supabase/supabase-js (évite "Invalid supabaseUrl" si espace / sans schéma).
+ * Si l’hôte ressemble à *.supabase.co sans https://, on préfixe https://
+ */
+function parseSupabaseProjectUrl(raw: string | undefined): string | null {
+  const s = normalizeEnvString(raw)
+  if (!s) return null
+  let candidate = s
+  if (!/^https?:\/\//i.test(candidate)) {
+    const host = candidate.replace(/^\/+/, '')
+    if (/^[a-z0-9-]+\.supabase\.co$/i.test(host)) {
+      candidate = `https://${host}`
+    } else {
+      return null
+    }
+  }
+  try {
+    const u = new URL(candidate)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+    return u.href.replace(/\/$/, '')
+  } catch {
+    return null
+  }
+}
+
+function parseServiceRoleKey(raw: string | undefined): string | null {
+  const k = normalizeEnvString(raw)
+  if (!k || k.length < 20) return null
+  return k
+}
+
 let adapter: DatabaseAdapter | null = null
 let adapterType: 'sqlite' | 'postgres' | 'supabase' | null = null
 let adapterInitializing = false
@@ -41,13 +82,26 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
 
   const initPromise = (async (): Promise<DatabaseAdapter> => {
     try {
-      const databaseUrl = process.env['DATABASE_URL']
-      const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
-      const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY']
+      const databaseUrl = normalizeEnvString(process.env['DATABASE_URL'])
+      const supabaseUrlRaw = process.env['NEXT_PUBLIC_SUPABASE_URL']
+      const supabaseKeyRaw = process.env['SUPABASE_SERVICE_ROLE_KEY']
+      const supabaseUrl = parseSupabaseProjectUrl(supabaseUrlRaw)
+      const supabaseKey = parseServiceRoleKey(supabaseKeyRaw)
       let localAdapter: DatabaseAdapter | null = null
       let localAdapterType: 'sqlite' | 'postgres' | 'supabase' | null = null
 
-      // PRIORITÉ 1: Si Supabase est configuré, utiliser Supabase
+      const userTriedSupabase = Boolean(
+        normalizeEnvString(supabaseUrlRaw) || normalizeEnvString(supabaseKeyRaw)
+      )
+      if (userTriedSupabase && (!supabaseUrl || !supabaseKey)) {
+        logger.error(
+          '[DB] Supabase: URL ou clé service_role invalides. ' +
+            'Vercel → Environment Variables: NEXT_PUBLIC_SUPABASE_URL = URL complète type https://xxxx.supabase.co (sans guillemets) ; ' +
+            'SUPABASE_SERVICE_ROLE_KEY = clé service_role (20+ caractères). Puis redéployer.'
+        )
+      }
+
+      // PRIORITÉ 1: Si Supabase est configuré correctement, l’utiliser
       if (supabaseUrl && supabaseKey) {
         try {
           const { SupabaseAdapter } = await import('./supabase-adapter')
