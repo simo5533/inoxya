@@ -6,6 +6,7 @@
 
 import { logger } from './logger'
 import { serializeError } from './sqlite'
+import { getBlobPutAccess, toShopImageUrl } from './blob-helpers'
 import { join } from 'path'
 import { mkdir } from 'fs/promises'
 import sharp from 'sharp'
@@ -51,18 +52,18 @@ async function uploadToBlob(
       .webp({ quality: config.quality })
       .toBuffer()
 
-    // Upload vers Vercel Blob
+    const putAccess = getBlobPutAccess()
     const blob = await put(filename, processedBuffer, {
-      access: 'public',
+      access: putAccess,
       contentType: 'image/webp',
       token: blobReadWriteToken,
-      // Évite 409 / collision si même chemin rejoué (slug identique, double clic)
       addRandomSuffix: true,
     })
 
-    logger.info(`[STORAGE] Image uploadée vers Vercel Blob: ${blob.url}`)
+    const publicUrl = toShopImageUrl({ url: blob.url, pathname: blob.pathname })
+    logger.info(`[STORAGE] Image uploadée vers Vercel Blob: ${putAccess} → ${publicUrl.slice(0, 120)}…`)
     return {
-      url: blob.url,
+      url: publicUrl,
     }
   } catch (error) {
     logger.error('[STORAGE] Erreur upload Vercel Blob:', serializeError(error))

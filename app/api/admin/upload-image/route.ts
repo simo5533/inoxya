@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { requireCSRF } from '@/lib/security'
 import { uploadImage, generateAdminUploadBlobKey } from '@/lib/storage-adapter'
+import { getBlobPutAccess, toShopImageUrl } from '@/lib/blob-helpers'
 import { promises as fs } from 'fs'
 
 export const runtime = 'nodejs'
@@ -62,15 +63,17 @@ export async function POST(request: NextRequest) {
           )
         }
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { put } = require('@vercel/blob') as { put: (name: string, data: Buffer, o: object) => Promise<{ url: string }> }
+        const { put } = require('@vercel/blob') as {
+          put: (name: string, data: Buffer, o: object) => Promise<{ url: string; pathname: string }>
+        }
         const key = `admin/shop/${Date.now()}-${base}.svg`
         const blob = await put(key, buffer, {
-          access: 'public',
+          access: getBlobPutAccess(),
           contentType: 'image/svg+xml',
           token,
           addRandomSuffix: true,
         })
-        return NextResponse.json({ url: blob.url })
+        return NextResponse.json({ url: toShopImageUrl(blob) })
       }
       const fileName = `${base}-${Date.now()}.svg`
       const dir = join(process.cwd(), 'public', 'uploads')
