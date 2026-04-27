@@ -7,8 +7,8 @@
  * Prérequis .env.local :
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   BLOB_READ_WRITE_TOKEN (hors --dry-run : la simulation n’en a pas besoin)
- *   NEXT_PUBLIC_SITE_URL = URL du site en prod (ex. https://xxx.vercel.app) — requis si BLOB_STORE_ACCESS=private
  *   BLOB_STORE_ACCESS = public | private (aligné sur le store Vercel)
+ *   (Les URLs enregistrées sont relatives /api/shop-blob?... ; inutile de forcer NEXT_PUBLIC_SITE_URL pour ça.)
  *
  * Usage:
  *   npx tsx scripts/sync-local-images-to-vercel-blob.ts           # exécution
@@ -32,18 +32,9 @@ function getBlobPutAccess(): 'public' | 'private' {
   return 'private'
 }
 
-function getOrigin(): string {
-  const u = (process.env['NEXT_PUBLIC_SITE_URL'] || '').trim().replace(/\/$/, '')
-  if (u) return u
-  if (process.env['VERCEL_URL']) return `https://${String(process.env['VERCEL_URL']).replace(/\/$/, '')}`
-  return 'http://localhost:3000'
-}
-
 function toShopImageUrl(blob: { url: string; pathname: string }): string {
   if (getBlobPutAccess() === 'public') return blob.url
-  const base = getOrigin()
-  if (!base) return blob.url
-  return `${base}/api/shop-blob?pathname=${encodeURIComponent(blob.pathname)}`
+  return `/api/shop-blob?pathname=${encodeURIComponent(blob.pathname)}`
 }
 
 function isLocalImageRef(s: string | null | undefined): boolean {
@@ -165,13 +156,6 @@ async function main() {
     console.error('❌ BLOB_READ_WRITE_TOKEN requis (sauf en --dry-run)')
     process.exit(1)
   }
-  if (getBlobPutAccess() === 'private' && !(process.env['NEXT_PUBLIC_SITE_URL'] || '').trim()) {
-    console.warn(
-      '⚠️  NEXT_PUBLIC_SITE_URL non défini : les URLs proxy pointeront vers localhost:3000. ' +
-        'Mets ton URL de prod (https://….vercel.app) dans .env.local avant de relancer pour la prod.\n'
-    )
-  }
-
   const supabase = createClient(supabaseUrl, key)
   console.log(DRY ? '🔍 Mode --dry-run (aucune écriture Blob/Supabase)\n' : '🚀 Synchronisation images → Blob + Supabase\n')
 

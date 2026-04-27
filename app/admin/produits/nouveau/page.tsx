@@ -84,6 +84,8 @@ export default function NouveauProduitPage() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
+  /** Aperçu immédiat du fichier (contenu affiché même si l’URL /api/shop-blob a un souci) */
+  const [localMainPreview, setLocalMainPreview] = useState<string | null>(null)
   const fileInputMainRef = useRef<HTMLInputElement>(null)
   const fileInputSecondary1Ref = useRef<HTMLInputElement>(null)
   const fileInputSecondary2Ref = useRef<HTMLInputElement>(null)
@@ -99,6 +101,12 @@ export default function NouveauProduitPage() {
       .then((d: { csrfToken?: string }) => setCsrfToken(d.csrfToken ?? null))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (localMainPreview) URL.revokeObjectURL(localMainPreview)
+    }
+  }, [localMainPreview])
 
   const handleInputChange = (field: keyof ProductFormData, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -189,8 +197,13 @@ export default function NouveauProduitPage() {
       }
 
       const imageUrl = data.imageUrl as string
-      if (target === 'main') handleInputChange('image_url', imageUrl)
-      else if (target === 'secondary1') handleInputChange('imageSecondary1', imageUrl)
+      if (target === 'main') {
+        setLocalMainPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev)
+          return URL.createObjectURL(file)
+        })
+        handleInputChange('image_url', imageUrl)
+      } else if (target === 'secondary1') handleInputChange('imageSecondary1', imageUrl)
       else handleInputChange('imageSecondary2', imageUrl)
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Erreur lors de l\'upload')
@@ -525,7 +538,13 @@ export default function NouveauProduitPage() {
                         <Input
                           id="image_url"
                           value={formData['image_url']}
-                          onChange={(e) => handleInputChange("image_url", e.target.value)}
+                          onChange={(e) => {
+                            setLocalMainPreview((prev) => {
+                              if (prev) URL.revokeObjectURL(prev)
+                              return null
+                            })
+                            handleInputChange("image_url", e.target.value)
+                          }}
                           placeholder="Cliquez sur 📤 pour uploader depuis votre ordinateur"
                           className={errors['image_url'] ? "border-red-500" : ""}
                         />
@@ -560,10 +579,10 @@ export default function NouveauProduitPage() {
                       <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="relative h-20 w-20 overflow-hidden rounded border-2 border-green-300 bg-white">
-                            {shouldUnoptimizeImageUrl(formData.image_url) ? (
-                              // next/image peut encore échouer sur /api/shop-blob ; <img> charge l’URL telle quelle
+                            {shouldUnoptimizeImageUrl(formData.image_url) || localMainPreview ? (
+                              // Aperçu local = contenu garanti juste après upload ; sinon URL (relative /api/shop-blob = même domaine)
                               <img
-                                src={getSafeImageSrc(formData.image_url)}
+                                src={localMainPreview || getSafeImageSrc(formData.image_url)}
                                 alt="Aperçu"
                                 className="h-full w-full object-cover"
                               />

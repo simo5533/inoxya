@@ -35,15 +35,13 @@ export type PutBlobLike = { url: string; pathname: string }
 
 /**
  * URL à enregistrer en base : URL Vercel directe si public, sinon proxy app (lecture via get() + token).
+ * Private : on enregistre une URL **relative** `/api/shop-blob?...` pour que l’aperçu / le site
+ * fonctionnent sur n’importe quel domaine (vercel.app, custom) sans mélange d’hôtes.
+ * Les metadata (OG) préfixent déjà avec `getSiteUrlSafe()` quand l’URL commence par `/`.
  */
 export function toShopImageUrl(putResult: PutBlobLike): string {
   if (getBlobPutAccess() === 'public') {
     return putResult.url
   }
-  const base = getServerOriginForBlobProxy()
-  if (!base) {
-    // Sans origine, fallback sur l’URL blob (peut 403 côté client sur private, mais upload ne plante pas)
-    return putResult.url
-  }
-  return `${base}/api/shop-blob?pathname=${encodeURIComponent(putResult.pathname)}`
+  return `/api/shop-blob?pathname=${encodeURIComponent(putResult.pathname)}`
 }
