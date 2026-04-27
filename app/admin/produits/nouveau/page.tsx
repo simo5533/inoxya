@@ -177,7 +177,13 @@ export default function NouveauProduitPage() {
         data = { error: res.ok ? 'Réponse invalide' : (text || 'Erreur lors de l\'upload') }
       }
       if (!res.ok) {
-        const msg = [data.error, data.details].filter(Boolean).join(' — ') || text || "Erreur lors de l'upload"
+        const isHtml = text.trim().startsWith('<!') || text.includes('<!DOCTYPE')
+        const fromApi = [data.details, data.error].filter(Boolean).join(' — ')
+        const msg =
+          fromApi ||
+          (isHtml
+            ? "Réponse serveur invalide (page d'erreur HTML). Ouvrez F12 → Réseau → product-image, ou consultez les logs Vercel."
+            : text || "Erreur lors de l'upload")
         throw new Error(msg)
       }
 

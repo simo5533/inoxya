@@ -170,8 +170,17 @@ export default function AdminPacksManagement() {
         body: formDataUpload
       })
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Erreur lors de l'upload")
+      const text = await res.text()
+      let data: { imageUrl?: string; error?: string; details?: string } = {}
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = {}
+      }
+      if (!res.ok) {
+        const msg = [data.details, data.error].filter(Boolean).join(" — ") || text || "Erreur lors de l'upload"
+        throw new Error(msg)
+      }
 
       const imageUrl = data.imageUrl as string
       setFormData(prev => ({ ...prev, image_url: imageUrl }))

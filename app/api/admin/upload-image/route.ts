@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
           access: 'public',
           contentType: 'image/svg+xml',
           token,
+          addRandomSuffix: true,
         })
         return NextResponse.json({ url: blob.url })
       }

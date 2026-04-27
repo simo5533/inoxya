@@ -132,16 +132,22 @@ export async function POST(request: NextRequest) {
       config
     )
 
-    // Si c'est la première image (main), générer aussi le thumbnail
+    // Miniature (2e put Blob) : ne pas faire échouer tout l’upload si celui-ci seul échoue
     if (imageType === 'main') {
       const thumbBlobFilename = generateBlobFilename(categoryFolder, productSlug, 'thumbnail')
       const thumbPath = join(productDir, 'thumbnail.webp')
-      await uploadImage(
-        imageBuffer,
-        thumbBlobFilename,
-        thumbPath,
-        { width: 200, height: 200, quality: 80 }
-      )
+      try {
+        await uploadImage(
+          imageBuffer,
+          thumbBlobFilename,
+          thumbPath,
+          { width: 200, height: 200, quality: 80 }
+        )
+      } catch (thumbErr) {
+        logger.warn('[upload/product-image] Miniature non créée (image principale OK):', {
+          err: thumbErr instanceof Error ? thumbErr.message : String(thumbErr),
+        })
+      }
     }
 
     return NextResponse.json({
@@ -150,8 +156,14 @@ export async function POST(request: NextRequest) {
       path: uploadResult.path // undefined en prod avec Blob
     })
   } catch (error: unknown) {
-    logger.error('Erreur upload image:', { error: error instanceof Error ? error.message : String(error) })
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+    const errorMessage = (() => {
+      if (error instanceof Error) return error.message
+      if (error && typeof error === 'object' && 'message' in error) {
+        return String((error as { message: unknown }).message)
+      }
+      return 'Erreur inconnue'
+    })()
+    logger.error('Erreur upload image:', { error: errorMessage, name: error instanceof Error ? error.name : undefined })
     let hint = ''
     if (/BLOB_READ_WRITE_TOKEN|vercel.*blob|@vercel\/blob/i.test(errorMessage)) {
       hint =

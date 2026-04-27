@@ -56,6 +56,8 @@ async function uploadToBlob(
       access: 'public',
       contentType: 'image/webp',
       token: blobReadWriteToken,
+      // Évite 409 / collision si même chemin rejoué (slug identique, double clic)
+      addRandomSuffix: true,
     })
 
     logger.info(`[STORAGE] Image uploadée vers Vercel Blob: ${blob.url}`)
