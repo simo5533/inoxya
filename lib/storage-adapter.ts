@@ -156,3 +156,11 @@ export function generateBlobFilename(
   return `bijoux/${categoryFolder}/${productSlug}/${filename}`
 }
 
+/**
+ * Clé d’objet pour uploads admin (page modifier produit, etc.) — hors arborescence bijoux/…
+ */
+export function generateAdminUploadBlobKey(uniquePart: string): string {
+  const safe = String(uniquePart).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'img'
+  return `admin/shop/${Date.now()}-${safe}.webp`
+}
+

@@ -1,23 +1,24 @@
 /**
- * Upload d'image pour l'admin : reçoit un fichier, le sauvegarde dans public/uploads,
- * retourne l'URL publique pour l'affecter à l'image du produit.
+ * Upload d’image admin (page *modifier* produit, etc.).
+ * En local : fichiers dans public/ ; sur Vercel : Vercel Blob (public/ n’est pas persistant / écriture refusée).
  */
-
 import { NextRequest, NextResponse } from 'next/server'
+import { join } from 'path'
+import sharp from 'sharp'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { requireCSRF } from '@/lib/security'
+import { uploadImage, generateAdminUploadBlobKey } from '@/lib/storage-adapter'
 import { promises as fs } from 'fs'
-import path from 'path'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
-const MAX_SIZE_MB = 5
-const UPLOAD_DIR = 'public/uploads'
+const RASTER_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const ALLOWED_TYPES = [...RASTER_TYPES, 'image/svg+xml']
+const MAX_SIZE_BYTES = 4 * 1024 * 1024 // aligné Vercel Blob / function
 
-function sanitizeFileName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'image'
+function sanitizeBase(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'image'
 }
 
 export async function POST(request: NextRequest) {
@@ -41,28 +42,66 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const maxBytes = MAX_SIZE_MB * 1024 * 1024
-    if (file.size > maxBytes) {
-      return NextResponse.json(
-        { error: `Fichier trop volumineux (max ${MAX_SIZE_MB} Mo).` },
-        { status: 400 }
-      )
+    if (file.size > MAX_SIZE_BYTES) {
+      return NextResponse.json({ error: 'Fichier trop volumineux (max 4 Mo).' }, { status: 400 })
     }
 
-    const ext = path.extname(file.name) || (file.type === 'image/svg+xml' ? '.svg' : '.jpg')
-    const baseName = sanitizeFileName(path.basename(file.name, ext))
-    const fileName = `${baseName}-${Date.now()}${ext}`
-    const dir = path.join(process.cwd(), UPLOAD_DIR)
-    const filePath = path.join(dir, fileName)
-
-    await fs.mkdir(dir, { recursive: true })
     const buffer = Buffer.from(await file.arrayBuffer())
-    await fs.writeFile(filePath, buffer)
+    const base = sanitizeBase(file.name.replace(/\.[^.]+$/, ''))
 
-    const url = `/uploads/${fileName}`
+    // SVG : pas de sharp ; Blob en prod, disque en dev
+    if (file.type === 'image/svg+xml') {
+      const isVercel = process.env.VERCEL === '1'
+      const isProd = process.env.NODE_ENV === 'production'
+      if (isProd && isVercel) {
+        const token = process.env['BLOB_READ_WRITE_TOKEN']
+        if (!token) {
+          return NextResponse.json(
+            { error: "SVG en prod: configurez BLOB_READ_WRITE_TOKEN (Vercel → Storage → Blob) puis redéployez." },
+            { status: 500 }
+          )
+        }
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { put } = require('@vercel/blob') as { put: (name: string, data: Buffer, o: object) => Promise<{ url: string }> }
+        const key = `admin/shop/${Date.now()}-${base}.svg`
+        const blob = await put(key, buffer, {
+          access: 'public',
+          contentType: 'image/svg+xml',
+          token,
+        })
+        return NextResponse.json({ url: blob.url })
+      }
+      const fileName = `${base}-${Date.now()}.svg`
+      const dir = join(process.cwd(), 'public', 'uploads')
+      await fs.mkdir(dir, { recursive: true })
+      const filePath = join(dir, fileName)
+      await fs.writeFile(filePath, buffer)
+      return NextResponse.json({ url: `/uploads/${fileName}` })
+    }
+
+    // Raster : validation sharp + uploadImage (Blob ou disque)
+    const meta = await sharp(buffer).metadata()
+    if (!meta.format || !['jpeg', 'png', 'webp', 'gif'].includes(meta.format)) {
+      return NextResponse.json({ error: "Fichier image invalide" }, { status: 400 })
+    }
+
+    const blobKey = generateAdminUploadBlobKey(base)
+    const localPath = join(process.cwd(), 'public', 'uploads', `${Date.now()}-admin.webp`)
+
+    const { url } = await uploadImage(buffer, blobKey, localPath, {
+      width: 1600,
+      height: 1600,
+      quality: 88,
+    })
     return NextResponse.json({ url })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: `Erreur lors de l'upload: ${message}` }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Erreur lors de l'upload de l'image",
+        details: message,
+      },
+      { status: 500 }
+    )
   }
 }

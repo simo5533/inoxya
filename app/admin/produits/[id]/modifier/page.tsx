@@ -194,10 +194,11 @@ export default function ModifierProduitPage() {
         headers: { 'X-CSRF-Token': csrfToken || '' },
         body: form,
       })
-      const data = await res.json().catch(() => ({}))
+      const data = (await res.json().catch(() => ({}))) as { error?: string; details?: string; url?: string }
       if (!res.ok) {
         handleInputChange('image_url', '')
-        setErrors((prev) => ({ ...prev, image_url: data.error || "Échec de l'upload" }))
+        const msg = [data.error, data.details].filter(Boolean).join(' — ') || "Échec de l'upload"
+        setErrors((prev) => ({ ...prev, image_url: msg }))
         return
       }
       if (data.url) {
