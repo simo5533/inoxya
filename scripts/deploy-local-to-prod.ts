@@ -36,6 +36,11 @@ const runNpm = (script: string) => {
 }
 
 async function main() {
+  console.log(
+    '\n⚠️  Les variables Supabase ci-dessous (.env.local) doivent pointer vers le MÊME projet que sur Vercel\n' +
+      '   (Dashboard Vercel → Settings → Environment Variables → NEXT_PUBLIC_SUPABASE_URL).\n' +
+      '   Sinon la base « prod » restera vide alors que ta copie locale est pleine.\n'
+  )
   if (!onlyImages) {
     console.log('\n════════ Étape 1/2 : migration SQLite → Supabase (npm run db:migrate) ════════\n')
     runNpm('db:migrate')
