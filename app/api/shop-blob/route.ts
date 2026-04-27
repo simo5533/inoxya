@@ -5,6 +5,7 @@
  */
 import { get } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
+import { getBlobPutAccess } from '@/lib/blob-helpers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'BLOB_READ_WRITE_TOKEN manquant' }, { status: 500 })
   }
 
+  const access = getBlobPutAccess()
   try {
-    const result = await get(decoded, { access: 'private', token })
+    const result = await get(decoded, { access, token })
     if (result == null) {
       return new NextResponse('Not found', { status: 404 })
     }

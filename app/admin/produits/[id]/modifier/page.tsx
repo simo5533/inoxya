@@ -669,14 +669,23 @@ export default function ModifierProduitPage() {
                     {formData['image_url']?.trim() && (
                       <div className="mt-3 flex items-center gap-3">
                         <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border">
-                          <Image
-                            src={getSafeImageSrc(formData['image_url'])}
-                            alt="Aperçu"
-                            fill
-                            className="object-cover"
-                            unoptimized={shouldUnoptimizePreview(formData['image_url'])}
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
-                          />
+                          {shouldUnoptimizePreview(formData['image_url']) ? (
+                            <img
+                              src={getSafeImageSrc(formData['image_url'])}
+                              alt="Aperçu"
+                              className="h-full w-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
+                            />
+                          ) : (
+                            <Image
+                              src={getSafeImageSrc(formData['image_url'])}
+                              alt="Aperçu"
+                              fill
+                              unoptimized={shouldUnoptimizePreview(formData['image_url'])}
+                              className="object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
+                            />
+                          )}
                         </div>
                         <p className="text-xs text-gray-500 truncate max-w-xs" title={formData['image_url']}>
                           {formData['image_url']}

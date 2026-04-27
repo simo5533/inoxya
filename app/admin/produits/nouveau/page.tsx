@@ -559,14 +559,22 @@ export default function NouveauProduitPage() {
                     {formData.image_url && (
                       <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="relative h-20 w-20">
-                            <Image 
-                              src={getSafeImageSrc(formData.image_url)} 
-                              alt="Aperçu" 
-                              fill
-                              unoptimized={shouldUnoptimizeImageUrl(formData.image_url)}
-                              className="object-cover rounded border-2 border-green-300" 
-                            />
+                          <div className="relative h-20 w-20 overflow-hidden rounded border-2 border-green-300 bg-white">
+                            {shouldUnoptimizeImageUrl(formData.image_url) ? (
+                              // next/image peut encore échouer sur /api/shop-blob ; <img> charge l’URL telle quelle
+                              <img
+                                src={getSafeImageSrc(formData.image_url)}
+                                alt="Aperçu"
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Image
+                                src={getSafeImageSrc(formData.image_url)}
+                                alt="Aperçu"
+                                fill
+                                className="object-cover"
+                              />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-green-800 mb-1">✅ Image principale définie</p>
