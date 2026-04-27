@@ -66,7 +66,7 @@ const initialFormData: ProductFormData = {
 
 const categories = [
   { id: "cat-bagues", name: "Bagues", slug: "bagues" },
-  { id: "cat-colliers", name: "Colliers", slug: "colliers" },
+  { id: "cat-colliers", name: "Ensemble et colliers", slug: "colliers" },
   { id: "cat-bracelets", name: "Bracelets", slug: "bracelets" },
   { id: "cat-boucles", name: "Boucles d&apos;oreilles", slug: "boucles-oreilles" },
   { id: "cat-broches", name: "Nos packs", slug: "broches" }

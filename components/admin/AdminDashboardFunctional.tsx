@@ -15,6 +15,7 @@ import {
   Trash2,
   Eye
 } from "lucide-react"
+import { categoryDbValueToDisplayName } from "@/lib/category-mapping"
 
 export default function AdminDashboardFunctional() {
   const [activeTab, setActiveTab] = useState("products")
@@ -192,7 +193,7 @@ export default function AdminDashboardFunctional() {
                     <div>
                       <h3 className="font-semibold">{product.name}</h3>
                       <p className="text-sm text-gray-600">
-                        {product.category} • {product.price} MAD • Stock: {product.stock}
+                        {categoryDbValueToDisplayName(product.category)} • {product.price} MAD • Stock: {product.stock}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

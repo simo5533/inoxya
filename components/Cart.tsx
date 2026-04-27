@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { categoryDbValueToDisplayName } from "@/lib/category-mapping"
 import { Plus, Minus, Trash2 } from "lucide-react"
 import { 
   getCartItems, 
@@ -195,7 +196,7 @@ export default function Cart({ onCheckout, showCheckoutButton = true, compact = 
               <p className="text-sm text-gray-600 mb-1">{item.name_ar}</p>
             )}
             <Badge variant="outline" className="text-xs">
-              {item.category}
+              {categoryDbValueToDisplayName(item.category ?? '')}
             </Badge>
           </div>
 

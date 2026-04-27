@@ -22,10 +22,10 @@ export const CATEGORIES: Record<string, CategoryDefinition> = {
     subtitle: 'Collection de bagues berbères et modernes'
   },
   colliers: {
-    label: 'Ensembles et colliers',
+    label: 'Ensemble et colliers',
     dbValue: 'Colliers',
     slug: 'colliers',
-    subtitle: 'Colliers traditionnels et contemporains'
+    subtitle: 'Ensembles assortis et colliers traditionnels ou contemporains'
   },
   bracelets: {
     label: 'Bracelets',
@@ -122,4 +122,14 @@ export function normalizeCategoryValue(value: string | number): string | null {
  * Liste de toutes les catégories (pour itération)
  */
 export const ALL_CATEGORIES = Object.values(CATEGORIES)
+
+/** Libellé affiché pour une valeur stockée en base (products.category, panier, etc.) */
+export function categoryDbValueToDisplayName(dbValue: string): string {
+  for (const cat of Object.values(CATEGORIES)) {
+    if (cat.dbValue === dbValue) {
+      return cat.label
+    }
+  }
+  return dbValue
+}
 

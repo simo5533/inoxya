@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { logger } from "@/lib/logger"
+import { categoryDbValueToDisplayName } from "@/lib/category-mapping"
 
 interface Product {
   id: string
@@ -59,14 +60,14 @@ interface ProductFormData {
   secondary_image_2: string  // Image secondaire 2 (optionnelle)
 }
 
-const categories = [
-  "Bagues",
-  "Colliers",
-  "Bracelets",
-  "Boucles d'oreilles",
-  "Pendentifs",
-  "Chaînes",
-  "Autres"
+const categories: { value: string; label: string }[] = [
+  { value: "Bagues", label: "Bagues" },
+  { value: "Colliers", label: "Ensemble et colliers" },
+  { value: "Bracelets", label: "Bracelets" },
+  { value: "Boucles d'oreilles", label: "Boucles d'oreilles" },
+  { value: "Pendentifs", label: "Pendentifs" },
+  { value: "Chaînes", label: "Chaînes" },
+  { value: "Autres", label: "Autres" }
 ]
 
 export default function ProductManagement() {
@@ -430,7 +431,8 @@ export default function ProductManagement() {
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.name_ar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    categoryDbValueToDisplayName(product.category).toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   if (loading && products.length === 0) {
@@ -607,7 +609,7 @@ export default function ProductManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{product.category}</Badge>
+                    <Badge variant="outline">{categoryDbValueToDisplayName(product.category)}</Badge>
                   </TableCell>
                   <TableCell>
                     <div>
@@ -723,7 +725,7 @@ export default function ProductManagement() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Catégorie</label>
-                  <div><Badge variant="outline">{selectedProduct.category}</Badge></div>
+                  <div><Badge variant="outline">{categoryDbValueToDisplayName(selectedProduct.category)}</Badge></div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Stock</label>
@@ -826,8 +828,8 @@ function ProductForm({ formData, errors, onInputChange, onSubmit, onCancel, load
             </SelectTrigger>
             <SelectContent>
               {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -11,7 +11,7 @@ import { logger } from './logger'
 
 /**
  * Images statiques par slug (assets locaux /public/images/categories/)
- * Bagues, Colliers, Bracelets, Boucles d'oreilles, Montres (parures), Nos packs (broches)
+ * Bagues, Ensemble et colliers, Bracelets, Boucles d'oreilles, Montres (parures), Nos packs (broches)
  */
 export const CATEGORY_STATIC_IMAGES: Record<string, string> = {
   bagues: '/images/categories/bagues.jpg',
@@ -29,7 +29,7 @@ export const CATEGORY_STATIC_IMAGES: Record<string, string> = {
  */
 export const CATEGORY_ALT_TEXTS: Record<string, string> = {
   bagues: 'Collection de bagues berbères en acier inoxydable premium',
-  colliers: 'Collection de colliers traditionnels et contemporains en acier inoxydable',
+  colliers: 'Collection d\'ensembles et de colliers traditionnels ou contemporains en acier inoxydable',
   bracelets: 'Collection de bracelets élégants et résistants en acier inoxydable',
   'boucles-oreilles': 'Collection de boucles d\'oreilles traditionnelles et modernes en acier inoxydable',
   montres: 'Collection de montres élégantes et précises en acier inoxydable',

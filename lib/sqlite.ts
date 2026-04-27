@@ -1105,7 +1105,7 @@ export function initializeDatabase(): void {
     
     const categories = [
       ['Bagues', 'bagues', 'Magnifiques bagues berbères traditionnelles'],
-      ['Colliers', 'colliers', 'Colliers en argent et or avec motifs marocains'],
+      ['Ensemble et colliers', 'colliers', 'Ensembles assortis et colliers avec motifs marocains'],
       ['Bracelets', 'bracelets', 'Bracelets élégants aux designs authentiques'],
       ['Boucles d\'oreilles', 'boucles-oreilles', 'Boucles d\'oreilles raffinées'],
       ['Nos packs', 'broches', 'Packs exclusifs de bijoux à prix avantageux']
@@ -1113,8 +1113,8 @@ export function initializeDatabase(): void {
     
     categories.forEach(category => {
       insertCategory.run(category)
-      // Mettre à jour la catégorie "broches" si elle existe déjà
-      if (category[1] === 'broches') {
+      // Mettre à jour le libellé si la ligne existe déjà (slug stable)
+      if (category[1] === 'broches' || category[1] === 'colliers') {
         updateCategory.run(category[0], category[2], category[1])
       }
     })

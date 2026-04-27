@@ -532,7 +532,7 @@ export default function AdminProduitsPage() {
                 <SelectContent>
                   <SelectItem value="all">Toutes catégories</SelectItem>
                   <SelectItem value="cat-bagues">Bagues</SelectItem>
-                  <SelectItem value="cat-colliers">Colliers</SelectItem>
+                  <SelectItem value="cat-colliers">Ensemble et colliers</SelectItem>
                   <SelectItem value="cat-bracelets">Bracelets</SelectItem>
                   <SelectItem value="cat-boucles">Boucles d&apos;oreilles</SelectItem>
                   <SelectItem value="cat-broches">Nos packs</SelectItem>
