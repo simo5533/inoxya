@@ -48,6 +48,8 @@
     "db:supabase:apply-schema": "node scripts/apply-supabase-schema.cjs",
     "db:schema": "npx tsx scripts/create-supabase-schema.ts",
     "db:migrate": "npx tsx scripts/migrate-to-supabase.ts",
+    "db:sync:local-images": "npx tsx scripts/sync-local-images-to-vercel-blob.ts",
+    "db:sync:local-images:dry": "npx tsx scripts/sync-local-images-to-vercel-blob.ts --dry-run",
     "db:check": "npx tsx scripts/check-local-products.ts",
     "db:test-supabase": "npx tsx scripts/test-supabase-connection.ts",
     "test:products": "npx tsx scripts/test-products-display.ts",
