@@ -8,6 +8,7 @@ import { useLocale } from "next-intl"
 
 // Utiliser le mapping centralisé
 import { getCategoryImageWithFallback, getCategoryAltText } from '@/lib/category-images-mapping'
+import { resolveCategoryCardDisplay } from '@/lib/category-mapping'
 
 interface CategoryCardProps {
   category: {
@@ -37,18 +38,25 @@ const getCategoryImageSrc = (slug: string, image_url?: string, coverImage?: stri
 export default function CategoryCard({ category, index, onFilter }: CategoryCardProps) {
   const locale = useLocale()
   const [imageError, setImageError] = useState(false)
+
+  const { name: displayName, description: displayDescription } = resolveCategoryCardDisplay(
+    category.slug,
+    category.name,
+    category.description
+  )
+  const isPacksCategory = category.slug === "broches"
   
   // Obtenir l'image source garantie
   const imageSrc = getCategoryImageSrc(category.slug, category.image_url, category.coverImage)
 
   // Rediriger vers /packs si c'est la catégorie "Nos packs"
-  const href = category.slug === "broches" || category.name === "Nos packs" 
+  const href = isPacksCategory
     ? `/${locale}/packs` 
     : `/${locale}/bijoux?category=${category.slug}`
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // Si onFilter est fourni (via prop), filtrer au lieu de rediriger
-    if (onFilter && category.slug !== "broches" && category.name !== "Nos packs") {
+    if (onFilter && !isPacksCategory) {
       e.preventDefault()
       onFilter(category.slug)
       return
@@ -59,14 +67,14 @@ export default function CategoryCard({ category, index, onFilter }: CategoryCard
       filterProductsByCategory?: (slug: string) => void
     }
     const windowWithFilter = typeof window !== 'undefined' ? (window as WindowWithFilter) : null
-    if (windowWithFilter?.filterProductsByCategory && category.slug !== "broches" && category.name !== "Nos packs") {
+    if (windowWithFilter?.filterProductsByCategory && !isPacksCategory) {
       e.preventDefault()
       windowWithFilter.filterProductsByCategory(category.slug)
       return
     }
     
     // Comportement par défaut : redirection avec smooth scroll
-    if (category.slug !== "broches" && category.name !== "Nos packs") {
+    if (!isPacksCategory) {
       setTimeout(() => {
         const productsSection = document.getElementById('products-section')
         if (productsSection) {
@@ -77,7 +85,7 @@ export default function CategoryCard({ category, index, onFilter }: CategoryCard
   }
 
   return (
-    <Link href={href} className="block" onClick={handleClick} aria-label={`Voir les ${category.name}`}>
+    <Link href={href} className="block" onClick={handleClick} aria-label={`Voir les ${displayName}`}>
       <div
         className="group relative rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.03] hover:-translate-y-1"
         style={{ 
@@ -111,11 +119,11 @@ export default function CategoryCard({ category, index, onFilter }: CategoryCard
           {/* Contenu texte en bas à gauche - Style uniforme */}
           <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
             <h3 className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] group-hover:text-luxury-gold transition-colors duration-300">
-              {category.name}
+              {displayName}
             </h3>
-            {category.description && (
+            {displayDescription && (
               <p className="text-sm md:text-base text-gray-200 opacity-95 group-hover:opacity-100 transition-opacity duration-300 leading-relaxed drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
-                {category.description}
+                {displayDescription}
               </p>
             )}
           </div>

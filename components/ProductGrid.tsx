@@ -8,6 +8,7 @@ import { Crown, Sparkles, Filter, SortAsc, Star } from "lucide-react"
 import { logger } from "@/lib/logger"
 import { ProductGridSkeleton } from "@/components/ProductCardSkeleton"
 import { useLocale } from "next-intl"
+import { resolveCategoryCardDisplay } from "@/lib/category-mapping"
 
 interface ProductGridProps {
   products: any[]
@@ -148,7 +149,7 @@ function ProductGridContent({ products, categories = [], title, subtitle, showFi
                       </option>
                       {categories.map((category: any) => (
                         <option key={category.id} value={category.slug} className="bg-luxury-black text-luxury-ivory">
-                          {category.name}
+                          {resolveCategoryCardDisplay(category.slug, category.name, category.description).name}
                         </option>
                       ))}
                     </select>

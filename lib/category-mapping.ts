@@ -133,3 +133,19 @@ export function categoryDbValueToDisplayName(dbValue: string): string {
   return dbValue
 }
 
+/**
+ * Titre + sous-titre des cartes catégorie : mapping canonique prioritaire sur la ligne DB
+ * (évite « Colliers » / textes seed obsolètes si Supabase/SQLite n’a pas été migré).
+ */
+export function resolveCategoryCardDisplay(
+  slug: string,
+  dbName: string,
+  dbDescription?: string
+): { name: string; description?: string } {
+  const def = CATEGORIES[slug]
+  if (def) {
+    return { name: def.label, description: def.subtitle }
+  }
+  return { name: dbName, description: dbDescription }
+}
+
