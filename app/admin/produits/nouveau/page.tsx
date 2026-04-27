@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Upload, Plus, X } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { logger } from "@/lib/logger"
+import { getSafeImageSrc, shouldUnoptimizeImageUrl } from "@/lib/image-path"
 
 interface ProductFormData {
   name: string
@@ -560,13 +561,11 @@ export default function NouveauProduitPage() {
                         <div className="flex items-center gap-3">
                           <div className="relative h-20 w-20">
                             <Image 
-                              src={formData.image_url} 
+                              src={getSafeImageSrc(formData.image_url)} 
                               alt="Aperçu" 
                               fill
+                              unoptimized={shouldUnoptimizeImageUrl(formData.image_url)}
                               className="object-cover rounded border-2 border-green-300" 
-                              onError={() => {
-                                // Error handled by Next.js Image component
-                              }}
                             />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -619,7 +618,13 @@ export default function NouveauProduitPage() {
                     {formData.imageSecondary1 && (
                       <div className="mt-2 flex items-center gap-3">
                         <div className="relative h-16 w-16">
-                          <Image src={formData.imageSecondary1} alt="Aperçu 1" fill className="object-cover rounded border" />
+                          <Image
+                            src={getSafeImageSrc(formData.imageSecondary1)}
+                            alt="Aperçu 1"
+                            fill
+                            unoptimized={shouldUnoptimizeImageUrl(formData.imageSecondary1)}
+                            className="object-cover rounded border"
+                          />
                         </div>
                         <p className="text-xs text-gray-500 truncate flex-1" title={formData.imageSecondary1}>{formData.imageSecondary1}</p>
                       </div>
@@ -660,7 +665,13 @@ export default function NouveauProduitPage() {
                     {formData.imageSecondary2 && (
                       <div className="mt-2 flex items-center gap-3">
                         <div className="relative h-16 w-16">
-                          <Image src={formData.imageSecondary2} alt="Aperçu 2" fill className="object-cover rounded border" />
+                          <Image
+                            src={getSafeImageSrc(formData.imageSecondary2)}
+                            alt="Aperçu 2"
+                            fill
+                            unoptimized={shouldUnoptimizeImageUrl(formData.imageSecondary2)}
+                            className="object-cover rounded border"
+                          />
                         </div>
                         <p className="text-xs text-gray-500 truncate flex-1" title={formData.imageSecondary2}>{formData.imageSecondary2}</p>
                       </div>
@@ -708,7 +719,13 @@ export default function NouveauProduitPage() {
                       {formData[key] && (
                         <div className="mt-2 flex items-center gap-3">
                           <div className="relative h-16 w-16">
-                            <Image src={formData[key]} alt={`Aperçu ${n}`} fill className="object-cover rounded border" />
+                            <Image
+                              src={getSafeImageSrc(formData[key])}
+                              alt={`Aperçu ${n}`}
+                              fill
+                              unoptimized={shouldUnoptimizeImageUrl(formData[key])}
+                              className="object-cover rounded border"
+                            />
                           </div>
                           <p className="text-xs text-gray-500 truncate flex-1" title={formData[key]}>{formData[key]}</p>
                         </div>

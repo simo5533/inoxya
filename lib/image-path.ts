@@ -66,3 +66,19 @@ export function getSafeImageSrc(src: string | null | undefined): string {
   // On retourne toujours la valeur normalisée pour garantir la cohérence serveur/client.
   return normalized
 }
+
+/**
+ * Désactiver l’optimiseur Next/Image pour les routes API (Blob privé, fichiers locaux servis en HTTP).
+ * Sinon `/_next/image?url=...` peut retourner une image vide ou 400 pour `/api/shop-blob?pathname=...`.
+ */
+export function shouldUnoptimizeImageUrl(src: string | null | undefined): boolean {
+  if (!src || !String(src).trim()) return false
+  const u = String(src)
+    .trim()
+    .replace(/^["']|["']$/g, '')
+  if (u.startsWith('/api/')) return true
+  if (/^https?:\/\//i.test(u) && (u.includes('/api/shop-blob') || u.includes('/api/admin/serve-local-image'))) {
+    return true
+  }
+  return false
+}

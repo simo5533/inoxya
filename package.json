@@ -54,6 +54,7 @@
     "db:sync:local-images:dry": "npx tsx scripts/sync-local-images-to-vercel-blob.ts --dry-run",
     "db:check": "npx tsx scripts/check-local-products.ts",
     "db:test-supabase": "npx tsx scripts/test-supabase-connection.ts",
+    "verify:env": "npx tsx scripts/verify-env.ts",
     "test:products": "npx tsx scripts/test-products-display.ts",
     "validate": "node scripts/validate.js",
     "deploy:check": "npm run type-check && npm run build",

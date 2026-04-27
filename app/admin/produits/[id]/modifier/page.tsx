@@ -15,6 +15,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { logger } from "@/lib/logger"
 import type { Product } from "@/lib/types"
+import { shouldUnoptimizeImageUrl } from "@/lib/image-path"
 
 function getSafeImageSrc(url: string | undefined): string {
   if (!url || !url.trim()) return '/placeholder.svg'
@@ -34,6 +35,7 @@ function isLocalImageSrc(url: string | undefined): boolean {
 
 /** Utiliser unoptimized pour chemins locaux ou URLs API (éviter échec optimiseur Next) */
 function shouldUnoptimizePreview(url: string | undefined): boolean {
+  if (shouldUnoptimizeImageUrl(url)) return true
   if (!url || !url.trim()) return false
   const u = url.trim().replace(/^"|"$/g, '')
   return isLocalImageSrc(url) || u.startsWith('/api/admin/serve-local-image')
