@@ -51,6 +51,8 @@ interface ProductRow {
   is_featured?: boolean
   rating?: string | number | null
   reviews_count?: string | number | null
+  stock_quantity?: string | number | null
+  stock?: string | number | null
   created_at?: string | Date
   updated_at?: string | Date
 }
@@ -197,22 +199,151 @@ export class PostgresAdapter implements DatabaseAdapter {
     return this.mapProduct(row)
   }
 
-  async createProduct(_productData: Partial<Product>): Promise<Product | null> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[PostgresAdapter] createProduct not yet implemented')
-    return null
+  async createProduct(productData: Partial<Product>): Promise<Product | null> {
+    try {
+      if (!productData.name || productData.price == null) {
+        logger.error('[PostgresAdapter] createProduct: champs requis manquants', {
+          hasName: !!productData.name,
+          hasPrice: productData.price != null,
+        })
+        return null
+      }
+
+      const categoryName = productData.category || productData.category_id || 'Général'
+      let categoryId: string | null = null
+      const catResult = await this.pool.query<{ id: string }>(
+        'SELECT id FROM categories WHERE name = $1 OR slug = $1 LIMIT 1',
+        [categoryName]
+      )
+      if (catResult.rows[0]?.id) {
+        categoryId = String(catResult.rows[0].id)
+      }
+
+      const imageUrl = productData.image_url || productData.main_image || null
+      let imagesValue: string | unknown[] = '[]'
+      if (productData.images) {
+        if (typeof productData.images === 'string') {
+          try {
+            imagesValue = JSON.parse(productData.images) as unknown[]
+          } catch {
+            imagesValue = []
+          }
+        } else {
+          imagesValue = productData.images
+        }
+      }
+
+      const stockQty =
+        productData.stock !== undefined ? Number(productData.stock) : 0
+      const isActive =
+        productData.is_active !== undefined ? Boolean(productData.is_active) : true
+      const isAvailable =
+        productData.is_available !== undefined
+          ? Boolean(productData.is_available)
+          : isActive
+
+      const result = await this.pool.query<ProductRow>(
+        `INSERT INTO products (
+          name, name_ar, description, price, original_price,
+          category_id, category, image_url, images,
+          stock_quantity, is_available, is_active, is_featured,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, NOW(), NOW())
+        RETURNING *`,
+        [
+          productData.name,
+          productData.name_ar || null,
+          productData.description || 'Description non fournie',
+          productData.price,
+          productData.original_price ?? null,
+          categoryId,
+          categoryName,
+          imageUrl,
+          JSON.stringify(imagesValue),
+          stockQty,
+          isAvailable,
+          isActive,
+          productData.is_featured !== undefined ? Boolean(productData.is_featured) : false,
+        ]
+      )
+
+      const row = result.rows[0]
+      if (!row) {
+        logger.error('[PostgresAdapter] createProduct: aucune ligne retournée')
+        return null
+      }
+
+      return this.mapProduct(row)
+    } catch (error) {
+      logger.error('[PostgresAdapter] createProduct error:', error)
+      return null
+    }
   }
 
-  async updateProduct(_id: string, _productData: Partial<Product>): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[PostgresAdapter] updateProduct not yet implemented')
-    return false
+  async updateProduct(id: string, productData: Partial<Product>): Promise<boolean> {
+    try {
+      const sets: string[] = []
+      const values: unknown[] = []
+      let idx = 1
+
+      const fieldMap: Record<string, unknown> = {
+        name: productData.name,
+        name_ar: productData.name_ar,
+        description: productData.description,
+        price: productData.price,
+        original_price: productData.original_price,
+        is_active: productData.is_active,
+        is_available: productData.is_available,
+        is_featured: productData.is_featured,
+        image_url: productData.image_url ?? productData.main_image,
+        category: productData.category ?? productData.category_id,
+      }
+
+      if (productData.stock !== undefined) {
+        fieldMap['stock_quantity'] = productData.stock
+      }
+
+      if (productData.images !== undefined) {
+        const raw = productData.images
+        fieldMap['images'] =
+          typeof raw === 'string' ? raw : JSON.stringify(raw)
+      }
+
+      for (const [col, val] of Object.entries(fieldMap)) {
+        if (val === undefined) continue
+        if (col === 'images') {
+          sets.push(`${col} = $${idx}::jsonb`)
+        } else {
+          sets.push(`${col} = $${idx}`)
+        }
+        values.push(val)
+        idx++
+      }
+
+      if (sets.length === 0) return false
+
+      sets.push('updated_at = NOW()')
+      values.push(id)
+
+      const result = await this.pool.query(
+        `UPDATE products SET ${sets.join(', ')} WHERE id = $${idx}`,
+        values
+      )
+      return (result.rowCount ?? 0) > 0
+    } catch (error) {
+      logger.error('[PostgresAdapter] updateProduct error:', error)
+      return false
+    }
   }
 
-  async deleteProduct(_id: string): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[PostgresAdapter] deleteProduct not yet implemented')
-    return false
+  async deleteProduct(id: string): Promise<boolean> {
+    try {
+      const result = await this.pool.query('DELETE FROM products WHERE id = $1', [id])
+      return (result.rowCount ?? 0) > 0
+    } catch (error) {
+      logger.error('[PostgresAdapter] deleteProduct error:', error)
+      return false
+    }
   }
 
   // Categories
@@ -272,10 +403,43 @@ export class PostgresAdapter implements DatabaseAdapter {
     }
   }
 
-  async createPack(_packData: Partial<Pack>): Promise<Pack | null> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[PostgresAdapter] createPack not yet implemented')
-    return null
+  async createPack(packData: Partial<Pack>): Promise<Pack | null> {
+    try {
+      if (!packData.name || packData.price == null || !packData.slug) {
+        logger.error('[PostgresAdapter] createPack: champs requis manquants')
+        return null
+      }
+
+      const result = await this.pool.query<PackRow>(
+        `INSERT INTO packs (name, slug, description, price, image_url, is_featured)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [
+          packData.name,
+          packData.slug,
+          packData.description || null,
+          packData.price,
+          packData.image_url || null,
+          packData.is_featured !== undefined ? Boolean(packData.is_featured) : false,
+        ]
+      )
+
+      const row = result.rows[0]
+      if (!row) return null
+
+      return {
+        id: String(row.id),
+        name: row.name,
+        slug: row.slug,
+        description: row.description || undefined,
+        price: Number(row.price),
+        image_url: row.image_url || undefined,
+        is_featured: Boolean(row.is_featured),
+      }
+    } catch (error) {
+      logger.error('[PostgresAdapter] createPack error:', error)
+      return null
+    }
   }
 
   async updatePack(_id: string, _packData: Partial<Pack>): Promise<boolean> {
@@ -664,6 +828,12 @@ export class PostgresAdapter implements DatabaseAdapter {
       is_available: row.is_available !== undefined ? Boolean(row.is_available) : (row.is_active !== undefined ? Boolean(row.is_active) : true),
       is_active: row.is_active !== undefined ? Boolean(row.is_active) : true,
       is_featured: Boolean(row.is_featured),
+      stock:
+        row.stock_quantity != null
+          ? Number(row.stock_quantity)
+          : row.stock != null
+            ? Number(row.stock)
+            : undefined,
       rating: row.rating ? Number(row.rating) : undefined,
       reviews_count: row.reviews_count ? Number(row.reviews_count) : undefined,
       created_at: row.created_at ? (typeof row.created_at === 'string' ? row.created_at : row.created_at.toISOString()) : undefined,
