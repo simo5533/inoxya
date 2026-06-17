@@ -51,6 +51,12 @@ const securityHeaders = [
 const nextConfig = {
   transpilePackages: ['next-intl'],
   outputFileTracingRoot: process.cwd(),
+  async redirects() {
+    return [
+      { source: '/', destination: '/fr', permanent: false },
+      { source: '/login', destination: '/fr/login', permanent: false },
+    ]
+  },
   async headers() {
     return [
       {
