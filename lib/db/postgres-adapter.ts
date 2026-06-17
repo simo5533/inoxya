@@ -90,8 +90,14 @@ interface PackRow {
   created_at?: string | Date
 }
 
+interface ProductColumnMeta {
+  data_type: string
+  column_default: string | null
+}
+
 export class PostgresAdapter implements DatabaseAdapter {
   private pool: Pool
+  private productColumnsCache: Map<string, ProductColumnMeta> | null = null
 
   constructor(databaseUrl: string) {
     // Vercel Postgres / Neon optimized pool config
@@ -199,84 +205,148 @@ export class PostgresAdapter implements DatabaseAdapter {
     return this.mapProduct(row)
   }
 
+  private async getProductColumnMeta(): Promise<Map<string, ProductColumnMeta>> {
+    if (this.productColumnsCache) return this.productColumnsCache
+
+    const result = await this.pool.query<{
+      column_name: string
+      data_type: string
+      column_default: string | null
+    }>(
+      `SELECT column_name, data_type, column_default
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'products'
+       ORDER BY ordinal_position`
+    )
+
+    this.productColumnsCache = new Map(
+      result.rows.map((row) => [
+        row.column_name,
+        { data_type: row.data_type, column_default: row.column_default },
+      ])
+    )
+    return this.productColumnsCache
+  }
+
+  private parseImagesForDb(
+    raw: string | string[] | undefined,
+    asJsonb: boolean
+  ): string | unknown[] {
+    if (!raw) return asJsonb ? [] : '[]'
+    if (typeof raw === 'string') {
+      try {
+        return asJsonb ? (JSON.parse(raw) as unknown[]) : raw
+      } catch {
+        return asJsonb ? [] : '[]'
+      }
+    }
+    return asJsonb ? raw : JSON.stringify(raw)
+  }
+
   async createProduct(productData: Partial<Product>): Promise<Product | null> {
-    try {
-      if (!productData.name || productData.price == null) {
-        logger.error('[PostgresAdapter] createProduct: champs requis manquants', {
-          hasName: !!productData.name,
-          hasPrice: productData.price != null,
-        })
-        return null
-      }
+    if (!productData.name || productData.price == null) {
+      throw new Error('Champs requis manquants: name et price')
+    }
 
-      const categoryName = productData.category || productData.category_id || 'Général'
-      let categoryId: string | null = null
-      const catResult = await this.pool.query<{ id: string }>(
-        'SELECT id FROM categories WHERE name = $1 OR slug = $1 LIMIT 1',
-        [categoryName]
+    const cols = await this.getProductColumnMeta()
+    if (cols.size === 0) {
+      throw new Error(
+        'Table products absente. Exécutez scripts/neon-setup-clean.sql dans Neon SQL Editor.'
       )
-      if (catResult.rows[0]?.id) {
-        categoryId = String(catResult.rows[0].id)
-      }
+    }
 
-      const imageUrl = productData.image_url || productData.main_image || null
-      let imagesValue: string | unknown[] = '[]'
-      if (productData.images) {
-        if (typeof productData.images === 'string') {
-          try {
-            imagesValue = JSON.parse(productData.images) as unknown[]
-          } catch {
-            imagesValue = []
-          }
-        } else {
-          imagesValue = productData.images
+    const categoryName = productData.category || productData.category_id || 'Général'
+    let categoryId: string | null = null
+    if (cols.has('category_id')) {
+      try {
+        const catResult = await this.pool.query<{ id: string }>(
+          'SELECT id FROM categories WHERE name = $1 OR slug = $1 LIMIT 1',
+          [categoryName]
+        )
+        if (catResult.rows[0]?.id) {
+          categoryId = String(catResult.rows[0].id)
         }
+      } catch {
+        // Table categories absente — insertion sans FK
       }
+    }
 
-      const stockQty =
-        productData.stock !== undefined ? Number(productData.stock) : 0
-      const isActive =
-        productData.is_active !== undefined ? Boolean(productData.is_active) : true
-      const isAvailable =
-        productData.is_available !== undefined
-          ? Boolean(productData.is_available)
-          : isActive
+    const imageUrl = productData.image_url || productData.main_image || null
+    const imagesIsJsonb =
+      cols.get('images')?.data_type === 'jsonb' ||
+      cols.get('images')?.data_type === 'ARRAY'
+    const imagesValue = this.parseImagesForDb(
+      productData.images as string | string[] | undefined,
+      imagesIsJsonb
+    )
 
+    const stockQty = productData.stock !== undefined ? Number(productData.stock) : 0
+    const isActive =
+      productData.is_active !== undefined ? Boolean(productData.is_active) : true
+    const isAvailable =
+      productData.is_available !== undefined
+        ? Boolean(productData.is_available)
+        : isActive
+
+    const row: Record<string, unknown> = {}
+
+    const idMeta = cols.get('id')
+    if (idMeta && !idMeta.column_default) {
+      if (idMeta.data_type === 'text' || idMeta.data_type === 'character varying') {
+        row['id'] = `prod-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+      }
+    }
+
+    if (cols.has('name')) row['name'] = productData.name
+    if (cols.has('name_ar')) row['name_ar'] = productData.name_ar || null
+    if (cols.has('description')) {
+      row['description'] = productData.description || 'Description non fournie'
+    }
+    if (cols.has('price')) row['price'] = productData.price
+    if (cols.has('original_price')) row['original_price'] = productData.original_price ?? null
+    if (cols.has('category_id') && categoryId) row['category_id'] = categoryId
+    if (cols.has('category')) row['category'] = categoryName
+    if (cols.has('image_url')) row['image_url'] = imageUrl
+    if (cols.has('images')) row['images'] = imagesValue
+    if (cols.has('stock_quantity')) row['stock_quantity'] = stockQty
+    else if (cols.has('stock')) row['stock'] = stockQty
+    if (cols.has('is_available')) row['is_available'] = isAvailable
+    if (cols.has('is_active')) row['is_active'] = isActive
+    if (cols.has('is_featured')) {
+      row['is_featured'] =
+        productData.is_featured !== undefined ? Boolean(productData.is_featured) : false
+    }
+
+    const keys = Object.keys(row)
+    const values = keys.map((k) => row[k])
+    const placeholders = keys.map((k, i) => {
+      if (k === 'images' && imagesIsJsonb) return `$${i + 1}::jsonb`
+      return `$${i + 1}`
+    })
+
+    const hasTimestamps = cols.has('created_at') && cols.has('updated_at')
+    const columnsSql = hasTimestamps
+      ? `${keys.join(', ')}, created_at, updated_at`
+      : keys.join(', ')
+    const valuesSql = hasTimestamps
+      ? `${placeholders.join(', ')}, NOW(), NOW()`
+      : placeholders.join(', ')
+
+    try {
       const result = await this.pool.query<ProductRow>(
-        `INSERT INTO products (
-          name, name_ar, description, price, original_price,
-          category_id, category, image_url, images,
-          stock_quantity, is_available, is_active, is_featured,
-          created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, NOW(), NOW())
-        RETURNING *`,
-        [
-          productData.name,
-          productData.name_ar || null,
-          productData.description || 'Description non fournie',
-          productData.price,
-          productData.original_price ?? null,
-          categoryId,
-          categoryName,
-          imageUrl,
-          JSON.stringify(imagesValue),
-          stockQty,
-          isAvailable,
-          isActive,
-          productData.is_featured !== undefined ? Boolean(productData.is_featured) : false,
-        ]
+        `INSERT INTO products (${columnsSql}) VALUES (${valuesSql}) RETURNING *`,
+        values
       )
-
-      const row = result.rows[0]
-      if (!row) {
-        logger.error('[PostgresAdapter] createProduct: aucune ligne retournée')
-        return null
+      const inserted = result.rows[0]
+      if (!inserted) {
+        throw new Error('INSERT réussi mais aucune ligne retournée')
       }
-
-      return this.mapProduct(row)
+      return this.mapProduct(inserted)
     } catch (error) {
-      logger.error('[PostgresAdapter] createProduct error:', error)
-      return null
+      const pgCode = (error as { code?: string })?.code
+      const pgMsg = error instanceof Error ? error.message : String(error)
+      logger.error('[PostgresAdapter] createProduct error:', { code: pgCode, message: pgMsg })
+      throw new Error(`Insertion Neon échouée: ${pgMsg}`)
     }
   }
 

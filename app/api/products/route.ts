@@ -8,7 +8,7 @@ import type { ProductResponse, DatabaseProduct } from '@/lib/types'
 import { createProductSchema, validateWithSchema } from '@/lib/validations'
 import { slugToDbValue } from '@/lib/category-mapping'
 import { getAllBijoux } from '@/lib/database'
-import { getDatabaseAdapter } from '@/lib/db'
+import { getDatabaseAdapter, getAdapterType } from '@/lib/db'
 import type { Product } from '@/lib/db/types'
 import { STOCK_UNKNOWN } from '@/lib/custom-pack'
 
@@ -368,23 +368,17 @@ export async function POST(request: NextRequest) {
       }
 
       // Créer le produit via l'adapter
-      const createdProduct = await adapter.createProduct(productData)
-      
+      let createdProduct: Product | null = null
+      try {
+        createdProduct = await adapter.createProduct(productData)
+      } catch (createErr) {
+        const createMsg = createErr instanceof Error ? createErr.message : String(createErr)
+        logger.error('[POST /api/products] createProduct adapter:', { error: createMsg })
+        throw createErr
+      }
+
       if (!createdProduct) {
-        logger.error('[POST /api/products] Échec création via adapter', { 
-          productName: productData.name,
-          category: productData.category,
-          hasImage: !!productData.image_url
-        })
-        return NextResponse.json(
-          { 
-            error: 'Échec de la création du produit en base de données',
-            details: process.env['NODE_ENV'] === 'development' 
-              ? 'Vérifiez les logs du serveur pour plus de détails. Assurez-vous que la catégorie existe et que tous les champs requis sont fournis.'
-              : 'Veuillez réessayer plus tard ou contacter l\'administrateur.'
-          },
-          { status: 500 }
-        )
+        throw new Error('Adapter createProduct a retourné null')
       }
 
       logger.info(`[POST /api/products] ✅ Produit créé via adapter: ${createdProduct.id}`)
@@ -441,7 +435,7 @@ export async function POST(request: NextRequest) {
       logger.error('[POST /api/products] ❌ Erreur adapter:', { 
         error: errorMessage,
         stack: errorStack,
-        adapterType: process.env['NEXT_PUBLIC_SUPABASE_URL'] ? 'Supabase' : (process.env['DATABASE_URL'] ? 'PostgreSQL' : 'SQLite')
+        adapterType: getAdapterType() ?? 'unknown',
       })
       
       // Fallback vers SQLite si l'adapter échoue
@@ -452,10 +446,10 @@ export async function POST(request: NextRequest) {
         logger.error('[POST /api/products] ❌ Connexion SQLite indisponible - Aucun fallback disponible')
         return NextResponse.json(
           { 
-            error: 'Base de données indisponible. Veuillez réessayer plus tard.',
-            details: process.env['NODE_ENV'] === 'development' ? errorMessage : undefined
+            error: 'Échec de la création du produit en base de données',
+            details: errorMessage,
           },
-          { status: 503 }
+          { status: 500 }
         )
       }
 

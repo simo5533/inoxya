@@ -50,6 +50,10 @@ import {
   markNotificationAsRead,
   getDashboardStats,
   testConnection,
+  initializeDatabase,
+  executeQuery,
+  select,
+  detectDriver,
 } from '../sqlite'
 import { slugToDbValue } from '../category-mapping'
 import { logger } from '../logger'
@@ -103,10 +107,57 @@ export class SqliteAdapter implements DatabaseAdapter {
     return await getProductByIdAsync(id) as Product | null
   }
 
-  async createProduct(_productData: Partial<Product> & { name: string; price: number }): Promise<Product | null> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[SqliteAdapter] createProduct not yet implemented')
-    return null
+  async createProduct(
+    productData: Partial<Product> & { name: string; price: number }
+  ): Promise<Product | null> {
+    if (!testConnection()) return null
+    initializeDatabase()
+
+    const categoryName = productData.category || productData.category_id || 'Général'
+    const imageUrl = productData.image_url || productData.main_image || null
+    const imagesJson =
+      productData.images && (Array.isArray(productData.images) || typeof productData.images === 'string')
+        ? typeof productData.images === 'string'
+          ? productData.images
+          : JSON.stringify(productData.images)
+        : '[]'
+
+    const now = new Date().toISOString()
+    const result = executeQuery(
+      `INSERT INTO products (name, name_ar, description, price, original_price, category, stock, is_active, image_url, images, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        productData.name,
+        productData.name_ar || null,
+        productData.description || 'Description non fournie',
+        productData.price,
+        productData.original_price ?? null,
+        categoryName,
+        productData.stock ?? 0,
+        productData.is_active !== undefined ? Boolean(productData.is_active) : true,
+        imageUrl,
+        imagesJson,
+        now,
+        now,
+      ]
+    )
+
+    let lastId: number | null = result.lastInsertRowid ? Number(result.lastInsertRowid) : null
+    if (!lastId && detectDriver() === 'sqljs') {
+      const lastIdResult = select('SELECT last_insert_rowid() as id') as Array<{ id: number }>
+      lastId = lastIdResult[0]?.id ?? null
+    }
+
+    if (!lastId) {
+      const found = select(
+        'SELECT id FROM products WHERE name = ? AND category = ? ORDER BY id DESC LIMIT 1',
+        [productData.name, categoryName]
+      ) as Array<{ id: number }>
+      lastId = found[0]?.id ?? null
+    }
+
+    if (!lastId) return null
+    return (await getProductByIdAsync(String(lastId))) as Product | null
   }
 
   async updateProduct(_id: string, _productData: Partial<Product>): Promise<boolean> {
