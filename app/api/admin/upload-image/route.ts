@@ -8,7 +8,7 @@ import sharp from 'sharp'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { requireCSRF } from '@/lib/security'
 import { uploadImage, generateAdminUploadBlobKey } from '@/lib/storage-adapter'
-import { getBlobPutAccess, toShopImageUrl } from '@/lib/blob-helpers'
+import { getBlobPutAccess, toShopImageUrl, isBlobConfigured, getBlobSdkAuthOptions, getBlobConfigErrorHint } from '@/lib/blob-helpers'
 import { promises as fs } from 'fs'
 
 export const runtime = 'nodejs'
@@ -55,10 +55,9 @@ export async function POST(request: NextRequest) {
       const isVercel = process.env.VERCEL === '1'
       const isProd = process.env.NODE_ENV === 'production'
       if (isProd && isVercel) {
-        const token = process.env['BLOB_READ_WRITE_TOKEN']
-        if (!token) {
+        if (!isBlobConfigured()) {
           return NextResponse.json(
-            { error: "SVG en prod: configurez BLOB_READ_WRITE_TOKEN (Vercel → Storage → Blob) puis redéployez." },
+            { error: `SVG en prod: ${getBlobConfigErrorHint()}` },
             { status: 500 }
           )
         }
@@ -70,8 +69,8 @@ export async function POST(request: NextRequest) {
         const blob = await put(key, buffer, {
           access: getBlobPutAccess(),
           contentType: 'image/svg+xml',
-          token,
           addRandomSuffix: true,
+          ...getBlobSdkAuthOptions(),
         })
         return NextResponse.json({ url: toShopImageUrl(blob) })
       }

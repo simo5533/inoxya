@@ -5,7 +5,7 @@
  */
 import { get } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
-import { getBlobPutAccess } from '@/lib/blob-helpers'
+import { getBlobPutAccess, isBlobConfigured, getBlobSdkAuthOptions, getBlobConfigErrorHint } from '@/lib/blob-helpers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -30,14 +30,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Pathname refusé' }, { status: 400 })
   }
 
-  const token = process.env['BLOB_READ_WRITE_TOKEN']
-  if (!token) {
-    return NextResponse.json({ error: 'BLOB_READ_WRITE_TOKEN manquant' }, { status: 500 })
+  if (!isBlobConfigured()) {
+    return NextResponse.json({ error: getBlobConfigErrorHint() }, { status: 500 })
   }
 
   const access = getBlobPutAccess()
   try {
-    const result = await get(decoded, { access, token })
+    const result = await get(decoded, { access, ...getBlobSdkAuthOptions() })
     if (result == null) {
       return new NextResponse('Not found', { status: 404 })
     }

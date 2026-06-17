@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { checkRateLimit, requireCSRF } from '@/lib/security'
 import { uploadImage, generateBlobFilename } from '@/lib/storage-adapter'
+import { getBlobConfigErrorHint } from '@/lib/blob-helpers'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -165,9 +166,8 @@ export async function POST(request: NextRequest) {
     })()
     logger.error('Erreur upload image:', { error: errorMessage, name: error instanceof Error ? error.name : undefined })
     let hint = ''
-    if (/BLOB_READ_WRITE_TOKEN|vercel.*blob|@vercel\/blob/i.test(errorMessage)) {
-      hint =
-        ' Vérifiez Vercel → Projet → Storage (Blob) connecté, variable BLOB_READ_WRITE_TOKEN, puis Redeploy.'
+    if (/BLOB_READ_WRITE_TOKEN|BLOB_STORE_ID|vercel.*blob|@vercel\/blob/i.test(errorMessage)) {
+      hint = ' ' + getBlobConfigErrorHint()
     }
     return NextResponse.json(
       {

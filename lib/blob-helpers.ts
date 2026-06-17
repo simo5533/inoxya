@@ -34,6 +34,33 @@ export function getServerOriginForBlobProxy(): string {
 export type PutBlobLike = { url: string; pathname: string }
 
 /**
+ * Blob configuré : token legacy OU OIDC (BLOB_STORE_ID sur Vercel).
+ */
+export function isBlobConfigured(): boolean {
+  if (process.env['BLOB_READ_WRITE_TOKEN']?.trim()) return true
+  if (process.env['BLOB_STORE_ID']?.trim() && process.env['VERCEL'] === '1') return true
+  return false
+}
+
+/**
+ * Options auth pour @vercel/blob put/get.
+ * OIDC (2026+) : ne pas passer token — le SDK utilise VERCEL_OIDC_TOKEN + BLOB_STORE_ID.
+ * Legacy : passer BLOB_READ_WRITE_TOKEN.
+ */
+export function getBlobSdkAuthOptions(): { token?: string } {
+  const token = process.env['BLOB_READ_WRITE_TOKEN']?.trim()
+  if (token) return { token }
+  return {}
+}
+
+export function getBlobConfigErrorHint(): string {
+  return (
+    'Vérifiez Vercel → Storage → inoxya-blob connecté au bon projet, ' +
+    'variables BLOB_STORE_ID (OIDC) ou BLOB_READ_WRITE_TOKEN, puis Redeploy.'
+  )
+}
+
+/**
  * URL à enregistrer en base : URL Vercel directe si public, sinon proxy app (lecture via get() + token).
  * Private : on enregistre une URL **relative** `/api/shop-blob?...` pour que l’aperçu / le site
  * fonctionnent sur n’importe quel domaine (vercel.app, custom) sans mélange d’hôtes.

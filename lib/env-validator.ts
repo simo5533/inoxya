@@ -170,8 +170,15 @@ export function validateEnvironment(): EnvValidationResult {
       warnings.push('Configuration SMTP incomplète (tous les champs SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS doivent être définis)')
     }
     
-    // BLOB_READ_WRITE_TOKEN recommandé en production sur Vercel
-    if (isVercel && !env.BLOB_READ_WRITE_TOKEN) {
+    // BLOB_READ_WRITE_TOKEN ou BLOB_STORE_ID (OIDC) recommandé sur Vercel
+    const hasBlobOidc = Boolean(process.env['BLOB_STORE_ID']?.trim())
+    if (isVercel && !env.BLOB_READ_WRITE_TOKEN && !hasBlobOidc) {
+      warnings.push(
+        'Blob non configuré : connectez inoxya-blob au projet (BLOB_STORE_ID) ou ajoutez BLOB_READ_WRITE_TOKEN'
+      )
+    } else if (isVercel && !env.BLOB_READ_WRITE_TOKEN && hasBlobOidc) {
+      // OIDC — OK
+    } else if (isVercel && !env.BLOB_READ_WRITE_TOKEN) {
       warnings.push('BLOB_READ_WRITE_TOKEN recommandé sur Vercel pour les uploads de fichiers')
     }
     

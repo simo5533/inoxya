@@ -6,7 +6,7 @@
 
 import { logger } from './logger'
 import { serializeError } from './sqlite'
-import { getBlobPutAccess, toShopImageUrl } from './blob-helpers'
+import { getBlobPutAccess, toShopImageUrl, isBlobConfigured, getBlobSdkAuthOptions } from './blob-helpers'
 import { join } from 'path'
 import { mkdir } from 'fs/promises'
 import sharp from 'sharp'
@@ -30,20 +30,15 @@ async function uploadToBlob(
   filename: string,
   config: ImageConfig
 ): Promise<UploadResult> {
-  const blobReadWriteToken = process.env['BLOB_READ_WRITE_TOKEN']
-  
-  if (!blobReadWriteToken) {
-    throw new Error('BLOB_READ_WRITE_TOKEN non configuré')
+  if (!isBlobConfigured()) {
+    throw new Error('Blob non configuré (BLOB_STORE_ID ou BLOB_READ_WRITE_TOKEN)')
   }
 
   try {
-    // Lazy import de @vercel/blob (optionnel, seulement si installé)
-    // Utiliser require() directement au lieu de Function constructor pour éviter eval
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const blobModule = require('@vercel/blob')
     const { put } = blobModule
 
-    // Traiter l'image avec sharp
     const processedBuffer = await sharp(buffer)
       .resize(config.width, config.height, {
         fit: 'cover',
@@ -56,8 +51,8 @@ async function uploadToBlob(
     const blob = await put(filename, processedBuffer, {
       access: putAccess,
       contentType: 'image/webp',
-      token: blobReadWriteToken,
       addRandomSuffix: true,
+      ...getBlobSdkAuthOptions(),
     })
 
     const publicUrl = toShopImageUrl({ url: blob.url, pathname: blob.pathname })
@@ -118,11 +113,10 @@ export async function uploadImage(
   config: ImageConfig
 ): Promise<UploadResult> {
   const isProduction = process.env['NODE_ENV'] === 'production'
-  const hasBlobToken = !!process.env['BLOB_READ_WRITE_TOKEN']
   const isVercel = !!process.env['VERCEL']
+  const blobReady = isBlobConfigured()
 
-  // En production sur Vercel: Blob obligatoire (le FS du conteneur n’est pas persistant / souvent en lecture seule)
-  if (isProduction && (isVercel || hasBlobToken)) {
+  if (isProduction && (isVercel || blobReady)) {
     try {
       return await uploadToBlob(buffer, filename, config)
     } catch (error) {
