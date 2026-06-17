@@ -3,7 +3,7 @@ import { getBijouById } from '@/lib/database'
 import { getDatabaseAdapter } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
-import { sanitizeInput, validateNumericId, requireCSRF } from '@/lib/security'
+import { sanitizeInput, validateProductId, requireCSRF } from '@/lib/security'
 import type { DatabaseProduct } from '@/lib/types'
 import { updateProductSchema } from '@/lib/validations'
 import { z } from 'zod'
@@ -25,7 +25,7 @@ export async function GET(
     const { id } = await params
     
     // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       return NextResponse.json(
         { error: 'ID produit invalide' },
         { status: 400 }
@@ -55,7 +55,7 @@ export async function GET(
         // Retourner image_url brute pour que l'admin puisse afficher et ré-enregistrer les chemins locaux (C:\...)
         const rawImageUrl = product.image_url || (product as { main_image?: string }).main_image || null
         const responseProduct = {
-          id: Number(product.id) || 0,
+          id: String(product.id),
           name: product.name,
           name_ar: product.name_ar || null,
           description: product.description || null,
@@ -174,7 +174,7 @@ export async function PUT(
     }
     
     // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       return NextResponse.json(
         { error: 'ID produit invalide' },
         { status: 400 }
@@ -396,7 +396,7 @@ export async function DELETE(
     const { id } = await params
     
     // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       logger.warn(`[DELETE /api/products/${id}] ID invalide`)
       return NextResponse.json(
         { error: 'ID produit invalide' },

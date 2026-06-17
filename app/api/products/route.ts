@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         logger.info(`[GET /api/products] ✅ Récupéré ${allProducts.length} produits via adapter`)
         // Convertir au format DatabaseProduct pour compatibilité
         const dbProducts: DatabaseProduct[] = allProducts.map(p => ({
-          id: Number(p.id) || 0,
+          id: String(p.id),
           name: p.name,
           name_ar: p.name_ar || null,
           description: p.description || null,
@@ -409,7 +409,7 @@ export async function POST(request: NextRequest) {
       
       // Convertir au format DatabaseProduct pour la réponse
       const responseProduct: DatabaseProduct = {
-        id: Number(createdProduct.id) || 0,
+        id: String(createdProduct.id),
         name: createdProduct.name,
         name_ar: createdProduct.name_ar || null,
         description: createdProduct.description || null,

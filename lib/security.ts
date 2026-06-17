@@ -520,6 +520,22 @@ export function validateNumericId(id: string | number): boolean {
   return !isNaN(numId) && numId > 0 && numId < Number.MAX_SAFE_INTEGER
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const SAFE_TEXT_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/
+
+/**
+ * ID produit : entier SQLite, UUID Neon, ou identifiant texte (catalogue importé).
+ */
+export function validateProductId(id: string | number | null | undefined): boolean {
+  if (id == null) return false
+  const s = String(id).trim()
+  if (!s || s === 'undefined' || s === 'null' || s === '0') return false
+  if (validateNumericId(s)) return true
+  if (UUID_RE.test(s)) return true
+  return SAFE_TEXT_ID_RE.test(s)
+}
+
 /**
  * Générer un token CSRF sécurisé (pour formulaires)
  */

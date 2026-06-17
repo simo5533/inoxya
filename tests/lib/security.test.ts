@@ -6,6 +6,7 @@ import {
   sanitizeInput,
   validatePassword,
   validateNumericId,
+  validateProductId,
   normalizePhoneNumber,
   hashPassword,
   verifyPassword,
@@ -163,6 +164,20 @@ describe('lib/security', () => {
       expect(validateNumericId('')).toBe(false) // parseInt('') = NaN
       expect(validateNumericId('-1')).toBe(false) // -1 n'est pas > 0
       expect(validateNumericId('0')).toBe(false) // 0 n'est pas > 0
+    })
+  })
+
+  describe('validateProductId', () => {
+    it('accepte les IDs numériques, UUID et texte catalogue', () => {
+      expect(validateProductId('42')).toBe(true)
+      expect(validateProductId('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d')).toBe(true)
+      expect(validateProductId('prod-1710000000-abc12')).toBe(true)
+    })
+
+    it('rejette les IDs vides ou dangereux', () => {
+      expect(validateProductId('')).toBe(false)
+      expect(validateProductId('0')).toBe(false)
+      expect(validateProductId("1'; DROP TABLE products;--")).toBe(false)
     })
   })
 

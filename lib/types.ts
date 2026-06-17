@@ -138,7 +138,7 @@ export interface ApiError {
 // ==================== DATABASE ====================
 
 export interface DatabaseProduct {
-  id: number
+  id: number | string
   name: string
   name_ar?: string | null
   description?: string | null

@@ -6,8 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabaseAdapter } from '@/lib/db'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { logger } from '@/lib/logger'
-import { requireCSRF } from '@/lib/security'
-import { validateNumericId } from '@/lib/security'
+import { requireCSRF, validateProductId } from '@/lib/security'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if ('error' in auth) return auth.error
 
     const { id } = await params
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       return NextResponse.json({ error: 'ID produit invalide' }, { status: 400 })
     }
 

@@ -166,10 +166,13 @@ export class SqliteAdapter implements DatabaseAdapter {
     return false
   }
 
-  async deleteProduct(_id: string): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[SqliteAdapter] deleteProduct not yet implemented')
-    return false
+  async deleteProduct(id: string): Promise<boolean> {
+    if (!testConnection()) return false
+    initializeDatabase()
+    const result = executeQuery('DELETE FROM products WHERE id = ?', [id])
+    if (result.changes > 0) return true
+    const remaining = select('SELECT id FROM products WHERE id = ?', [id]) as Array<{ id: number }>
+    return remaining.length === 0
   }
 
   // Categories
