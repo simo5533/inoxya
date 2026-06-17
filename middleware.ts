@@ -1,41 +1,32 @@
-// Middleware next-intl — exclut impérativement /_vercel (Analytics, Speed Insights, etc.),
-// sinon rewrites i18n cassent MIDDLEWARE_INVOCATION_FAILED sur Vercel.
-// Voir: https://next-intl.dev/docs/routing/middleware#matcher-config
-import createMiddleware from 'next-intl/middleware'
+// Redirect i18n léger — sans next-intl/middleware (crash MIDDLEWARE_INVOCATION_FAILED sur Vercel).
+// La locale est lue depuis le segment [locale] ; NextIntlClientProvider est dans app/[locale]/layout.tsx.
 import { NextRequest, NextResponse } from 'next/server'
-import { routing } from './i18n/routing'
 
-const handleI18nRouting = createMiddleware(routing)
+const locales = ['fr', 'ar'] as const
+const defaultLocale = 'fr'
 
-/** Évite les 500 Vercel sur en-têtes x-middleware-rewrite avec caractères non-ASCII */
-function sanitizeRewriteHeader(response: NextResponse): NextResponse {
-  const rewrite = response.headers.get('x-middleware-rewrite')
-  if (!rewrite) return response
-
-  try {
-    const reEncoded = encodeURI(decodeURI(rewrite)).replace(/\+/g, '%20')
-    response.headers.set('x-middleware-rewrite', reEncoded)
-  } catch {
-    // Laisser la réponse telle quelle si l'URL n'est pas décodable
-  }
-  return response
+function pathnameHasLocale(pathname: string): boolean {
+  return locales.some(
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)
+  )
 }
 
 export default function middleware(request: NextRequest) {
-  try {
-    const response = handleI18nRouting(request)
-    return sanitizeRewriteHeader(response)
-  } catch (err) {
-    console.error('[middleware]', err)
+  const { pathname } = request.nextUrl
+
+  if (pathnameHasLocale(pathname)) {
     return NextResponse.next()
   }
+
+  const url = request.nextUrl.clone()
+  url.pathname = pathname === '/' ? `/${defaultLocale}` : `/${defaultLocale}${pathname}`
+  return NextResponse.redirect(url)
 }
 
 export const config = {
-  // Node.js runtime : évite les crashs Edge (MIDDLEWARE_INVOCATION_FAILED) sur Vercel
   runtime: 'nodejs',
   matcher: [
-    // api | trpc | _next | _vercel (interne Vercel) | fichiers avec extension | /admin (sans locale)
-    '/((?!api|trpc|_next|_vercel|.*\\..*|admin).*)',
+    // api | trpc | _next | _vercel | routes de test | fichiers | admin (sans locale)
+    '/((?!api|trpc|_next|_vercel|test-simple|.*\\..*|admin).*)',
   ],
 }

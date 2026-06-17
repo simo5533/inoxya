@@ -6,6 +6,11 @@ export async function register() {
   if (typeof process.env['NEXT_PHASE'] !== 'undefined') {
     return
   }
-  const { ensureValidEnvironment } = await import('./lib/env-validator')
-  ensureValidEnvironment()
+  try {
+    const { ensureValidEnvironment } = await import('./lib/env-validator')
+    ensureValidEnvironment()
+  } catch (error) {
+    // Ne pas faire planter toutes les fonctions Vercel si une variable manque
+    console.error('[instrumentation] Configuration invalide:', error)
+  }
 }
