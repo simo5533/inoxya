@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger'
 import { sanitizeInput, requireCSRF } from '@/lib/security'
 import type { ProductResponse, DatabaseProduct } from '@/lib/types'
 import { createProductSchema, validateWithSchema } from '@/lib/validations'
-import { slugToDbValue } from '@/lib/category-mapping'
+import { slugToDbValue, normalizeCategoryValue } from '@/lib/category-mapping'
 import { getAllBijoux } from '@/lib/database'
 import { getDatabaseAdapter, getAdapterType } from '@/lib/db'
 import type { Product } from '@/lib/db/types'
@@ -330,9 +330,14 @@ export async function POST(request: NextRequest) {
       
       // RÈGLE MÉTIER: Vérifier que la catégorie existe
       const categories = await adapter.getCategories()
-      const categoryExists = categories.some(cat => 
-        cat.name === sanitizedCategory || cat.slug === sanitizedCategory
-      )
+      const canonicalCategory = normalizeCategoryValue(sanitizedCategory)
+      const categoryExists =
+        categories.some(
+          (cat) =>
+            cat.name === sanitizedCategory ||
+            cat.slug === sanitizedCategory ||
+            (canonicalCategory != null && cat.name === canonicalCategory)
+        ) || canonicalCategory != null
       
       if (!categoryExists) {
         return NextResponse.json(
@@ -445,8 +450,10 @@ export async function POST(request: NextRequest) {
       if (!isConnected) {
         logger.error('[POST /api/products] ❌ Connexion SQLite indisponible - Aucun fallback disponible')
         return NextResponse.json(
-          { 
-            error: 'Échec de la création du produit en base de données',
+          {
+            error: errorMessage.includes('Insertion')
+              ? errorMessage
+              : 'Échec de la création du produit en base de données',
             details: errorMessage,
           },
           { status: 500 }

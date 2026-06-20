@@ -213,76 +213,74 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   async createProduct(productData: Partial<Product>): Promise<Product | null> {
-    try {
-      // Validation des champs requis
-      if (!productData.name || !productData.price) {
-        logger.error('[SupabaseAdapter] createProduct: Champs requis manquants', { 
-          hasName: !!productData.name,
-          hasPrice: !!productData.price
-        })
-        return null
-      }
-
-      // Préparer les données pour l'insertion (s'assurer que tous les champs requis sont présents)
-      // NOTE: Supabase table products n'a pas is_available, seulement is_active
-      // Table Supabase products : pas de colonne main_image, uniquement image_url
-      const imageUrl = productData.image_url || productData.main_image || null
-      const insertData: Record<string, unknown> = {
-        name: productData.name,
-        price: productData.price,
-        description: productData.description || 'Description non fournie',
-        name_ar: productData.name_ar || null,
-        original_price: productData.original_price || null,
-        category: productData.category || productData.category_id || 'Général',
-        image_url: imageUrl,
-        images: productData.images ? (typeof productData.images === 'string' ? productData.images : JSON.stringify(productData.images)) : '[]',
-        is_active: productData.is_active !== undefined ? productData.is_active : true,
-        is_featured: productData.is_featured !== undefined ? productData.is_featured : false,
-        stock: productData.stock !== undefined ? productData.stock : 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      // Éviter duplicate key si la séquence id est désynchronisée (ex. 23505)
-      const { data: maxRow } = await this.supabase.from('products').select('id').order('id', { ascending: false }).limit(1).maybeSingle()
-      const maxId = (maxRow as { id?: number } | null)?.id
-      const nextId = maxId != null ? Number(maxId) + 1 : 1
-      insertData['id'] = nextId
-
-      logger.info('[SupabaseAdapter] createProduct: Tentative insertion', { 
-        name: insertData['name'],
-        category: insertData['category'],
-        hasImage: !!insertData['image_url']
-      })
-
-      const { data, error } = await this.insertData('products', insertData)
-        .select()
-        .single()
-      
-      if (error) {
-        logger.error('[SupabaseAdapter] createProduct error:', { 
-          message: error.message, 
-          code: error.code, 
-          details: error.details,
-          hint: error.hint,
-          productData: { name: productData.name, category: productData.category }
-        })
-        return null
-      }
-      
-      if (!data) {
-        logger.error('[SupabaseAdapter] createProduct: No data returned from insert')
-        return null
-      }
-      
-      return this.mapProduct(data)
-    } catch (err) {
-      logger.error('[SupabaseAdapter] createProduct exception:', { 
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined
-      })
-      return null
+    if (!productData.name || productData.price == null) {
+      throw new Error('Champs requis manquants: name et price')
     }
+
+    const imageUrl = productData.image_url || productData.main_image || null
+    let imagesPayload: string | unknown[] = '[]'
+    if (productData.images) {
+      if (typeof productData.images === 'string') {
+        try {
+          imagesPayload = JSON.parse(productData.images) as unknown[]
+        } catch {
+          imagesPayload = []
+        }
+      } else {
+        imagesPayload = productData.images
+      }
+    }
+
+    const insertData: Record<string, unknown> = {
+      name: productData.name,
+      price: productData.price,
+      description: productData.description || 'Description non fournie',
+      name_ar: productData.name_ar || null,
+      original_price: productData.original_price || null,
+      category: productData.category || productData.category_id || 'Général',
+      image_url: imageUrl,
+      images: imagesPayload,
+      is_active: productData.is_active !== undefined ? productData.is_active : true,
+      is_featured: productData.is_featured !== undefined ? productData.is_featured : false,
+      is_available:
+        productData.is_available !== undefined
+          ? productData.is_available
+          : productData.is_active !== undefined
+            ? productData.is_active
+            : true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const stockQty = productData.stock !== undefined ? productData.stock : 0
+    insertData['stock'] = stockQty
+
+    if (productData.rating != null) insertData['rating'] = productData.rating
+    if (productData.reviews_count != null) insertData['reviews_count'] = productData.reviews_count
+
+    logger.info('[SupabaseAdapter] createProduct: Tentative insertion', {
+      name: insertData['name'],
+      category: insertData['category'],
+      hasImage: !!insertData['image_url'],
+    })
+
+    const { data, error } = await this.insertData('products', insertData).select().single()
+
+    if (error) {
+      logger.error('[SupabaseAdapter] createProduct error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      })
+      throw new Error(`Insertion Supabase échouée: ${error.message}`)
+    }
+
+    if (!data) {
+      throw new Error('Insertion Supabase: aucune donnée retournée')
+    }
+
+    return this.mapProduct(data)
   }
 
   async updateProduct(id: string, productData: Partial<Product>): Promise<boolean> {

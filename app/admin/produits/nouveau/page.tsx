@@ -341,7 +341,10 @@ export default function NouveauProduitPage() {
           if (err.details && Array.isArray(err.details)) {
             errorMessage = `Données invalides:\n${err.details.join('\n')}`
           } else if (err.error) {
-            errorMessage = err.error
+            errorMessage =
+              typeof err.details === 'string' && err.details
+                ? `${err.error}\n${err.details}`
+                : err.error
           } else if (responseText) {
             errorMessage = responseText
           }

@@ -235,12 +235,46 @@ export class PostgresAdapter implements DatabaseAdapter {
     if (!raw) return asJsonb ? [] : '[]'
     if (typeof raw === 'string') {
       try {
-        return asJsonb ? (JSON.parse(raw) as unknown[]) : raw
+        const parsed = JSON.parse(raw) as unknown
+        return asJsonb ? (Array.isArray(parsed) ? parsed : [parsed]) : raw
       } catch {
         return asJsonb ? [] : '[]'
       }
     }
     return asJsonb ? raw : JSON.stringify(raw)
+  }
+
+  private async ensureDefaultCategories(): Promise<void> {
+    try {
+      const countResult = await this.pool.query<{ c: number }>(
+        'SELECT COUNT(*)::int AS c FROM categories'
+      )
+      if ((countResult.rows[0]?.c ?? 0) > 0) return
+
+      const defaults: [string, string, string][] = [
+        ['Bagues', 'bagues', 'Collection de bagues berberes et modernes'],
+        ['Colliers', 'colliers', 'Colliers traditionnels et contemporains'],
+        ['Bracelets', 'bracelets', 'Bracelets elegants et resistants'],
+        ["Boucles d'oreilles", 'boucles-oreilles', "Boucles d'oreilles traditionnelles et modernes"],
+        ['Parures', 'parures', 'Ensembles coordonnes de bijoux'],
+        ['Broches', 'broches', 'Broches decoratives et elegantes'],
+        ['Montres', 'montres', 'Montres elegantes et modernes'],
+      ]
+
+      for (const [name, slug, description] of defaults) {
+        await this.pool.query(
+          `INSERT INTO categories (name, slug, description)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (slug) DO NOTHING`,
+          [name, slug, description]
+        )
+      }
+      logger.info('[PostgresAdapter] Catégories par défaut insérées')
+    } catch (error) {
+      logger.warn('[PostgresAdapter] ensureDefaultCategories:', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 
   async createProduct(productData: Partial<Product>): Promise<Product | null> {
@@ -254,6 +288,8 @@ export class PostgresAdapter implements DatabaseAdapter {
         'Table products absente. Exécutez scripts/neon-setup-clean.sql dans Neon SQL Editor.'
       )
     }
+
+    await this.ensureDefaultCategories()
 
     const categoryName = productData.category || productData.category_id || 'Général'
     let categoryId: string | null = null
@@ -316,9 +352,27 @@ export class PostgresAdapter implements DatabaseAdapter {
       row['is_featured'] =
         productData.is_featured !== undefined ? Boolean(productData.is_featured) : false
     }
+    if (cols.has('is_custom')) {
+      row['is_custom'] =
+        (productData as { is_custom?: boolean }).is_custom !== undefined
+          ? Boolean((productData as { is_custom?: boolean }).is_custom)
+          : false
+    }
+    if (cols.has('rating') && productData.rating != null) {
+      row['rating'] = productData.rating
+    }
+    if (cols.has('reviews_count') && productData.reviews_count != null) {
+      row['reviews_count'] = productData.reviews_count
+    }
 
     const keys = Object.keys(row)
-    const values = keys.map((k) => row[k])
+    const values = keys.map((k) => {
+      if (k === 'images' && imagesIsJsonb) {
+        const v = row[k]
+        return typeof v === 'string' ? v : JSON.stringify(v ?? [])
+      }
+      return row[k]
+    })
     const placeholders = keys.map((k, i) => {
       if (k === 'images' && imagesIsJsonb) return `$${i + 1}::jsonb`
       return `$${i + 1}`

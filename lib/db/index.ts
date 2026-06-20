@@ -125,8 +125,33 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
         )
       }
 
-      // PRIORITÉ 1: Si Supabase est configuré correctement, l’utiliser
-      if (supabaseUrl && supabaseKey) {
+      const isPostgresUrl =
+        Boolean(databaseUrl) &&
+        (databaseUrl!.startsWith('postgresql://') || databaseUrl!.startsWith('postgres://'))
+
+      // PRIORITÉ 1: PostgreSQL / Neon quand DATABASE_URL est défini (Vercel prod)
+      if (isPostgresUrl) {
+        try {
+          const { PostgresAdapter } = await import('./postgres-adapter')
+          localAdapter = new PostgresAdapter(databaseUrl!)
+          localAdapterType = 'postgres'
+          logger.info('[DB] ✅ Utilisation de PostgreSQL (DATABASE_URL)')
+
+          const isConnected = await localAdapter.testConnection()
+          if (!isConnected) {
+            logger.error('[DB] ❌ Échec de connexion PostgreSQL')
+            localAdapter = null
+            localAdapterType = null
+          }
+        } catch (error) {
+          logger.error('[DB] ❌ Erreur lors de l\'initialisation PostgreSQL:', error)
+          localAdapter = null
+          localAdapterType = null
+        }
+      }
+
+      // PRIORITÉ 2: Supabase (si Postgres indisponible ou non configuré)
+      if (!localAdapter && supabaseUrl && supabaseKey) {
         try {
           const { SupabaseAdapter } = await import('./supabase-adapter')
           localAdapter = new SupabaseAdapter(supabaseUrl, supabaseKey)
@@ -162,31 +187,7 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
         }
       }
 
-      // PRIORITÉ 2: Si DATABASE_URL est défini et commence par postgres, utiliser Postgres
-      if (!localAdapter && databaseUrl && (databaseUrl.startsWith('postgresql://') || databaseUrl.startsWith('postgres://'))) {
-        try {
-          const { PostgresAdapter } = await import('./postgres-adapter')
-          localAdapter = new PostgresAdapter(databaseUrl)
-          localAdapterType = 'postgres'
-          logger.info('[DB] ✅ Utilisation de PostgreSQL')
-          
-          // Tester la connexion
-          const isConnected = await localAdapter.testConnection()
-          if (!isConnected) {
-            logger.error('[DB] ❌ Échec de connexion PostgreSQL, fallback vers SQLite')
-            localAdapter = null
-            localAdapterType = null
-          }
-        } catch (error) {
-          logger.error('[DB] ❌ Erreur lors de l\'initialisation PostgreSQL:', error)
-          logger.warn('[DB] ⚠️  Fallback vers SQLite')
-          localAdapter = null
-          localAdapterType = null
-        }
-      }
-
-      // Si pas de Postgres ou échec, utiliser SQLite UNIQUEMENT en développement
-      // En production (Vercel), ne jamais tenter SQLite : pas de fichier .db → ENOENT
+      // PRIORITÉ 3: SQLite en développement local uniquement
       if (!localAdapter && !IS_PRODUCTION) {
         try {
           const { SqliteAdapter } = await import('./sqlite-adapter')
