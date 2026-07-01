@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector"
-import { BankTransferInstructions } from "@/components/checkout/BankTransferInstructions"
-import { PAYMENT_METHOD_BANK_TRANSFER, PAYMENT_METHOD_COD } from "@/lib/config/payment"
+import { PAYMENT_METHOD_COD } from "@/lib/config/payment"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { ShoppingCart, Gift, Sparkles, Crown, Gem, Package, Star, Eye } from "lucide-react"
@@ -46,7 +45,7 @@ export default function PacksPage() {
     city: "",
     address: "",
     notes: "",
-    payment_method: PAYMENT_METHOD_COD as "cod" | "bank_transfer",
+    payment_method: PAYMENT_METHOD_COD,
   })
   const [submitting, setSubmitting] = useState(false)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
@@ -462,26 +461,8 @@ export default function PacksPage() {
                               onChange={(v) => setForm((prev) => ({ ...prev, payment_method: v }))}
                               labelCod={tc('paymentCodLabel')}
                               hintCod={tc('paymentCodHint')}
-                              labelBank={tc('paymentBankLabel')}
-                              hintBank={tc('paymentBankHint')}
                             />
                           </div>
-                          {form.payment_method === PAYMENT_METHOD_BANK_TRANSFER && (
-                            <BankTransferInstructions
-                              title={tc('bankPanelTitle')}
-                              shortIntro={tc('bankReassuring')}
-                              mainInstruction={tc('bankMainInstruction')}
-                              motifHint={tc('bankMotif')}
-                              securityNote={tc('bankSecurityNote')}
-                              copyLabel={tc('copyRib')}
-                              copiedLabel={tc('copiedRib')}
-                              whatsappCta={tc('whatsappCta')}
-                              whatsappFooterHint={tc('whatsappAfterTransfer')}
-                              whatsappNoNumberText={tc('whatsappNoNumber')}
-                              orderId={null}
-                              locale={locale}
-                            />
-                          )}
                           <div>
                             <label className="text-sm">{t('fullName')} *</label>
                             <Input name="name" value={form.name} onChange={onChange} required />
@@ -503,11 +484,7 @@ export default function PacksPage() {
                             <textarea name="notes" value={form.notes} onChange={onChange} className="border rounded w-full p-2 min-h-[60px]" />
                           </div>
                           <Button disabled={submitting} onClick={() => submitOrder(pack)} className={`w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-black flex items-center ${locale === 'ar' ? 'flex-row-reverse' : ''}`}>
-                            {submitting
-                              ? t('ordering')
-                              : form.payment_method === PAYMENT_METHOD_BANK_TRANSFER
-                                ? tc('submitOrderBank')
-                                : tc('submitOrderCod')}
+                            {submitting ? t('ordering') : tc('submitOrderCod')}
                           </Button>
                         </div>
                       </DialogContent>

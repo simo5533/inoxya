@@ -18,7 +18,7 @@ export const CATEGORY_STATIC_IMAGES: Record<string, string> = {
   colliers: '/images/categories/colliers.jpg',
   bracelets: '/images/categories/bracelets.jpg',
   'boucles-oreilles': '/images/categories/boucles-oreilles.jpg',
-  montres: '/images/categories/montres.jpg',
+  montres: '/images/categories/colliers.jpg',
   parures: '/images/categories/montres.jpg',
   broches: '/images/categories/packs.jpg',
   packs: '/images/categories/packs.jpg',
@@ -29,11 +29,11 @@ export const CATEGORY_STATIC_IMAGES: Record<string, string> = {
  */
 export const CATEGORY_ALT_TEXTS: Record<string, string> = {
   bagues: 'Collection de bagues berbères en acier inoxydable premium',
-  colliers: 'Collection d\'ensembles et de colliers traditionnels ou contemporains en acier inoxydable',
+  colliers: 'Collection d\'ensembles de bijoux en acier inoxydable INOXYA',
   bracelets: 'Collection de bracelets élégants et résistants en acier inoxydable',
   'boucles-oreilles': 'Collection de boucles d\'oreilles traditionnelles et modernes en acier inoxydable',
-  montres: 'Collection de montres élégantes et précises en acier inoxydable',
-  parures: 'Collection de montres élégantes et précises en acier inoxydable',
+  parures: 'Collection de montres élégantes en acier inoxydable INOXYA',
+  montres: 'Collection de colliers en acier inoxydable INOXYA',
   broches: 'Packs exclusifs de bijoux INOXYA à prix avantageux',
 }
 

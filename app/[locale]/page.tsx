@@ -12,40 +12,32 @@ import { Star, Shield, Truck, Heart, Crown, Sparkles, Gem, Instagram } from "luc
 import { TikTokIcon } from "@/components/ui/tiktok-icon"
 import { socialLinks } from "@/lib/social-links"
 import { getSiteUrlSafe } from '@/lib/site-url'
+import { seoPageMetadata } from '@/lib/seo/config'
+import { HomeSeoIntro } from '@/components/seo/HomeSeoIntro'
 import { getTranslations } from 'next-intl/server'
 import type { Category } from "@/lib/types"
 
 const siteUrl = getSiteUrlSafe()
 
-export const metadata: Metadata = {
-  title: "Accueil | INOXYA BIJOUX",
-  description: "Découvrez notre collection exclusive de bijoux en acier inoxydable premium. Bagues, colliers, bracelets et montres berbères authentiques. Embellie ton âme avec INOXYA BIJOUX.",
-  keywords: ["bijoux", "acier inoxydable", "bijoux berbères", "bijoux maroc", "bijoux premium", "colliers", "bagues", "bracelets", "montres"],
-  openGraph: {
-    title: "INOXYA BIJOUX - Embellie ton âme",
-    description: "Collection exclusive de bijoux en acier inoxydable premium. Bijoux berbères authentiques.",
-    url: siteUrl,
-    siteName: "INOXYA BIJOUX",
-    images: [
-      {
-        url: `${siteUrl}/icon.svg`,
-        width: 1200,
-        height: 630,
-        alt: "INOXYA BIJOUX - Collection de bijoux",
-      },
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  return seoPageMetadata({
+    title: 'Bijoux acier inoxydable 316L au Maroc',
+    description:
+      'INOXYA BIJOUX : bagues, colliers, bracelets et packs en acier inoxydable 316L. Hypoallergéniques, livraison Maroc, paiement à la livraison, retour 30 jours.',
+    path: '',
+    locale,
+    keywords: [
+      'bijoux acier inoxydable Maroc',
+      'bijoux hypoallergéniques',
+      'INOXYA',
+      '316L',
     ],
-    locale: "fr_FR",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "INOXYA BIJOUX - Embellie ton âme",
-    description: "Collection exclusive de bijoux en acier inoxydable premium",
-    images: [`${siteUrl}/icon.svg`],
-  },
-  alternates: {
-    canonical: siteUrl,
-  },
+  })
 }
 
 export const dynamic = 'force-dynamic'
@@ -274,6 +266,8 @@ async function HomePage({
     <div>
       {/* Hero Banner */}
       <HeroBanner />
+
+      <HomeSeoIntro locale={locale} />
 
       {/* Section Bijoux Vedettes avec grille selon votre spécification */}
       <section className="relative z-10 bg-white pt-8 pb-20 sm:pt-12 md:py-20">

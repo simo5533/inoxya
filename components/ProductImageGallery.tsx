@@ -8,12 +8,14 @@ interface ProductImageGalleryProps {
   mainImage: string
   images: string[]
   productName: string
+  imageAlts?: string[]
 }
 
 export default function ProductImageGallery({ 
   mainImage, 
   images, 
-  productName 
+  productName,
+  imageAlts = [],
 }: ProductImageGalleryProps) {
   // Convertir tous les chemins en URLs avec getSafeImageSrc
   const mainImageUrl = useMemo(() => getSafeImageSrc(mainImage || ""), [mainImage])
@@ -39,13 +41,17 @@ export default function ProductImageGallery({
     setSelectedMainImage(imageUrl)
   }
   
+  const mainAlt = imageAlts[0] || `${productName} — bijou acier inoxydable 316L INOXYA Maroc`
+  const mainTitle = `${productName} — INOXYA BIJOUX`
+  
   return (
     <div className="w-full min-w-0 max-w-full space-y-4 overflow-hidden">
       {/* Image principale - Luxury wrapper with explicit dimensions */}
       <div className="main-image relative w-full min-w-0 max-w-full aspect-square sm:aspect-[4/5] rounded-xl overflow-hidden shadow-lg bg-neutral-100/40 min-h-0 sm:min-h-[400px]">
         <Image
           src={selectedMainImage || "/placeholder.svg"}
-          alt={`${productName} - Bijou en acier inoxydable premium INOXYA - Vue principale`}
+          alt={mainAlt}
+          title={mainTitle}
           fill
           className="object-cover"
           priority
@@ -76,7 +82,8 @@ export default function ProductImageGallery({
               >
                 <Image
                   src={image || "/placeholder.svg"}
-                  alt={`${productName} - Bijou en acier inoxydable premium INOXYA - Vue ${index + 1}`}
+                  alt={imageAlts[index + 1] || `${productName} — bijou acier inoxydable INOXYA vue ${index + 1}`}
+                  title={`${productName} — vue ${index + 1}`}
                   fill
                   className={`object-cover transition-opacity ${
                     isSelected ? "opacity-100" : "opacity-70 hover:opacity-100"

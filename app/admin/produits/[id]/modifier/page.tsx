@@ -16,6 +16,13 @@ import Image from "next/image"
 import { logger } from "@/lib/logger"
 import type { Product } from "@/lib/types"
 import { shouldUnoptimizeImageUrl } from "@/lib/image-path"
+import {
+  ADMIN_PRODUCT_CATEGORIES,
+  adminCategoryIdToDbValue,
+  adminDbValueToCategoryId,
+} from "@/lib/admin-categories"
+
+const categories = ADMIN_PRODUCT_CATEGORIES
 
 function getSafeImageSrc(url: string | undefined): string {
   if (!url || !url.trim()) return '/placeholder.svg'
@@ -64,14 +71,6 @@ interface ProductFormData {
   is_custom: boolean
   stock_quantity: string
 }
-
-const categories = [
-  { id: "cat-bagues", name: "Bagues", slug: "bagues" },
-  { id: "cat-colliers", name: "Ensemble et colliers", slug: "colliers" },
-  { id: "cat-bracelets", name: "Bracelets", slug: "bracelets" },
-  { id: "cat-boucles", name: "Boucles d'oreilles", slug: "boucles-oreilles" },
-  { id: "cat-broches", name: "Nos packs", slug: "broches" }
-]
 
 const availableTags = ["promo", "nouveau", "bestseller", "premium"]
 
@@ -127,13 +126,9 @@ export default function ModifierProduitPage() {
           return
         }
         setProduct(productData as Product)
-        const categoryNameToId: Record<string, string> = {
-          "Bagues": "cat-bagues",
-          "Colliers": "cat-colliers",
-          "Bracelets": "cat-bracelets",
-          "Boucles d'oreilles": "cat-boucles",
-          "Nos packs": "cat-broches"
-        }
+        const categoryNameToId: Record<string, string> = Object.fromEntries(
+          ADMIN_PRODUCT_CATEGORIES.map((c) => [c.dbValue, c.id])
+        )
         const cat = productData.category as string
         const imagesArr = Array.isArray(productData.images) ? productData.images : 
           (typeof productData.images === 'string' ? JSON.parse(productData.images || '[]') : [])
@@ -143,7 +138,7 @@ export default function ModifierProduitPage() {
           description: productData.description || "",
           price: productData.price?.toString() || "",
           original_price: productData.original_price?.toString() || "",
-          category_id: categoryNameToId[cat] || cat || "",
+          category_id: categoryNameToId[cat] || adminDbValueToCategoryId(cat) || cat || "",
           pack_id: productData.pack_id || "",
           image_url: productData.image_url || productData.main_image || "",
           imageSecondary1: imagesArr[0] || "",
@@ -250,14 +245,7 @@ export default function ModifierProduitPage() {
       const csrfData = await csrfRes.json()
       const csrfToken = csrfData.csrfToken
 
-      const categoryIdToName: Record<string, string> = {
-        "cat-bagues": "Bagues",
-        "cat-colliers": "Colliers",
-        "cat-bracelets": "Bracelets",
-        "cat-boucles": "Boucles d'oreilles",
-        "cat-broches": "Nos packs"
-      }
-      const categoryName = categoryIdToName[formData.category_id] || formData.category_id
+      const categoryName = adminCategoryIdToDbValue(formData.category_id) || formData.category_id
       
       // Validation de la catégorie
       if (!categoryName || categoryName.trim() === '') {

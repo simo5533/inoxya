@@ -1,47 +1,75 @@
-import type { Metadata } from "next"
-import { getSiteUrlSafe } from '@/lib/site-url'
+import type { Metadata } from 'next'
+import type React from 'react'
+import { getAllPacks } from '@/lib/database'
+import { seoPageMetadata } from '@/lib/seo/config'
+import { ItemListJsonLd } from '@/components/SEOJsonLd'
+import { seoLocalePath } from '@/lib/seo/config'
 
-function getPacksMetadata(): Metadata {
-  const siteUrl = getSiteUrlSafe()
-  return {
-  title: "Packs Exclusifs | INOXYA BIJOUX",
-  description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium. Collections complètes à prix avantageux. Bagues, colliers, bracelets et plus.",
-  keywords: ["packs bijoux", "collections bijoux", "bijoux pack", "bijoux acier inoxydable", "bijoux premium", "bijoux maroc"],
-  openGraph: {
-    title: "Packs Exclusifs | INOXYA BIJOUX",
-    description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium. Collections complètes à prix avantageux.",
-    url: `${siteUrl}/packs`,
-    siteName: "INOXYA BIJOUX",
-    images: [
-      {
-        url: `${siteUrl}/icon.svg`,
-        width: 1200,
-        height: 630,
-        alt: "INOXYA BIJOUX - Packs Exclusifs",
-      },
-    ],
-    locale: "fr_FR",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Packs Exclusifs | INOXYA BIJOUX",
-    description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium",
-    images: [`${siteUrl}/icon.svg`],
-  },
-  alternates: {
-    canonical: `${siteUrl}/packs`,
-  },
-  }
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  return seoPageMetadata({
+    title: 'Packs bijoux acier inoxydable Maroc',
+    description:
+      'Packs cadeaux INOXYA en acier inoxydable 316L : ensembles à prix avantageux, livraison Maroc, paiement à la livraison.',
+    path: '/packs',
+    locale,
+  })
 }
 
-export const metadata: Metadata = getPacksMetadata()
-
-export default function PacksLayout({
+export default async function PacksLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: Promise<{ locale: string }>
 }) {
-  return children
-}
+  const { locale } = await params
+  let packs: Array<{
+    id?: string | number
+    name?: string
+    description?: string
+    price?: number
+    original_price?: number
+  }> = []
+  try {
+    packs = (await getAllPacks()) as typeof packs
+  } catch {
+    packs = []
+  }
 
+  const listItems = packs.map((p, i) => ({
+    name: p.name || 'Pack INOXYA',
+    url: seoLocalePath(locale, '/packs'),
+    position: i + 1,
+  }))
+
+  return (
+    <>
+      {listItems.length > 0 ? <ItemListJsonLd items={listItems} /> : null}
+      {packs.length > 0 ? (
+        <section className="sr-only" aria-label="Catalogue packs INOXYA">
+          <h1>Packs bijoux acier inoxydable INOXYA Maroc</h1>
+          <ul>
+            {packs.map((pack) => (
+              <li key={String(pack.id)}>
+                <h2>{pack.name}</h2>
+                {pack.description ? <p>{pack.description}</p> : null}
+                <p>
+                  Prix : {pack.price} MAD
+                  {pack.original_price && pack.original_price > (pack.price || 0)
+                    ? ` (au lieu de ${pack.original_price} MAD)`
+                    : ''}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {children}
+    </>
+  )
+}

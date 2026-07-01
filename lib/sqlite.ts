@@ -1105,7 +1105,7 @@ export function initializeDatabase(): void {
     
     const categories = [
       ['Bagues', 'bagues', 'Magnifiques bagues berbères traditionnelles'],
-      ['Ensemble et colliers', 'colliers', 'Ensembles assortis et colliers avec motifs marocains'],
+      ['Ensemble', 'colliers', 'Ensembles assortis de bijoux en acier inoxydable'],
       ['Bracelets', 'bracelets', 'Bracelets élégants aux designs authentiques'],
       ['Boucles d\'oreilles', 'boucles-oreilles', 'Boucles d\'oreilles raffinées'],
       ['Nos packs', 'broches', 'Packs exclusifs de bijoux à prix avantageux']

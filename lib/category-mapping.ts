@@ -22,10 +22,10 @@ export const CATEGORIES: Record<string, CategoryDefinition> = {
     subtitle: 'Collection de bagues berbères et modernes'
   },
   colliers: {
-    label: 'Ensemble et colliers',
+    label: 'Ensemble',
     dbValue: 'Colliers',
     slug: 'colliers',
-    subtitle: 'Ensembles assortis et colliers traditionnels ou contemporains'
+    subtitle: 'Ensembles assortis de bijoux en acier inoxydable'
   },
   bracelets: {
     label: 'Bracelets',
@@ -41,9 +41,15 @@ export const CATEGORIES: Record<string, CategoryDefinition> = {
   },
   parures: {
     label: 'Montres',
-    dbValue: 'Montres',
+    dbValue: 'Parures',
     slug: 'parures',
     subtitle: 'Montres élégantes et précises'
+  },
+  montres: {
+    label: 'Colliers',
+    dbValue: 'Montres',
+    slug: 'montres',
+    subtitle: 'Colliers traditionnels et contemporains'
   },
   broches: {
     label: 'Nos packs',
@@ -77,8 +83,10 @@ export function slugToDbValue(slug: string): string | null {
  * Convertit une valeur DB en slug
  */
 export function dbValueToSlug(dbValue: string): string | null {
+  // Parures (ensembles) → carte Montres ; produits « Montres » → slug montres (carte Colliers)
+  if (dbValue === 'Parures') return 'parures'
   for (const [slug, category] of Object.entries(CATEGORIES)) {
-    if (category.dbValue === dbValue) {
+    if (category.dbValue === dbValue && slug !== 'parures') {
       return slug
     }
   }

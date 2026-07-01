@@ -21,6 +21,8 @@ import {
   Calendar,
   DollarSign
 } from "lucide-react"
+import { ADMIN_PRODUCT_CATEGORIES } from "@/lib/admin-categories"
+
 interface Product {
   id: string
   name: string
@@ -531,11 +533,11 @@ export default function AdminProduitsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes catégories</SelectItem>
-                  <SelectItem value="cat-bagues">Bagues</SelectItem>
-                  <SelectItem value="cat-colliers">Ensemble et colliers</SelectItem>
-                  <SelectItem value="cat-bracelets">Bracelets</SelectItem>
-                  <SelectItem value="cat-boucles">Boucles d&apos;oreilles</SelectItem>
-                  <SelectItem value="cat-broches">Nos packs</SelectItem>
+                  {ADMIN_PRODUCT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               

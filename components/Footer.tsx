@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Instagram, Mail, Phone, MapPin, MessageCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { TikTokIcon } from "@/components/ui/tiktok-icon"
 import { socialLinks, contactInfo } from "@/lib/social-links"
+import { getSeoFooterGroups } from '@/lib/seo/content/registry'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
 
@@ -13,6 +14,7 @@ export default function Footer() {
   const t = useTranslations('footer')
   const locale = useLocale()
   const [isMapExpanded, setIsMapExpanded] = useState(false)
+  const seoGuideGroups = getSeoFooterGroups()
 
   return (
     <footer className="relative text-white overflow-hidden">
@@ -44,7 +46,7 @@ export default function Footer() {
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#C8A24A] to-transparent opacity-60" />
 
       <div className="container mx-auto px-4 py-16 lg:py-20 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-16 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-12 lg:gap-10 max-w-7xl mx-auto">
           
           {/* Column 1: Brand Block */}
           <div className="space-y-4">
@@ -122,7 +124,34 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Service Client */}
+          {/* Column 3: Guides & ressources SEO */}
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-[#C8A24A] mb-6">
+              Guides &amp; ressources
+            </h2>
+            <ul className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
+              {seoGuideGroups.flatMap((g) =>
+                g.pages.slice(0, 2).map((p) => (
+                  <li key={p.slug}>
+                    <Link
+                      href={`/${locale}/guide/${p.slug}`}
+                      className="text-gray-200 hover:text-[#C8A24A] transition-colors text-sm leading-snug inline-block"
+                    >
+                      {p.label.length > 48 ? `${p.label.slice(0, 46)}…` : p.label}
+                    </Link>
+                  </li>
+                ))
+              )}
+            </ul>
+            <Link
+              href={`/${locale}/guide`}
+              className="inline-block mt-4 text-sm font-medium text-[#C8A24A] hover:underline"
+            >
+              Tous les guides →
+            </Link>
+          </div>
+
+          {/* Column 4: Service Client */}
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-[#C8A24A] mb-6">
               Service Client
@@ -140,7 +169,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 4: Contact */}
+          {/* Column 5: Contact */}
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-[#C8A24A] mb-6">
               Contact

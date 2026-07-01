@@ -49,10 +49,12 @@ export default function CategoryCard({ category, index, onFilter }: CategoryCard
   // Obtenir l'image source garantie
   const imageSrc = getCategoryImageSrc(category.slug, category.image_url, category.coverImage)
 
-  // Rediriger vers /packs si c'est la catégorie "Nos packs"
+  // parures (carte Montres) → /bijoux/parures ; montres (carte Colliers) → /bijoux/montres
+  const seoSlug =
+    category.slug === 'parures' ? 'parures' : category.slug
   const href = isPacksCategory
-    ? `/${locale}/packs` 
-    : `/${locale}/bijoux?category=${category.slug}`
+    ? `/${locale}/packs`
+    : `/${locale}/bijoux/${seoSlug}`
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // Si onFilter est fourni (via prop), filtrer au lieu de rediriger

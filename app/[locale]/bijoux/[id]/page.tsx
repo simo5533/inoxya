@@ -10,7 +10,12 @@ import { getBijouById, getAllBijoux } from "@/lib/database"
 import OrderForm from "@/components/OrderForm"
 import ProductImageGallery from "@/components/ProductImageGallery"
 import ProductReviewsSection from "@/components/ProductReviewsSection"
-import { ProductSchema, BreadcrumbSchema } from "@/components/StructuredData"
+import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/SEOJsonLd"
+import { ProductPremiumContent } from "@/components/seo/ProductPremiumContent"
+import { buildProductSeo } from "@/lib/seo/product"
+import { SEO_MATERIAL, SEO_FREE_SHIPPING_THRESHOLD, SEO_RETURN_DAYS } from "@/lib/seo/config"
+import { dbValueToSlug, categoryDbValueToDisplayName } from "@/lib/category-mapping"
+import { seoPageMetadata } from "@/lib/seo/config"
 import { selectRows } from "@/lib/sqlite"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
@@ -51,44 +56,27 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
     
-    const price = bijou.price ? `${bijou.price} MAD` : ''
-    const description = bijou.description || t('description', { name: bijou.name, price })
+    const seo = buildProductSeo({
+      id: String(bijou.id),
+      name: bijou.name,
+      name_ar: bijou.name_ar,
+      description: bijou.description,
+      price: Number(bijou.price) || 0,
+      original_price: bijou.original_price,
+      category_id: bijou.category_id,
+      category: bijou.category,
+      is_available: bijou.is_available,
+      main_image: bijou.main_image || bijou.image_url,
+    })
 
-    return {
-      metadataBase: new URL(siteUrl),
-      title: `${bijou.name} | INOXYA BIJOUX`,
-      description,
-      keywords: [bijou.name, bijou.category_id || 'bijoux', 'acier inoxydable', 'bijoux berbères'],
-      openGraph: {
-        title: bijou.name,
-        description,
-        type: 'website',
-        url: `${siteUrl}/${locale}/bijoux/${id}`,
-        images: [
-          {
-            url: imageUrl,
-            width: 1200,
-            height: 630,
-            alt: bijou.name,
-          },
-        ],
-        siteName: 'INOXYA BIJOUX',
-        locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: bijou.name,
-        description,
-        images: [imageUrl],
-      },
-      alternates: {
-        canonical: `${siteUrl}/${locale}/bijoux/${id}`,
-        languages: {
-          'fr': `${siteUrl}/fr/bijoux/${id}`,
-          'ar': `${siteUrl}/ar/bijoux/${id}`,
-        },
-      },
-    }
+    return seoPageMetadata({
+      title: seo.seoTitle.length > 60 ? seo.seoTitle.slice(0, 57) + '…' : seo.seoTitle.replace(/\s*\|\s*INOXYA BIJOUX\s*$/i, ''),
+      description: seo.metaDescription,
+      path: `/bijoux/${id}`,
+      locale,
+      ogImage: imageUrl,
+      keywords: [...seo.keywords.primary, ...seo.keywords.secondary, ...seo.keywords.searchVariants],
+    })
   } catch {
     try {
       const { locale } = await params
@@ -152,7 +140,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     .filter(b => String(b.id) !== String(id) && String(b.category_id || '') === productCategory)
     .slice(0, 4)
 
-  const rating = product.rating ?? 4.5
+  const rating = product.rating ?? 0
   const reviews = (() => {
     const tableColumns = selectRows("PRAGMA table_info(reviews)") as Array<{ name?: string }>
     const hasProductId = tableColumns.some((col) => String(col.name || "").toLowerCase() === "product_id")
@@ -215,33 +203,72 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
   const categoryName = (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : null) 
     || (typeof productWithCategory.category === 'string' ? productWithCategory.category : null)
     || t('breadcrumb.jewelry')
-  const categorySlug = (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : '') 
-    || (typeof productWithCategory.category === 'string' ? productWithCategory.category : '')
-  const breadcrumbItems = [
-    { name: t('breadcrumb.home'), url: siteUrl },
-    { name: t('breadcrumb.jewelry'), url: `${siteUrl}/${locale}/bijoux` },
-    ...(categoryName !== t('breadcrumb.jewelry') && categorySlug ? [{ name: categoryName, url: `${siteUrl}/${locale}/bijoux?category=${categorySlug}` }] : []),
-    { name: product.name, url: `${siteUrl}/${locale}/bijoux/${product.id}` },
+  const categorySlug = dbValueToSlug(categoryName) || (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : '')
+  const categoryDisplay = categoryDbValueToDisplayName(categoryName)
+  const productSeo = buildProductSeo({
+    id: product.id,
+    name: product.name,
+    name_ar: product.name_ar,
+    description: product.description,
+    price: product.price,
+    original_price: product.original_price,
+    category_id: productCategory,
+    category: productWithCategory.category as string | undefined,
+    is_available: product.is_available,
+    is_featured: product.is_featured,
+    rating,
+    reviews_count: reviews,
+    images: cappedGallery,
+    main_image: galleryMain,
+  })
+
+  const h1Title = productSeo.h1
+  const breadcrumbNav = [
+    { name: t('breadcrumb.home'), href: `/${locale}` },
+    { name: t('breadcrumb.jewelry'), href: `/${locale}/bijoux` },
+    ...(categoryName !== t('breadcrumb.jewelry') && categorySlug
+      ? [{ name: categoryDisplay, href: `/${locale}/bijoux/${categorySlug}` }]
+      : []),
+    { name: product.name, href: `/${locale}/bijoux/${product.id}` },
   ]
+  const breadcrumbItems = breadcrumbNav.map((b) => ({
+    name: b.name,
+    url: `${siteUrl}${b.href}`,
+  }))
 
   return (
     <>
-      <ProductSchema
+      <ProductJsonLd
         product={{
           id: product.id,
           name: product.name,
-          description: product.description || undefined,
+          description: productSeo.shortDescription,
           price: product.price,
-          main_image: normalizedImages[0] || undefined,
-          images: normalizedImages,
-          rating: rating,
-          reviews_count: reviews,
+          image: normalizedImages,
+          category: categoryDisplay,
+          inStock: product.is_available !== false,
+          ...(reviews > 0 ? { rating, reviews_count: reviews } : {}),
         }}
-        siteUrl={siteUrl}
+        locale={locale}
       />
-      <BreadcrumbSchema items={breadcrumbItems} />
+      <BreadcrumbJsonLd items={breadcrumbItems} />
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white w-full max-w-full min-w-0 overflow-x-hidden">
         <div className="container mx-auto min-w-0 max-w-full px-4 py-8 md:py-12">
+        {/* Fil d'Ariane visible */}
+        <nav aria-label="Fil d'Ariane" className="mb-4 text-sm text-gray-600 flex flex-wrap items-center gap-1">
+          {breadcrumbNav.map((item, i) => (
+            <span key={item.href} className="flex items-center gap-1">
+              {i > 0 && <span className="text-gray-400">/</span>}
+              {i < breadcrumbNav.length - 1 ? (
+                <Link href={item.href} className="hover:text-luxury-gold transition-colors">
+                  {item.name}
+                </Link>
+              ) : (
+                <span className="text-gray-900 font-medium">{item.name}</span>
+              )}
+            </span>
+          ))}
+        </nav>
         {/* back link */}
         <Link 
           href={`/${locale}/bijoux`}
@@ -258,6 +285,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               mainImage={galleryMain || "/placeholder.svg"}
               images={galleryThumbs}
               productName={product.name}
+              imageAlts={productSeo.imageAlts}
             />
           </div>
 
@@ -302,13 +330,14 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="min-w-0 max-w-full">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 tracking-tight leading-tight break-words">{product.name}</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 tracking-tight leading-tight break-words">{h1Title}</h1>
               {product.name_ar && (
                 <div className="font-arabic text-2xl text-gray-600 mb-4 text-right">{product.name_ar}</div>
               )}
             </div>
 
-            {/* rating */}
+            {/* rating — uniquement si avis réels */}
+            {reviews > 0 && (
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
@@ -324,6 +353,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
                 {rating.toFixed(1)} <span className="text-gray-500">({reviews} {t('reviews')})</span>
               </span>
             </div>
+            )}
 
             {/* price */}
             <div className="flex items-center gap-3 mb-6 flex-wrap min-w-0 max-w-full">
@@ -351,9 +381,21 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            <div className="text-gray-700 leading-relaxed mb-8 text-base sm:text-lg min-w-0 max-w-full break-words">
-              {product.description || t('defaultDescription', { name: product.name })}
+            <div className="text-gray-700 leading-relaxed mb-6 text-base sm:text-lg min-w-0 max-w-full break-words">
+              {productSeo.shortDescription}
             </div>
+
+            {/* Attributs produit visibles (SEO + AEO) */}
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-8 text-sm border border-gray-100 rounded-xl p-4 bg-white/80">
+              <div><dt className="text-gray-500">Matière</dt><dd className="font-medium text-gray-900">{SEO_MATERIAL}</dd></div>
+              <div><dt className="text-gray-500">Catégorie</dt><dd className="font-medium text-gray-900">{categoryDisplay}</dd></div>
+              <div><dt className="text-gray-500">Hypoallergénique</dt><dd className="font-medium text-gray-900">Oui (acier 316L)</dd></div>
+              <div><dt className="text-gray-500">Résistance à l&apos;eau</dt><dd className="font-medium text-gray-900">Oui, port quotidien</dd></div>
+              <div><dt className="text-gray-500">Stock</dt><dd className="font-medium text-gray-900">{product.is_available ? 'En stock' : 'Rupture'}</dd></div>
+              <div><dt className="text-gray-500">Livraison</dt><dd className="font-medium text-gray-900">Maroc — gratuite dès {SEO_FREE_SHIPPING_THRESHOLD} MAD</dd></div>
+              <div><dt className="text-gray-500">Paiement</dt><dd className="font-medium text-gray-900">À la livraison</dd></div>
+              <div><dt className="text-gray-500">Retour</dt><dd className="font-medium text-gray-900">Gratuit sous {SEO_RETURN_DAYS} jours</dd></div>
+            </dl>
 
             {/* Formulaire de commande */}
             <div className="mb-8 min-w-0 max-w-full overflow-x-hidden rounded-xl border border-gray-100 bg-white p-3 shadow-lg sm:p-4 md:p-6">
@@ -421,30 +463,41 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             <TabsContent value="description" className="mt-6">
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">{t('tabs.descriptionTitle')}</h3>
-                  <div className="text-gray-700 leading-relaxed">
-                    {product.description || t('defaultDescription', { name: product.name })}
-                  </div>
-                  <div className="mt-6 grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-2">{t('tabs.features')}</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• {t('tabs.feature1')}</li>
-                        <li>• {t('tabs.feature2')}</li>
-                        <li>• {t('tabs.feature3')}</li>
-                        <li>• {t('tabs.feature4')}</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">{t('tabs.maintenance')}</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• {t('tabs.maintenance1')}</li>
-                        <li>• {t('tabs.maintenance2')}</li>
-                        <li>• {t('tabs.maintenance3')}</li>
-                        <li>• {t('tabs.maintenance4')}</li>
-                      </ul>
-                    </div>
-                  </div>
+                  {locale === 'fr' ? (
+                    <ProductPremiumContent
+                      seo={productSeo}
+                      productName={product.name}
+                      locale={locale}
+                      className="mt-0 border-0 pt-0"
+                    />
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-semibold mb-4">{t('tabs.descriptionTitle')}</h3>
+                      <div className="text-gray-700 leading-relaxed">
+                        {product.description || t('defaultDescription', { name: product.name })}
+                      </div>
+                      <div className="mt-6 grid md:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="font-semibold mb-2">{t('tabs.features')}</h4>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            <li>• {t('tabs.feature1')}</li>
+                            <li>• {t('tabs.feature2')}</li>
+                            <li>• {t('tabs.feature3')}</li>
+                            <li>• {t('tabs.feature4')}</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold mb-2">{t('tabs.maintenance')}</h4>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            <li>• {t('tabs.maintenance1')}</li>
+                            <li>• {t('tabs.maintenance2')}</li>
+                            <li>• {t('tabs.maintenance3')}</li>
+                            <li>• {t('tabs.maintenance4')}</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -534,36 +587,23 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
           <div className="mt-16">
             <h2 className="text-2xl font-bold text-gray-900 mb-8">{t('similarProducts')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {similarProducts.map((product) => (
-                <Link key={product.id} href={`/${locale}/bijoux/${product.id}`}>
+              {similarProducts.map((similar) => (
+                <Link key={similar.id} href={`/${locale}/bijoux/${similar.id}`}>
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                     <CardContent className="p-4">
                       <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100 mb-3">
                         <Image
-                          src={product.image_url || "/placeholder.svg"}
-                          alt={`${product.name} - Bijou en acier inoxydable premium INOXYA - Produit similaire`}
+                          src={similar.image_url || "/placeholder.svg"}
+                          alt={`${similar.name} — bijou acier inoxydable 316L INOXYA Maroc`}
                           fill
                           className="object-cover"
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          loading="lazy"
                         />
                       </div>
-                      <h3 className="font-semibold text-sm mb-1 line-clamp-2">{product.name}</h3>
+                      <h3 className="font-semibold text-sm mb-1 line-clamp-2">{similar.name}</h3>
                       <div className="flex items-center justify-between">
-                        <span className="text-luxury-gold font-bold">{Math.round(product.price)} MAD</span>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs text-gray-600">
-                            {(() => {
-                              const rating = (product as { rating?: number | string | unknown })['rating']
-                              if (typeof rating === 'number') return rating.toFixed(1)
-                              if (typeof rating === 'string') {
-                                const numRating = Number(rating)
-                                return isNaN(numRating) ? "0.0" : numRating.toFixed(1)
-                              }
-                              return "0.0"
-                            })()}
-                          </span>
-                        </div>
+                        <span className="text-luxury-gold font-bold">{Math.round(similar.price)} MAD</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -572,6 +612,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
         )}
+
       </div>
     </div>
     </>

@@ -1,166 +1,95 @@
 import { MetadataRoute } from 'next'
-import { getSiteUrlSafe } from '@/lib/site-url'
+import { CATEGORY_SEO_SLUGS } from '@/lib/seo/categories'
+import { SEO_CONTENT_SLUGS } from '@/lib/seo/content/registry'
+import { seoSiteUrl } from '@/lib/seo/config'
 
-const siteUrl = getSiteUrlSafe()
+const LOCALES = ['fr', 'ar'] as const
+
+const STATIC_PATHS = [
+  { path: '', priority: 1, changeFrequency: 'daily' as const },
+  { path: '/bijoux', priority: 0.9, changeFrequency: 'daily' as const },
+  { path: '/packs', priority: 0.9, changeFrequency: 'daily' as const },
+  { path: '/packs/creer', priority: 0.7, changeFrequency: 'weekly' as const },
+  { path: '/a-propos', priority: 0.7, changeFrequency: 'monthly' as const },
+  { path: '/faq', priority: 0.6, changeFrequency: 'monthly' as const },
+  { path: '/guide', priority: 0.7, changeFrequency: 'weekly' as const },
+  { path: '/sur-mesure', priority: 0.7, changeFrequency: 'monthly' as const },
+]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Pages statiques
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: siteUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${siteUrl}/bijoux`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${siteUrl}/packs`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${siteUrl}/a-propos`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/faq`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${siteUrl}/sur-mesure`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-  ]
+  const siteUrl = seoSiteUrl()
+  const now = new Date()
 
-  // Pages produits dynamiques (avec fallback)
-  let productPages: MetadataRoute.Sitemap = []
+  const entries: MetadataRoute.Sitemap = []
+
+  for (const locale of LOCALES) {
+    for (const page of STATIC_PATHS) {
+      entries.push({
+        url: `${siteUrl}/${locale}${page.path}`,
+        lastModified: now,
+        changeFrequency: page.changeFrequency,
+        priority: page.priority,
+      })
+    }
+
+    for (const slug of CATEGORY_SEO_SLUGS) {
+      entries.push({
+        url: `${siteUrl}/${locale}/bijoux/${slug}`,
+        lastModified: now,
+        changeFrequency: 'daily',
+        priority: 0.85,
+      })
+    }
+
+    for (const slug of SEO_CONTENT_SLUGS) {
+      entries.push({
+        url: `${siteUrl}/${locale}/guide/${slug}`,
+        lastModified: now,
+        changeFrequency: 'monthly',
+        priority: 0.7,
+      })
+    }
+  }
+
   try {
-    const { getAllBijoux } = await import('@/lib/database')
+    const { getAllBijoux, getAllPacks } = await import('@/lib/database')
     const products = await getAllBijoux()
     type Product = {
       id: string | number
       is_active?: boolean
       is_available?: boolean
       updated_at?: string | null
-      [key: string]: unknown
     }
-    productPages = (products || [])
-      .filter((p: Product) => p.is_active !== false && p.is_available !== false)
-      .map((product: Product) => {
-        const updatedAt = product['updated_at']
-        const lastModified = (typeof updatedAt === 'string' && updatedAt) ? new Date(updatedAt) : new Date()
-        return {
-          url: `${siteUrl}/bijoux/${product.id}`,
-          lastModified,
-          changeFrequency: 'weekly' as const,
+    for (const locale of LOCALES) {
+      for (const product of (products || []) as Product[]) {
+        if (product.is_active === false || product.is_available === false) continue
+        const updatedAt = product.updated_at
+        entries.push({
+          url: `${siteUrl}/${locale}/bijoux/${product.id}`,
+          lastModified: updatedAt ? new Date(updatedAt) : now,
+          changeFrequency: 'weekly',
           priority: 0.8,
-        }
-      })
-  } catch (error) {
-    // Silencieux: utiliser le fallback depuis les images si DB non disponible
-    try {
-      const { getAllFallbackProducts } = await import('@/lib/fallback-products')
-      const fallbackProducts = getAllFallbackProducts()
-      productPages = fallbackProducts.map((product) => ({
-        url: `${siteUrl}/bijoux/${product.id}`,
-        lastModified: new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      }))
-    } catch {
-      // Si même le fallback échoue, continuer sans produits dynamiques
-      // Logger l'erreur en développement seulement
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[sitemap] Impossible de récupérer les produits:', error)
+        })
       }
     }
-  }
 
-  // Pages packs dynamiques (avec fallback)
-  let packPages: MetadataRoute.Sitemap = []
-  try {
-    const { getAllPacks } = await import('@/lib/database')
     const packs = await getAllPacks()
-    type Pack = {
-      id: string | number
-      slug?: string
-      [key: string]: unknown
-    }
-    packPages = (packs || []).map((pack: Pack) => {
-      const updatedAt = pack['updated_at']
-      const lastModified = (typeof updatedAt === 'string' && updatedAt) ? new Date(updatedAt) : new Date()
-      return {
-        url: `${siteUrl}/packs/${pack.id || pack.slug || ''}`,
-        lastModified,
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      }
-    })
-  } catch (error) {
-    // Silencieux: utiliser le fallback depuis les images si DB non disponible
-    try {
-      const { getFallbackPacks } = await import('@/lib/fallback-packs')
-      const fallbackPacks = getFallbackPacks()
-      packPages = fallbackPacks.map((pack) => ({
-        url: `${siteUrl}/packs/${pack.slug}`,
-        lastModified: new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      }))
-    } catch {
-      // Si même le fallback échoue, continuer sans packs dynamiques
-      // Logger l'erreur en développement seulement
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[sitemap] Impossible de récupérer les packs:', error)
+    for (const locale of LOCALES) {
+      for (const pack of packs || []) {
+        const id = (pack as { id?: string | number; slug?: string }).id ?? (pack as { slug?: string }).slug
+        if (!id) continue
+        entries.push({
+          url: `${siteUrl}/${locale}/packs`,
+          lastModified: now,
+          changeFrequency: 'weekly',
+          priority: 0.75,
+        })
+        break
       }
     }
+  } catch {
+    // DB indisponible au build — pages statiques suffisent
   }
-  
-  // Ajouter les pages catégories importantes
-  const categoryPages: MetadataRoute.Sitemap = [
-    {
-      url: `${siteUrl}/bijoux?category=bagues`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/bijoux?category=colliers`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/bijoux?category=bracelets`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/bijoux?category=boucles-oreilles`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/bijoux?category=montres`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-  ]
 
-  return [...staticPages, ...categoryPages, ...productPages, ...packPages]
+  return entries
 }

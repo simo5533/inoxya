@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { OrganizationSchema } from "@/components/StructuredData"
+import { GlobalSeoJsonLd } from "@/components/SEOJsonLd"
 
 // Validation environnement au démarrage (serveur uniquement)
 // TEMPORAIRE: Désactivé pour diagnostic - réactiver après fix
@@ -26,10 +26,7 @@ const siteUrl = getSiteUrlSafe()
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: {
-    default: "INOXYA BIJOUX - Embellie ton âme",
-    template: "%s | INOXYA BIJOUX"
-  },
+  title: "INOXYA BIJOUX — Embellie ton âme",
   description: "Bijoux en acier inoxydable de qualité premium. Durables, hypoallergéniques et élégants. Collection berbère authentique.",
   keywords: ["bijoux", "acier inoxydable", "bijoux berbères", "bijoux maroc", "bijoux premium", "colliers", "bagues", "bracelets"],
   authors: [{ name: "INOXYA BIJOUX" }],
@@ -93,7 +90,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
-        <OrganizationSchema siteUrl={siteUrl} />
+        <GlobalSeoJsonLd />
       </head>
       <body className={`${inter.className} overflow-x-hidden max-w-[100vw]`} suppressHydrationWarning>
         {children}

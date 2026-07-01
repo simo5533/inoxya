@@ -3,6 +3,8 @@
  * Fonctions de génération de slugs, chemins, etc.
  */
 
+import { ADMIN_PRODUCT_CATEGORIES } from '@/lib/admin-categories'
+
 /**
  * Génère un slug à partir d'un nom de produit
  */
@@ -20,13 +22,9 @@ export function generateSlug(name: string): string {
  * Obtient le nom du dossier de catégorie à partir de category_id
  */
 export function getCategoryFolder(categoryId: string): string {
-  const categoryMap: Record<string, string> = {
-    'cat-bagues': 'bagues',
-    'cat-colliers': 'colliers',
-    'cat-bracelets': 'bracelets',
-    'cat-boucles': 'boucles-oreilles',
-    'cat-broches': 'broches'
-  }
+  const categoryMap: Record<string, string> = Object.fromEntries(
+    ADMIN_PRODUCT_CATEGORIES.map((c) => [c.id, c.slug])
+  )
   return categoryMap[categoryId] || 'general'
 }
 

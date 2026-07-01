@@ -253,12 +253,12 @@ export class PostgresAdapter implements DatabaseAdapter {
 
       const defaults: [string, string, string][] = [
         ['Bagues', 'bagues', 'Collection de bagues berberes et modernes'],
-        ['Colliers', 'colliers', 'Colliers traditionnels et contemporains'],
+        ['Ensemble', 'colliers', 'Ensembles assortis de bijoux en acier inoxydable'],
         ['Bracelets', 'bracelets', 'Bracelets elegants et resistants'],
         ["Boucles d'oreilles", 'boucles-oreilles', "Boucles d'oreilles traditionnelles et modernes"],
-        ['Parures', 'parures', 'Ensembles coordonnes de bijoux'],
-        ['Broches', 'broches', 'Broches decoratives et elegantes'],
-        ['Montres', 'montres', 'Montres elegantes et modernes'],
+        ['Colliers', 'montres', 'Colliers traditionnels et contemporains'],
+        ['Montres', 'parures', 'Montres elegantes et precises'],
+        ['Nos packs', 'broches', 'Packs exclusifs de bijoux a prix avantageux'],
       ]
 
       for (const [name, slug, description] of defaults) {

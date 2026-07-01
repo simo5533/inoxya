@@ -13,11 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CreditCard, ShoppingCart, CheckCircle, Truck, Shield } from "lucide-react"
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector"
-import { BankTransferInstructions } from "@/components/checkout/BankTransferInstructions"
-import {
-  PAYMENT_METHOD_BANK_TRANSFER,
-  PAYMENT_METHOD_COD,
-} from "@/lib/config/payment"
+import { PAYMENT_METHOD_COD } from "@/lib/config/payment"
 import { getCartItems, clearCart, type CartItem } from "@/lib/cart-favorites"
 import { getCustomPackSnapshot, isCustomPackLineId } from "@/lib/custom-pack"
 import { Confetti } from "@/components/Confetti"
@@ -31,7 +27,6 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
-  const [confirmedPaymentMethod, setConfirmedPaymentMethod] = useState<string | null>(null)
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
   const [formData, setFormData] = useState<{
@@ -40,7 +35,7 @@ export default function CheckoutPage() {
     city: string
     address: string
     notes: string
-    payment_method: "cod" | "bank_transfer"
+    payment_method: typeof PAYMENT_METHOD_COD
   }>({
     name: "",
     phone: "",
@@ -178,7 +173,6 @@ export default function CheckoutPage() {
 
       const data = await response.json()
       const totalSnapshot = calculateTotal()
-      setConfirmedPaymentMethod(formData.payment_method)
       setConfirmedTotal(totalSnapshot)
       setOrderId(data.order_id || null)
       setIsSubmitting(false)
@@ -196,21 +190,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const bankProps = {
-    title: t("bankPanelTitle"),
-    shortIntro: t("bankReassuring"),
-    mainInstruction: t("bankMainInstruction"),
-    motifHint: t("bankMotif"),
-    securityNote: t("bankSecurityNote"),
-    copyLabel: t("copyRib"),
-    copiedLabel: t("copiedRib"),
-    whatsappCta: t("whatsappCta"),
-    whatsappFooterHint: t("whatsappAfterTransfer"),
-    whatsappNoNumberText: t("whatsappNoNumber"),
-  }
-
   if (isSuccess) {
-    const showBankReminder = confirmedPaymentMethod === PAYMENT_METHOD_BANK_TRANSFER
     const totalFormatted =
       confirmedTotal != null
         ? new Intl.NumberFormat(locale === "ar" ? "ar-MA" : "fr-MA", {
@@ -232,19 +212,10 @@ export default function CheckoutPage() {
                   {t("orderNumber")}: {orderId}
                 </p>
               )}
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                {showBankReminder ? t("successBankExtra") : t("contactWithin24h")}
-              </p>
-              {showBankReminder && (
-                <div className="mb-6 text-left">
-                  <BankTransferInstructions
-                    {...bankProps}
-                    orderId={orderId}
-                    totalFormatted={totalFormatted}
-                    locale={locale}
-                  />
-                </div>
+              {totalFormatted && (
+                <p className="text-gray-700 mb-2 font-medium">{t("total")}: {totalFormatted}</p>
               )}
+              <p className="text-gray-700 mb-6 leading-relaxed">{t("contactWithin24h")}</p>
               <Button
                 onClick={() => router.push(`/${locale}`)}
                 className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
@@ -286,14 +257,8 @@ export default function CheckoutPage() {
                       onChange={(v) => handleInputChange("payment_method", v)}
                       labelCod={t("paymentCodLabel")}
                       hintCod={t("paymentCodHint")}
-                      labelBank={t("paymentBankLabel")}
-                      hintBank={t("paymentBankHint")}
                     />
                   </div>
-
-                  {formData.payment_method === PAYMENT_METHOD_BANK_TRANSFER && (
-                    <BankTransferInstructions {...bankProps} orderId={null} locale={locale} />
-                  )}
 
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
@@ -381,11 +346,7 @@ export default function CheckoutPage() {
                     }`}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting
-                      ? t("processing")
-                      : formData.payment_method === PAYMENT_METHOD_BANK_TRANSFER
-                        ? t("submitOrderBank")
-                        : t("submitOrderCod")}
+                    {isSubmitting ? t("processing") : t("submitOrderCod")}
                   </Button>
                 </form>
               </CardContent>

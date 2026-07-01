@@ -28,6 +28,7 @@ import {
 import Link from "next/link"
 import { logger } from "@/lib/logger"
 import { categoryDbValueToDisplayName } from "@/lib/category-mapping"
+import { ADMIN_PRODUCT_CATEGORIES } from "@/lib/admin-categories"
 
 interface Product {
   id: string
@@ -60,15 +61,10 @@ interface ProductFormData {
   secondary_image_2: string  // Image secondaire 2 (optionnelle)
 }
 
-const categories: { value: string; label: string }[] = [
-  { value: "Bagues", label: "Bagues" },
-  { value: "Colliers", label: "Ensemble et colliers" },
-  { value: "Bracelets", label: "Bracelets" },
-  { value: "Boucles d'oreilles", label: "Boucles d'oreilles" },
-  { value: "Pendentifs", label: "Pendentifs" },
-  { value: "Chaînes", label: "Chaînes" },
-  { value: "Autres", label: "Autres" }
-]
+const categories: { value: string; label: string }[] = ADMIN_PRODUCT_CATEGORIES.map((c) => ({
+  value: c.dbValue,
+  label: c.name,
+}))
 
 export default function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([])

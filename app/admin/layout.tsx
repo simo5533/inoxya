@@ -7,8 +7,9 @@ import "@/styles/admin-premium.css"
 import AdminNavBar from "@/components/admin/AdminNavBar"
 
 export const metadata: Metadata = {
-  title: "Administration - INOXYA BIJOUX",
-  description: "Panneau d'administration INOXYA BIJOUX"
+  title: "Administration",
+  description: "Panneau d'administration INOXYA BIJOUX",
+  robots: { index: false, follow: false },
 }
 
 export const dynamic = 'force-dynamic'

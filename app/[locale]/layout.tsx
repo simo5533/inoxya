@@ -20,8 +20,8 @@ import { ClientProviders } from "@/components/ClientProviders"
 
 export const metadata: Metadata = {
   title: {
-    default: 'INOXYA Bijoux | Acier inoxydable 316L',
-    template: '%s | INOXYA Bijoux',
+    default: 'INOXYA BIJOUX — Bijoux acier inoxydable Maroc',
+    template: '%s | INOXYA BIJOUX',
   },
   description:
     'Bijoux en acier inoxydable 316L premium. Artisanat marocain authentique. Livraison gratuite dès 200 MAD.',

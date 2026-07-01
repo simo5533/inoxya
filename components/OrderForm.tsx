@@ -9,8 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Phone, User, CreditCard, CheckCircle } from "lucide-react"
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector"
-import { BankTransferInstructions } from "@/components/checkout/BankTransferInstructions"
-import { PAYMENT_METHOD_BANK_TRANSFER, PAYMENT_METHOD_COD } from "@/lib/config/payment"
+import { PAYMENT_METHOD_COD } from "@/lib/config/payment"
 import { ORDER_CONFIG } from "@/lib/order-config"
 import { Confetti } from "@/components/Confetti"
 import { useTranslations, useLocale } from "next-intl"
@@ -29,7 +28,6 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
-  const [successPaymentMethod, setSuccessPaymentMethod] = useState<CheckoutPaymentMethod | null>(null)
   const [csrfToken, setCsrfToken] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
@@ -101,7 +99,6 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
       }
       const data = await response.json()
       setOrderId(data.order_id || null)
-      setSuccessPaymentMethod(formData.payment_method)
 
       setIsSubmitting(false)
       setIsSuccess(true)
@@ -118,7 +115,6 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           payment_method: PAYMENT_METHOD_COD,
         })
         setOrderId(null)
-        setSuccessPaymentMethod(null)
       }, 5000)
       
     } catch (error) {
@@ -155,9 +151,6 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           <div className="mt-4 text-xs text-green-600">
             <div>⏰ {t('success.responseTime', { time: ORDER_CONFIG.responseTime })}</div>
           </div>
-          {successPaymentMethod === PAYMENT_METHOD_BANK_TRANSFER && (
-            <p className="mt-3 text-sm text-green-800 text-left">{tc('successBankExtra')}</p>
-          )}
         </CardContent>
       </Card>
       </>
@@ -188,31 +181,12 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
             <PaymentMethodSelector
               sectionLabel={tc('paymentModeHeading')}
-              value={formData.payment_method}
-              onChange={(v) => handleInputChange('payment_method', v)}
+              value={PAYMENT_METHOD_COD}
+              onChange={() => {}}
               labelCod={tc('paymentCodLabel')}
               hintCod={tc('paymentCodHint')}
-              labelBank={tc('paymentBankLabel')}
-              hintBank={tc('paymentBankHint')}
             />
           </div>
-
-          {formData.payment_method === PAYMENT_METHOD_BANK_TRANSFER && (
-            <BankTransferInstructions
-              title={tc('bankPanelTitle')}
-              shortIntro={tc('bankReassuring')}
-              mainInstruction={tc('bankMainInstruction')}
-              motifHint={tc('bankMotif')}
-              securityNote={tc('bankSecurityNote')}
-              copyLabel={tc('copyRib')}
-              copiedLabel={tc('copiedRib')}
-              whatsappCta={tc('whatsappCta')}
-              whatsappFooterHint={tc('whatsappAfterTransfer')}
-              whatsappNoNumberText={tc('whatsappNoNumber')}
-              orderId={null}
-              locale={locale}
-            />
-          )}
 
         {/* Nom complet */}
         <div className="space-y-2 min-w-0">
@@ -320,9 +294,7 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
             ) : (
               <>
                 <CreditCard className={`w-5 h-5 ${locale === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                {formData.payment_method === PAYMENT_METHOD_BANK_TRANSFER
-                  ? tc('submitOrderBank')
-                  : tc('submitOrderCod')}
+                {tc('submitOrderCod')}
               </>
             )}
           </Button>

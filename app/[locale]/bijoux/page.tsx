@@ -9,33 +9,34 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { X } from "lucide-react"
 import { CATEGORIES } from "@/lib/category-mapping"
+import { GeoQaBlock } from '@/components/seo/GeoQaBlock'
+import { GEO_QA_COLLECTION } from '@/lib/seo/geo-qa'
+import { seoPageMetadata } from '@/lib/seo/config'
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const siteUrl = getSiteUrlSafe()
   try {
     const { locale } = await params
+    if (locale === 'fr') {
+      return seoPageMetadata({
+        title: 'Bijoux acier inoxydable au Maroc',
+        description:
+          'Collection INOXYA : bagues, colliers, bracelets, boucles d’oreilles et montres en acier 316L. Hypoallergéniques, livraison Maroc, paiement à la livraison.',
+        path: '/bijoux',
+        locale,
+      })
+    }
     const t = await getTranslations({ locale, namespace: 'bijoux' })
+    const siteUrl = getSiteUrlSafe()
     return {
       metadataBase: new URL(siteUrl),
       title: t('title'),
       description: t('description'),
-      keywords: t('keywords').split(','),
-      openGraph: {
-        title: t('title'),
-        description: t('description'),
-        url: `${siteUrl}/${locale}/bijoux`,
-        siteName: "INOXYA BIJOUX",
-        images: [{ url: `${siteUrl}/icon.svg`, width: 1200, height: 630, alt: t('title') }],
-        locale: locale === 'ar' ? 'ar_MA' : 'fr_FR',
-        type: "website",
-      },
-      twitter: { card: "summary_large_image", title: t('title'), description: t('description'), images: [`${siteUrl}/icon.svg`] },
       alternates: { canonical: `${siteUrl}/${locale}/bijoux`, languages: { fr: `${siteUrl}/fr/bijoux`, ar: `${siteUrl}/ar/bijoux` } },
     }
   } catch {
-    return { title: 'Bijoux | INOXYA BIJOUX', description: 'Découvrez nos bijoux.', metadataBase: new URL(siteUrl) }
+    return { title: 'Bijoux | INOXYA BIJOUX' }
   }
 }
 
@@ -183,13 +184,15 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
 
   // Fallback: Si aucune catégorie n'est récupérée, utiliser le mapping CATEGORIES
   if (categories.length === 0) {
-    categories = Object.entries(CATEGORIES).map(([slug, def]) => ({
-      id: String(slug), // S'assurer que id est une string
-      name: def.label,
-      slug: def.slug,
-      description: def.subtitle,
-      image_url: undefined
-    }))
+    categories = Object.entries(CATEGORIES)
+      .filter(([slug]) => slug !== 'broches')
+      .map(([slug, def]) => ({
+        id: String(slug),
+        name: def.label,
+        slug: def.slug,
+        description: def.subtitle,
+        image_url: undefined,
+      }))
   }
 
   // Enrichir les catégories avec leurs images de couverture
@@ -281,11 +284,32 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
-            {t('pageTitle')}
+            {locale === 'fr' ? 'Bijoux en acier inoxydable au Maroc' : t('pageTitle')}
           </h1>
-          <p className="text-xl text-gray-700 max-w-2xl mx-auto leading-relaxed">
-            {t('pageSubtitle')}
+          <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
+            {locale === 'fr'
+              ? 'Bijoux acier inoxydable Maroc : bagues, boucles d’oreilles, bracelets, colliers et montres hypoallergéniques, résistants à l’eau, avec livraison partout au Maroc.'
+              : t('pageSubtitle')}
           </p>
+          {locale === 'fr' ? (
+            <nav className="mt-6 flex flex-wrap justify-center gap-2 text-sm" aria-label="Catégories">
+              {[
+                ['bagues', 'Bagues'],
+                ['colliers', 'Colliers'],
+                ['bracelets', 'Bracelets'],
+                ['boucles-oreilles', "Boucles d'oreilles"],
+                ['montres', 'Montres'],
+              ].map(([slug, label]) => (
+                <Link
+                  key={slug}
+                  href={`/${locale}/bijoux/${slug}`}
+                  className="rounded-full border border-gray-200 px-4 py-2 hover:border-orange-300 hover:text-orange-800"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
         </div>
 
         {/* Section Nos Catégories - Simple et élégante */}
@@ -405,6 +429,7 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
             </div>
           )}
         </div>
+        {locale === 'fr' ? <GeoQaBlock items={GEO_QA_COLLECTION} /> : null}
       </div>
     </div>
   )

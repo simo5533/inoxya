@@ -15,6 +15,12 @@ import Link from "next/link"
 import Image from "next/image"
 import { logger } from "@/lib/logger"
 import { getSafeImageSrc, shouldUnoptimizeImageUrl } from "@/lib/image-path"
+import {
+  ADMIN_PRODUCT_CATEGORIES,
+  adminCategoryIdToDbValue,
+} from "@/lib/admin-categories"
+
+const categories = ADMIN_PRODUCT_CATEGORIES
 
 interface ProductFormData {
   name: string
@@ -63,14 +69,6 @@ const initialFormData: ProductFormData = {
   is_custom: false,
   stock_quantity: "100"
 }
-
-const categories = [
-  { id: "cat-bagues", name: "Bagues", slug: "bagues" },
-  { id: "cat-colliers", name: "Ensemble et colliers", slug: "colliers" },
-  { id: "cat-bracelets", name: "Bracelets", slug: "bracelets" },
-  { id: "cat-boucles", name: "Boucles d&apos;oreilles", slug: "boucles-oreilles" },
-  { id: "cat-broches", name: "Nos packs", slug: "broches" }
-]
 
 const availableTags = ["promo", "nouveau", "bestseller", "premium"]
 
@@ -225,13 +223,9 @@ export default function NouveauProduitPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const categoryIdToName: Record<string, string> = {
-    "cat-bagues": "Bagues",
-    "cat-colliers": "Colliers",
-    "cat-bracelets": "Bracelets",
-    "cat-boucles": "Boucles d'oreilles",
-    "cat-broches": "Nos packs"
-  }
+  const categoryIdToName: Record<string, string> = Object.fromEntries(
+    ADMIN_PRODUCT_CATEGORIES.map((c) => [c.id, c.dbValue])
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -255,7 +249,7 @@ export default function NouveauProduitPage() {
       if (!csrfToken) {
         throw new Error("Token CSRF manquant. Rechargez la page et réessayez.")
       }
-      const categoryName = categoryIdToName[formData.category_id] || formData.category_id
+      const categoryName = adminCategoryIdToDbValue(formData.category_id) || categoryIdToName[formData.category_id] || formData.category_id
       
       // Validation de la catégorie
       if (!categoryName || categoryName.trim() === '') {
