@@ -1,6 +1,4 @@
 import Link from 'next/link'
-import { GeoQaBlock } from '@/components/seo/GeoQaBlock'
-import { GEO_QA_HOME } from '@/lib/seo/geo-qa'
 
 export function HomeSeoIntro({ locale }: { locale: string }) {
   if (locale !== 'fr') return null
@@ -42,7 +40,6 @@ export function HomeSeoIntro({ locale }: { locale: string }) {
             Packs
           </Link>
         </nav>
-        <GeoQaBlock items={GEO_QA_HOME} title="Questions fréquentes INOXYA" className="mt-8" />
       </div>
     </section>
   )

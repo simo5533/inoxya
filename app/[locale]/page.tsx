@@ -14,6 +14,8 @@ import { socialLinks } from "@/lib/social-links"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { seoPageMetadata } from '@/lib/seo/config'
 import { HomeSeoIntro } from '@/components/seo/HomeSeoIntro'
+import { GeoQaBlock } from '@/components/seo/GeoQaBlock'
+import { GEO_QA_HOME } from '@/lib/seo/geo-qa'
 import { getTranslations } from 'next-intl/server'
 import type { Category } from "@/lib/types"
 
@@ -530,6 +532,14 @@ async function HomePage({
           </div>
         </div>
       </section>
+
+      {locale === 'fr' && (
+        <section className="bg-white border-t border-gray-100">
+          <div className="container mx-auto px-4 py-16 md:py-20 max-w-4xl">
+            <GeoQaBlock items={GEO_QA_HOME} title="Questions fréquentes INOXYA" />
+          </div>
+        </section>
+      )}
     </div>
   )
 }
