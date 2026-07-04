@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import ProductGrid from "./ProductGrid"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -46,30 +46,6 @@ export default function FilterableProductSection({ products, categories }: Filte
 
     setFilteredProducts(filtered)
   }, [selectedCategory, products, categories])
-
-  // Fonction pour filtrer par catégorie (appelée depuis CategoryCard)
-  const handleCategoryFilter = useCallback((categorySlug: string) => {
-    setSelectedCategory(categorySlug)
-    // Scroll vers la section produits
-    setTimeout(() => {
-      const productsSection = document.getElementById('products-section')
-      if (productsSection) {
-        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-    }, 100)
-  }, [])
-
-  // Exposer la fonction globalement pour que CategoryCard puisse l'appeler
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).filterProductsByCategory = handleCategoryFilter
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        delete (window as any).filterProductsByCategory
-      }
-    }
-  }, [handleCategoryFilter])
 
   const handleResetFilter = () => {
     setSelectedCategory(null)

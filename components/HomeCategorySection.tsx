@@ -8,7 +8,6 @@ interface HomeCategorySectionProps {
 
 /**
  * Wrapper client pour la section catégories sur la page d'accueil
- * CategoryCard utilisera window.filterProductsByCategory pour filtrer
  */
 export default function HomeCategorySection({ categories }: HomeCategorySectionProps) {
   return (

@@ -20,7 +20,6 @@ interface CategoryCardProps {
     coverImage?: string // Image de couverture passée depuis le serveur
   }
   index: number
-  onFilter?: (categorySlug: string) => void // Callback optionnel pour filtrer les produits (page d'accueil)
 }
 
 /**
@@ -35,7 +34,7 @@ const getCategoryImageSrc = (slug: string, image_url?: string, coverImage?: stri
  * Composant CategoryCard Premium - Style Unifié
  * Toutes les cartes utilisent le même design : photo de fond + overlay sombre + texte en bas
  */
-export default function CategoryCard({ category, index, onFilter }: CategoryCardProps) {
+export default function CategoryCard({ category, index }: CategoryCardProps) {
   const locale = useLocale()
   const [imageError, setImageError] = useState(false)
 
@@ -56,38 +55,8 @@ export default function CategoryCard({ category, index, onFilter }: CategoryCard
     ? `/${locale}/packs`
     : `/${locale}/bijoux/${seoSlug}`
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // Si onFilter est fourni (via prop), filtrer au lieu de rediriger
-    if (onFilter && !isPacksCategory) {
-      e.preventDefault()
-      onFilter(category.slug)
-      return
-    }
-    
-    // Si on est sur la page d'accueil (window.filterProductsByCategory existe), filtrer
-    type WindowWithFilter = Window & {
-      filterProductsByCategory?: (slug: string) => void
-    }
-    const windowWithFilter = typeof window !== 'undefined' ? (window as WindowWithFilter) : null
-    if (windowWithFilter?.filterProductsByCategory && !isPacksCategory) {
-      e.preventDefault()
-      windowWithFilter.filterProductsByCategory(category.slug)
-      return
-    }
-    
-    // Comportement par défaut : redirection avec smooth scroll
-    if (!isPacksCategory) {
-      setTimeout(() => {
-        const productsSection = document.getElementById('products-section')
-        if (productsSection) {
-          productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-      }, 100)
-    }
-  }
-
   return (
-    <Link href={href} className="block" onClick={handleClick} aria-label={`Voir les ${displayName}`}>
+    <Link href={href} className="block" aria-label={`Voir les ${displayName}`}>
       <div
         className="group relative rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.03] hover:-translate-y-1"
         style={{ 
