@@ -274,6 +274,19 @@ body {
   display: none;
 }
 
+/* Galerie produit — scroll horizontal tactile fiable (iOS / Android) */
+.product-gallery-track {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.product-gallery-track::-webkit-scrollbar {
+  display: none;
+}
+
 /* Hover effects pour les cartes produits */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;

@@ -280,10 +280,10 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
 
         <div className="grid w-full min-w-0 max-w-full grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* image gallery */}
-          <div className="min-w-0 w-full max-w-full space-y-4">
+          <div className="min-w-0 w-full max-w-full space-y-4 overflow-visible">
             <ProductImageGallery
               mainImage={galleryMain || "/placeholder.svg"}
-              images={galleryThumbs}
+              images={cappedGallery}
               productName={product.name}
               imageAlts={productSeo.imageAlts}
             />
