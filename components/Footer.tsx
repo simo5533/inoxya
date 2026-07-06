@@ -9,6 +9,7 @@ import { socialLinks, contactInfo } from "@/lib/social-links"
 import { getSeoFooterGroups } from '@/lib/seo/content/registry'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
+import { BRAND_LOGO, BRAND_LOGO_ALT } from '@/lib/brand'
 
 export default function Footer() {
   const t = useTranslations('footer')
@@ -52,15 +53,12 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="mb-6">
               <Image 
-                src="/logo-inoxya.svg" 
-                alt="INOXYA - Embellie ton âme" 
-                width={140} 
-                height={56}
-                className="h-auto brightness-0 invert contrast-125"
+                src={BRAND_LOGO} 
+                alt={BRAND_LOGO_ALT} 
+                width={88} 
+                height={88}
+                className="h-16 w-auto object-contain"
                 priority
-                style={{
-                  filter: 'brightness(0) invert(1) contrast(1.2)',
-                }}
               />
             </div>
             <p className="text-gray-200 text-sm leading-relaxed mb-4 max-w-xs">

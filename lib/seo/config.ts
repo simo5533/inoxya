@@ -1,4 +1,5 @@
 import { getSiteUrlSafe } from '@/lib/site-url'
+import { BRAND_LOGO } from '@/lib/brand'
 
 export const SEO_BRAND = 'INOXYA BIJOUX'
 export const SEO_SLOGAN = 'Embellie ton âme'
@@ -52,7 +53,7 @@ export function seoPageMetadata(opts: {
   const path = opts.path.startsWith('/') ? opts.path : `/${opts.path}`
   const url = `${siteUrl}/${locale}${path}`
   const alt = seoAlternates(path)
-  const image = opts.ogImage ?? `${siteUrl}/icon.svg`
+  const image = opts.ogImage ?? `${siteUrl}${BRAND_LOGO}`
 
   return {
     metadataBase: new URL(siteUrl),

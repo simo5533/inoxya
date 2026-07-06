@@ -10,6 +10,7 @@ import {
   SEO_SLOGAN,
   seoSiteUrl,
 } from '@/lib/seo/config'
+import { BRAND_LOGO } from '@/lib/brand'
 
 function JsonLdScript({ data }: { data: Record<string, unknown> }) {
   return (
@@ -31,7 +32,7 @@ export function OrganizationJsonLd() {
         name: SEO_BRAND,
         slogan: SEO_SLOGAN,
         url: siteUrl,
-        logo: `${siteUrl}/icon.svg`,
+        logo: `${siteUrl}${BRAND_LOGO}`,
         description:
           'Boutique marocaine de bijoux en acier inoxydable 316L : bagues, colliers, bracelets, boucles d’oreilles, montres et packs. Livraison Maroc.',
         telephone: SEO_PHONE_E164,
@@ -278,14 +279,14 @@ export function ArticleJsonLd({
         headline,
         description,
         url,
-        image: image ?? `${siteUrl}/icon.svg`,
+        image: image ?? `${siteUrl}${BRAND_LOGO}`,
         datePublished,
         dateModified,
         author: { '@type': 'Organization', name: SEO_BRAND },
         publisher: {
           '@type': 'Organization',
           name: SEO_BRAND,
-          logo: { '@type': 'ImageObject', url: `${siteUrl}/icon.svg` },
+          logo: { '@type': 'ImageObject', url: `${siteUrl}${BRAND_LOGO}` },
         },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
       }}

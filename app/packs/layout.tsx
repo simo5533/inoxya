@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getSiteUrlSafe } from '@/lib/site-url'
+import { BRAND_LOGO } from '@/lib/brand'
 
 const siteUrl = getSiteUrlSafe()
 
@@ -14,9 +15,9 @@ export const metadata: Metadata = {
     siteName: "INOXYA BIJOUX",
     images: [
       {
-        url: `${siteUrl}/icon.svg`,
-        width: 1200,
-        height: 630,
+        url: `${siteUrl}${BRAND_LOGO}`,
+        width: 512,
+        height: 512,
         alt: "INOXYA BIJOUX - Packs Exclusifs",
       },
     ],
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Packs Exclusifs | INOXYA BIJOUX",
     description: "Découvrez nos packs exclusifs de bijoux en acier inoxydable premium",
-    images: [`${siteUrl}/icon.svg`],
+    images: [`${siteUrl}${BRAND_LOGO}`],
   },
   alternates: {
     canonical: `${siteUrl}/packs`,

@@ -12,6 +12,7 @@ import { useState, useEffect, useRef } from "react"
 import { getCartCount, getFavorites } from "@/lib/cart-favorites"
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
+import { BRAND_LOGO, BRAND_LOGO_ALT } from '@/lib/brand'
 
 export default function Header() {
   const t = useTranslations('header')
@@ -89,11 +90,11 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center group flex-shrink-0 min-w-0">
             <Image 
-              src="/logo-inoxya.svg" 
-              alt="INOXYA - Embellie ton âme" 
-              width={150} 
-              height={60} 
-              className="h-7 sm:h-9 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
+              src={BRAND_LOGO} 
+              alt={BRAND_LOGO_ALT} 
+              width={72} 
+              height={72} 
+              className="h-10 sm:h-12 w-auto object-contain transition-opacity duration-300 group-hover:opacity-90"
               priority
             />
           </Link>

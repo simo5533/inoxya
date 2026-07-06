@@ -21,6 +21,7 @@ import { GlobalSeoJsonLd } from "@/components/SEOJsonLd"
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 
 import { getSiteUrlSafe } from '@/lib/site-url'
+import { BRAND_LOGO, BRAND_LOGO_ICON } from '@/lib/brand'
 
 const siteUrl = getSiteUrlSafe()
 
@@ -46,7 +47,7 @@ export const metadata: Metadata = {
     description: "Bijoux en acier inoxydable de qualité premium. Durables, hypoallergéniques et élégants.",
     images: [
       {
-        url: `${siteUrl}/icon.svg`,
+        url: `${siteUrl}${BRAND_LOGO}`,
         width: 512,
         height: 512,
         alt: "INOXYA BIJOUX",
@@ -57,7 +58,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "INOXYA BIJOUX - Embellie ton âme",
     description: "Bijoux en acier inoxydable de qualité premium",
-    images: [`${siteUrl}/icon.svg`],
+    images: [`${siteUrl}${BRAND_LOGO}`],
   },
   robots: {
     index: true,
@@ -75,8 +76,8 @@ export const metadata: Metadata = {
     // yandex: 'your-yandex-verification-code',
   },
   icons: {
-    icon: '/logo-inoxya-icon.svg',
-    apple: '/logo-inoxya-icon.svg',
+    icon: BRAND_LOGO_ICON,
+    apple: BRAND_LOGO_ICON,
   },
 }
 
