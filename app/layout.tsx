@@ -72,8 +72,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // google: 'your-google-verification-code',
-    // yandex: 'your-yandex-verification-code',
+    google: 'google43cc1435106addd6',
   },
   icons: {
     icon: BRAND_LOGO_ICON,
