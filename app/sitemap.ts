@@ -3,6 +3,10 @@ import { CATEGORY_SEO_SLUGS } from '@/lib/seo/categories'
 import { SEO_CONTENT_SLUGS } from '@/lib/seo/content/registry'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
+/** Sitemap pré-généré : réponse rapide pour Googlebot (évite timeouts cold start). */
+export const dynamic = 'force-static'
+export const revalidate = 3600
+
 const LOCALES = ['fr', 'ar'] as const
 
 const STATIC_PATHS = [
