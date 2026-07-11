@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   description:
     'Bijoux en acier inoxydable 316L premium. Artisanat marocain authentique. Livraison gratuite dès 200 MAD.',
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://inoxya-bijoux.vercel.app'
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://inoxya.ma'
   ),
   openGraph: {
     type: 'website',

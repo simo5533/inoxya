@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { CATEGORY_SEO_SLUGS } from '@/lib/seo/categories'
 import { SEO_CONTENT_SLUGS } from '@/lib/seo/content/registry'
-import { seoSiteUrl } from '@/lib/seo/config'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
 const LOCALES = ['fr', 'ar'] as const
 
@@ -17,7 +17,7 @@ const STATIC_PATHS = [
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = seoSiteUrl()
+  const siteUrl = PRODUCTION_SITE_URL
   const now = new Date()
 
   const entries: MetadataRoute.Sitemap = []

@@ -1,9 +1,46 @@
 /**
  * Utilitaire pour obtenir l'URL du site avec fallback intelligent
- * - Utilise NEXT_PUBLIC_SITE_URL si défini
- * - Fallback sur headers de requête (host + protocol) si disponible
- * - Fallback final sur placeholder (pour développement/preview)
+ * - Utilise NEXT_PUBLIC_SITE_URL si défini (origine seule, sans /fr)
+ * - En production Vercel: toujours https://inoxya.ma (évite les URLs preview)
+ * - Fallback sur headers de requête si disponible
  */
+
+/** Domaine canonique public (SEO, sitemap, robots, Open Graph). */
+export const PRODUCTION_SITE_URL = 'https://inoxya.ma'
+
+function isProductionDeploy(): boolean {
+  return (
+    process.env['VERCEL_ENV'] === 'production' ||
+    (typeof process.env['NODE_ENV'] === 'string' && process.env['NODE_ENV'].trim() === 'production')
+  )
+}
+
+/** Ne garde que le schéma + host (corrige NEXT_PUBLIC_SITE_URL=.../fr). */
+export function normalizeSiteOrigin(raw: string): string {
+  const value = raw.trim()
+  if (!value) return PRODUCTION_SITE_URL
+  try {
+    const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`
+    const url = new URL(withProtocol)
+    return `${url.protocol}//${url.host}`.replace(/\/$/, '')
+  } catch {
+    return value.replace(/\/$/, '').split('/').slice(0, 3).join('/') || PRODUCTION_SITE_URL
+  }
+}
+
+function resolveConfiguredSiteUrl(): string | null {
+  const fromEnv = process.env['NEXT_PUBLIC_SITE_URL']
+  if (fromEnv && typeof fromEnv === 'string' && fromEnv.trim()) {
+    const origin = normalizeSiteOrigin(fromEnv)
+    // Preview Vercel.app ne doit jamais être le domaine SEO en production
+    if (isProductionDeploy() && origin.includes('.vercel.app')) {
+      return PRODUCTION_SITE_URL
+    }
+    if (origin.includes('inoxya.ma')) return PRODUCTION_SITE_URL
+    return origin
+  }
+  return null
+}
 
 /**
  * Obtient l'URL du site depuis l'environnement ou les headers
@@ -11,61 +48,59 @@
  * @returns URL du site (sans trailing slash)
  */
 export function getSiteUrl(request?: Request): string {
-  // 1. Priorité: NEXT_PUBLIC_SITE_URL (défini par l'utilisateur)
-  if (process.env['NEXT_PUBLIC_SITE_URL']) {
-    return process.env['NEXT_PUBLIC_SITE_URL'].replace(/\/$/, '')
+  const configured = resolveConfiguredSiteUrl()
+  if (configured) return configured
+
+  if (isProductionDeploy()) {
+    return PRODUCTION_SITE_URL
   }
 
-  // 2. Fallback Vercel: VERCEL_URL (preview + prod sans domaine personnalisé)
+  const productionUrl = process.env['VERCEL_PROJECT_PRODUCTION_URL']
+  if (productionUrl && typeof productionUrl === 'string') {
+    return normalizeSiteOrigin(productionUrl)
+  }
+
   const vercelUrl = process.env['VERCEL_URL']
   if (vercelUrl && typeof vercelUrl === 'string') {
-    return `https://${vercelUrl.replace(/\/$/, '')}`
+    return normalizeSiteOrigin(`https://${vercelUrl}`)
   }
 
-  // 3. Fallback: Headers de requête (si disponible)
   if (request) {
-    const protocol = request.headers.get('x-forwarded-proto') || 
-                     (request.url.startsWith('https') ? 'https' : 'http')
+    const protocol =
+      request.headers.get('x-forwarded-proto') ||
+      (request.url.startsWith('https') ? 'https' : 'http')
     const host = request.headers.get('host') || request.headers.get('x-forwarded-host')
-    
+
     if (host) {
-      return `${protocol}://${host}`
+      return normalizeSiteOrigin(`${protocol}://${host}`)
     }
   }
 
-  // 4. Fallback final: Placeholder (pour dev/preview)
-  // En production, ceci ne devrait jamais être utilisé car NEXT_PUBLIC_SITE_URL sera défini
-  const nodeEnv = (typeof process.env['NODE_ENV'] === 'string' ? process.env['NODE_ENV'].trim() : '')
-  const isProduction = nodeEnv === 'production'
-  if (isProduction) {
-    // En production, utiliser un placeholder générique
-    // L'utilisateur devra définir NEXT_PUBLIC_SITE_URL
-    return 'https://your-domain.vercel.app'
-  }
-
-  // En développement, localhost (utiliser le port depuis PORT ou NEXT_PUBLIC_PORT)
   const port = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
   return `http://localhost:${port}`
 }
 
 /**
  * Obtient l'URL du site de manière synchrone (sans request)
- * Utilise uniquement NEXT_PUBLIC_SITE_URL ou placeholder
  */
 export function getSiteUrlSync(): string {
-  if (process.env['NEXT_PUBLIC_SITE_URL']) {
-    return process.env['NEXT_PUBLIC_SITE_URL'].replace(/\/$/, '')
-  }
-  const vercelUrl = process.env['VERCEL_URL']
-  if (vercelUrl && typeof vercelUrl === 'string') {
-    return `https://${vercelUrl.replace(/\/$/, '')}`
-  }
-  const nodeEnv = (typeof process.env['NODE_ENV'] === 'string' ? process.env['NODE_ENV'].trim() : '')
-  if (nodeEnv === 'production') {
-    return 'https://inoxya-bijoux.vercel.app'
+  const configured = resolveConfiguredSiteUrl()
+  if (configured) return configured
+
+  if (isProductionDeploy()) {
+    return PRODUCTION_SITE_URL
   }
 
-  // En développement, utiliser le port depuis PORT ou NEXT_PUBLIC_PORT
+  const productionUrl = process.env['VERCEL_PROJECT_PRODUCTION_URL']
+  if (productionUrl && typeof productionUrl === 'string') {
+    return normalizeSiteOrigin(productionUrl)
+  }
+
+  const vercelUrl = process.env['VERCEL_URL']
+  if (vercelUrl && typeof vercelUrl === 'string') {
+    return normalizeSiteOrigin(`https://${vercelUrl}`)
+  }
+
   const port = process.env['PORT'] || process.env['NEXT_PUBLIC_PORT'] || '3000'
   return `http://localhost:${port}`
 }
@@ -77,14 +112,17 @@ export function getSiteUrlSync(): string {
 export function getSiteUrlSafe(): string {
   try {
     const url = getSiteUrlSync()
-    if (url && typeof url === 'string') return url.trim() || 'https://inoxya-bijoux.vercel.app'
-    return 'https://inoxya-bijoux.vercel.app'
+    if (url && typeof url === 'string') return url.trim() || PRODUCTION_SITE_URL
+    return PRODUCTION_SITE_URL
   } catch {
     try {
       const env = process.env['NEXT_PUBLIC_SITE_URL']
-      if (env && typeof env === 'string') return env.replace(/\/$/, '').trim() || 'https://inoxya-bijoux.vercel.app'
-    } catch { /* ignore */ }
-    return 'https://inoxya-bijoux.vercel.app'
+      if (env && typeof env === 'string') {
+        return normalizeSiteOrigin(env) || PRODUCTION_SITE_URL
+      }
+    } catch {
+      /* ignore */
+    }
+    return PRODUCTION_SITE_URL
   }
 }
-

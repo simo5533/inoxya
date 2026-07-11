@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
-import { seoSiteUrl } from '@/lib/seo/config'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
-const siteUrl = seoSiteUrl()
+const siteUrl = PRODUCTION_SITE_URL
 
 const DISALLOW = [
   '/admin/',
