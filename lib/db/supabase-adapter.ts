@@ -541,14 +541,18 @@ export class SupabaseAdapter implements DatabaseAdapter {
     if (error || !data) {
       // Fallback : colonne TEXT qui refuse un objet
       if (error && /json|jsonb|invalid input/i.test(error.message || '') && typeof addr === 'string') {
-        const retry = await this.insertData('orders', {
-          ...payload,
+        const { data: retryData, error: retryError } = await this.insertData('orders', {
+          user_id: payload.user_id,
+          total_amount: payload.total_amount,
+          status: payload.status,
           shipping_address: addr,
+          phone: payload.phone,
+          notes: payload.notes,
         })
           .select()
           .single()
-        if (!retry.error && retry.data) {
-          return this.mapOrder(retry.data)
+        if (!retryError && retryData) {
+          return this.mapOrder(retryData as Record<string, unknown>)
         }
       }
       const errPayload = {
