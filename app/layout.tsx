@@ -22,7 +22,7 @@ import { MetaPixel } from "@/components/MetaPixel"
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 
 import { getSiteUrlSafe } from '@/lib/site-url'
-import { BRAND_LOGO, BRAND_LOGO_ICON } from '@/lib/brand'
+import { BRAND_LOGO_ICON } from '@/lib/brand'
 
 const siteUrl = getSiteUrlSafe()
 
@@ -48,9 +48,9 @@ export const metadata: Metadata = {
     description: "Bijoux en acier inoxydable de qualité premium. Durables, hypoallergéniques et élégants.",
     images: [
       {
-        url: `${siteUrl}${BRAND_LOGO}`,
-        width: 512,
-        height: 512,
+        url: `${siteUrl}${BRAND_LOGO_ICON}`,
+        width: 1024,
+        height: 1024,
         alt: "INOXYA BIJOUX",
       },
     ],
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "INOXYA BIJOUX - Embellie ton âme",
     description: "Bijoux en acier inoxydable de qualité premium",
-    images: [`${siteUrl}${BRAND_LOGO}`],
+    images: [`${siteUrl}${BRAND_LOGO_ICON}`],
   },
   robots: {
     index: true,
@@ -76,8 +76,13 @@ export const metadata: Metadata = {
     google: 'google43cc1435106addd6',
   },
   icons: {
-    icon: BRAND_LOGO_ICON,
-    apple: BRAND_LOGO_ICON,
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: BRAND_LOGO_ICON, type: 'image/png', sizes: '1024x1024' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 }
 

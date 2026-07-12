@@ -10,7 +10,7 @@ import {
   SEO_SLOGAN,
   seoSiteUrl,
 } from '@/lib/seo/config'
-import { BRAND_LOGO } from '@/lib/brand'
+import { BRAND_LOGO, BRAND_LOGO_ICON } from '@/lib/brand'
 
 function JsonLdScript({ data }: { data: Record<string, unknown> }) {
   return (
@@ -24,15 +24,27 @@ function JsonLdScript({ data }: { data: Record<string, unknown> }) {
 
 export function OrganizationJsonLd() {
   const siteUrl = seoSiteUrl()
+  const logoUrl = `${siteUrl}${BRAND_LOGO_ICON}`
   return (
     <JsonLdScript
       data={{
         '@context': 'https://schema.org',
         '@type': ['Organization', 'JewelryStore'],
+        '@id': `${siteUrl}/#organization`,
         name: SEO_BRAND,
+        alternateName: 'INOXYA',
         slogan: SEO_SLOGAN,
         url: siteUrl,
-        logo: `${siteUrl}${BRAND_LOGO}`,
+        logo: {
+          '@type': 'ImageObject',
+          '@id': `${siteUrl}/#logo`,
+          url: logoUrl,
+          contentUrl: logoUrl,
+          width: 1024,
+          height: 1024,
+          caption: SEO_BRAND,
+        },
+        image: logoUrl,
         description:
           'Boutique marocaine de bijoux en acier inoxydable 316L : bagues, colliers, bracelets, boucles d’oreilles, montres et packs. Livraison Maroc.',
         telephone: SEO_PHONE_E164,
@@ -62,8 +74,11 @@ export function WebSiteJsonLd() {
       data={{
         '@context': 'https://schema.org',
         '@type': 'WebSite',
+        '@id': `${siteUrl}/#website`,
         name: SEO_BRAND,
+        alternateName: 'INOXYA',
         url: siteUrl,
+        publisher: { '@id': `${siteUrl}/#organization` },
         potentialAction: {
           '@type': 'SearchAction',
           target: {
