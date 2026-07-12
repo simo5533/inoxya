@@ -639,21 +639,34 @@ export class PostgresAdapter implements DatabaseAdapter {
     phone?: string
     notes?: string
   }): Promise<Order | null> {
-    const result = await this.pool.query(
-      `INSERT INTO orders (user_id, total_amount, status, shipping_address, phone, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        orderData.user_id,
-        orderData.total_amount,
-        orderData.status,
-        orderData.shipping_address ? JSON.stringify(orderData.shipping_address) : null,
-        orderData.phone || null,
-        orderData.notes || null,
-      ]
-    )
-    if (result.rows.length === 0) return null
-    return this.mapOrder(result.rows[0])
+    try {
+      const addr = orderData.shipping_address
+      const shipping_address =
+        addr == null || addr === ''
+          ? null
+          : typeof addr === 'string'
+            ? addr
+            : JSON.stringify(addr)
+
+      const result = await this.pool.query(
+        `INSERT INTO orders (user_id, total_amount, status, shipping_address, phone, notes)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [
+          orderData.user_id || null,
+          orderData.total_amount,
+          orderData.status,
+          shipping_address,
+          orderData.phone || null,
+          orderData.notes || null,
+        ]
+      )
+      if (result.rows.length === 0) return null
+      return this.mapOrder(result.rows[0])
+    } catch (error) {
+      logger.error('[PostgresAdapter] createOrder error:', error)
+      throw error
+    }
   }
 
   async createOrderItem(itemData: {
@@ -665,30 +678,68 @@ export class PostgresAdapter implements DatabaseAdapter {
     price: number
     product_name?: string
   }): Promise<OrderItem | null> {
-    const bijou_id = itemData.bijou_id ?? itemData.product_id ?? ''
-    if (!bijou_id && !itemData.pack_id) {
-      return null
-    }
-    const pack_id = itemData.pack_id ?? null
+    const orderId = itemData.order_id
+    const packId = itemData.pack_id ? String(itemData.pack_id) : null
+    const productRef = String(itemData.bijou_id || itemData.product_id || '').trim()
+    const qty = Number(itemData.quantity)
+    const price = Number(itemData.price)
+    const name = itemData.product_name ? String(itemData.product_name) : null
 
-    const result = await this.pool.query(
-      `INSERT INTO order_items (order_id, bijou_id, pack_id, quantity, price)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [itemData.order_id, bijou_id || null, pack_id, itemData.quantity, itemData.price]
-    )
-    
-    if (result.rows.length === 0) return null
-    
-    const row = result.rows[0] as { id: number; order_id: number; bijou_id: string; pack_id?: string | null; quantity: number; price: number }
-    return {
-      id: String(row.id),
-      order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id ?? ''),
-      pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
-      quantity: Number(row.quantity),
-      price: Number(row.price),
+    // Ordre des tentatives : schémas Neon/Supabase varient (UUID FK vs TEXT, pack_id, product_id…)
+    const attempts: Array<Record<string, unknown>> = []
+    if (packId) {
+      attempts.push({ order_id: orderId, bijou_id: null, pack_id: packId, quantity: qty, price })
+      attempts.push({ order_id: orderId, pack_id: packId, quantity: qty, price })
     }
+    if (productRef) {
+      attempts.push({ order_id: orderId, bijou_id: productRef, pack_id: null, quantity: qty, price })
+      attempts.push({ order_id: orderId, product_id: productRef, quantity: qty, price })
+      attempts.push({
+        order_id: orderId,
+        bijou_id: productRef,
+        quantity: qty,
+        price,
+        product_name: name,
+      })
+    }
+    attempts.push({ order_id: orderId, quantity: qty, price })
+
+    let lastError: unknown = null
+    for (const payload of attempts) {
+      const cols = Object.keys(payload)
+      const values = Object.values(payload)
+      const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ')
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await this.pool.query(
+          `INSERT INTO order_items (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+          values
+        )
+        const row = result.rows[0] as
+          | { id: number; order_id: number; bijou_id?: string | null; pack_id?: string | null; quantity: number; price: number }
+          | undefined
+        if (!row) continue
+        return {
+          id: String(row.id),
+          order_id: String(row.order_id),
+          bijou_id: String(row.bijou_id ?? productRef ?? ''),
+          pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : packId || undefined,
+          quantity: Number(row.quantity),
+          price: Number(row.price),
+        }
+      } catch (error) {
+        lastError = error
+        logger.warn('[PostgresAdapter] createOrderItem attempt failed', {
+          cols,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+
+    logger.error('[PostgresAdapter] createOrderItem exhausted attempts', lastError)
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Impossible d’enregistrer la ligne de commande')
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {

@@ -230,7 +230,8 @@ export async function POST(request: NextRequest) {
           product_id: item.id,
           quantity: item.quantity,
           price: item.price,
-          product_name: item.name
+          product_name: item.name,
+          isPack: Boolean(item.isPack),
         }))
       })
       
@@ -288,9 +289,13 @@ export async function POST(request: NextRequest) {
         name: orderError.name
       } : { message: String(orderError) }
       logger.error('[POST /api/checkout] Erreur lors de la création de la commande:', errorDetails)
+      const detailMsg =
+        orderError instanceof Error && orderError.message
+          ? orderError.message
+          : 'Erreur base de données'
       return NextResponse.json({ 
         error: 'Erreur lors de la création de la commande. Veuillez réessayer.',
-        ...(process.env.NODE_ENV === 'development' ? { details: errorDetails } : {})
+        details: [detailMsg],
       }, { status: 500 })
     }
   } catch (error) {

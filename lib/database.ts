@@ -762,6 +762,7 @@ export async function createOrderFull(orderData: {
     quantity: number
     price: number
     product_name: string
+    isPack?: boolean
   }>
 }) {
   const pm = normalizeCheckoutPaymentMethod(orderData.payment_method)
@@ -801,11 +802,12 @@ export async function createOrderFull(orderData: {
       // Créer les items (en parallèle pour meilleure performance)
       const orderItems: Array<{ id: string; order_id: string; bijou_id: string; quantity: number; price: number }> = []
       const itemPromises = orderData.items.map(async (item) => {
-         
+        const isPack = Boolean(item.isPack)
         const orderItem = await adapter.createOrderItem({
           order_id: order.id,
-          product_id: item.product_id,
-          bijou_id: item.product_id,
+          product_id: isPack ? undefined : item.product_id,
+          bijou_id: isPack ? undefined : item.product_id,
+          pack_id: isPack ? item.product_id : undefined,
           quantity: item.quantity,
           price: item.price,
           product_name: item.product_name
@@ -816,6 +818,10 @@ export async function createOrderFull(orderData: {
         return orderItem
       })
       await Promise.all(itemPromises)
+
+      if (orderItems.length === 0 && orderData.items.length > 0) {
+        throw new Error('Aucune ligne de commande n’a pu être enregistrée')
+      }
       
       // Créer le paiement
       const payment = await adapter.createPayment({
@@ -851,7 +857,8 @@ export async function createOrderFull(orderData: {
         notes: orderData.shipping_name
       },
       items: orderData.items.map(item => ({
-        bijou_id: item.product_id,
+        bijou_id: item.isPack ? null : item.product_id,
+        pack_id: item.isPack ? item.product_id : null,
         quantity: item.quantity,
         price: item.price
       })),

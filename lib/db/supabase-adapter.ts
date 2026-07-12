@@ -532,7 +532,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
         hint: error?.hint
       }
       logger.warn('[SupabaseAdapter] createOrder failed', error ? { ...errPayload, serialized: serializeError(error) } : errPayload)
-      return null
+      throw new Error(error?.message || 'Échec de création de la commande (orders)')
     }
     return this.mapOrder(data)
   }
@@ -540,45 +540,85 @@ export class SupabaseAdapter implements DatabaseAdapter {
   async createOrderItem(itemData: {
     order_id: string
     bijou_id?: string
+    pack_id?: string
     product_id?: string
     quantity: number
     price: number
     product_name?: string
   }): Promise<{ id: string; order_id: string; bijou_id: string; quantity: number; price: number } | null> {
-    const bijou_id = itemData.bijou_id || itemData.product_id || ''
     const orderIdRaw = itemData.order_id
     const order_id = Number.isFinite(Number(orderIdRaw)) ? Number(orderIdRaw) : orderIdRaw
-    const { data, error } = await this.insertData('order_items', {
+    const packId = itemData.pack_id ? String(itemData.pack_id) : null
+    const productRef = String(itemData.bijou_id || itemData.product_id || '').trim()
+
+    const attempts: Array<Record<string, unknown>> = []
+    if (packId) {
+      attempts.push({
+        order_id,
+        bijou_id: null,
+        pack_id: packId,
+        quantity: Number(itemData.quantity),
+        price: Number(itemData.price),
+      })
+    }
+    if (productRef) {
+      attempts.push({
+        order_id,
+        bijou_id: productRef,
+        pack_id: null,
+        quantity: Number(itemData.quantity),
+        price: Number(itemData.price),
+      })
+      attempts.push({
+        order_id,
+        bijou_id: productRef,
+        quantity: Number(itemData.quantity),
+        price: Number(itemData.price),
+      })
+    }
+    attempts.push({
       order_id,
-      bijou_id: bijou_id || null,
       quantity: Number(itemData.quantity),
-      price: Number(itemData.price)
+      price: Number(itemData.price),
     })
-      .select()
-      .single()
-    
-    if (error || !data) {
-      const errPayload = {
-        table: 'order_items',
-        operation: 'insert',
-        order_id: itemData.order_id,
+
+    let lastError: { message?: string; code?: string; details?: string; hint?: string } | null = null
+    for (const payload of attempts) {
+      // eslint-disable-next-line no-await-in-loop
+      const { data, error } = await this.insertData('order_items', payload).select().single()
+      if (!error && data) {
+        const row = data as { id: number; order_id: number; bijou_id: string; quantity: number; price: number }
+        return {
+          id: String(row.id),
+          order_id: String(row.order_id),
+          bijou_id: String(row.bijou_id ?? productRef ?? ''),
+          quantity: Number(row.quantity),
+          price: Number(row.price),
+        }
+      }
+      lastError = error
+      logger.warn('[SupabaseAdapter] createOrderItem attempt failed', {
+        keys: Object.keys(payload),
         message: error?.message,
         code: error?.code,
         details: error?.details,
-        hint: error?.hint
-      }
-      logger.warn('[SupabaseAdapter] createOrderItem failed', error ? { ...errPayload, serialized: serializeError(error) } : errPayload)
-      return null
+        hint: error?.hint,
+      })
     }
-    
-    const row = data as { id: number; order_id: number; bijou_id: string; quantity: number; price: number }
-    return {
-      id: String(row.id),
-      order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id),
-      quantity: Number(row.quantity),
-      price: Number(row.price),
-    }
+
+    logger.warn('[SupabaseAdapter] createOrderItem failed', {
+      table: 'order_items',
+      operation: 'insert',
+      order_id: itemData.order_id,
+      message: lastError?.message,
+      code: lastError?.code,
+      details: lastError?.details,
+      hint: lastError?.hint,
+    })
+    throw new Error(
+      lastError?.message ||
+        'Impossible d’enregistrer la ligne de commande (order_items)'
+    )
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {

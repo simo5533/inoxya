@@ -64,6 +64,7 @@ export interface DatabaseAdapter {
   createOrderItem(itemData: {
     order_id: string
     bijou_id?: string
+    pack_id?: string
     product_id?: string
     quantity: number
     price: number
