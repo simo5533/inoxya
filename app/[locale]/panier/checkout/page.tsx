@@ -18,6 +18,7 @@ import { getCartItems, clearCart, type CartItem } from "@/lib/cart-favorites"
 import { getCustomPackSnapshot, isCustomPackLineId } from "@/lib/custom-pack"
 import { Confetti } from "@/components/Confetti"
 import { useTranslations, useLocale } from "next-intl"
+import { trackMetaInitiateCheckout, trackMetaPurchase } from "@/lib/meta-pixel"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -76,6 +77,8 @@ export default function CheckoutPage() {
       return
     }
     setCartItems(items)
+    const value = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    trackMetaInitiateCheckout({ value, currency: 'MAD' })
   }, [router, locale])
 
   useEffect(() => {
@@ -177,6 +180,11 @@ export default function CheckoutPage() {
       setOrderId(data.order_id || null)
       setIsSubmitting(false)
       setIsSuccess(true)
+      trackMetaPurchase({
+        value: totalSnapshot,
+        currency: 'MAD',
+        orderId: data.order_id || null,
+      })
 
       clearCart()
 

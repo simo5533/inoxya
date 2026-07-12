@@ -14,6 +14,7 @@ import { ORDER_CONFIG } from "@/lib/order-config"
 import { Confetti } from "@/components/Confetti"
 import { useTranslations, useLocale } from "next-intl"
 import type { CheckoutPaymentMethod } from "@/lib/config/payment"
+import { trackMetaPurchase } from "@/lib/meta-pixel"
 
 interface OrderFormProps {
   productName: string
@@ -102,6 +103,11 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
 
       setIsSubmitting(false)
       setIsSuccess(true)
+      trackMetaPurchase({
+        value: price,
+        currency: 'MAD',
+        orderId: data.order_id || null,
+      })
 
       // Réinitialiser le formulaire après 5 secondes
       setTimeout(() => {

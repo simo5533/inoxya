@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger"
 import { addToFavorites as addToFavoritesLib } from "@/lib/cart-favorites"
 import { useTranslations, useLocale } from 'next-intl'
 import Link from "next/link"
+import { trackMetaPurchase } from "@/lib/meta-pixel"
 
 interface Pack {
   id: string
@@ -240,6 +241,11 @@ export default function PacksPage() {
         duration: 5000,
       })
       
+      trackMetaPurchase({
+        value: pack.price,
+        currency: 'MAD',
+        orderId: data.order_id || null,
+      })
       // Déclencher un événement pour le confetti (si nécessaire)
       window.dispatchEvent(new CustomEvent('order-success', { detail: { orderId: data.order_id } }))
       setOpenId(null)

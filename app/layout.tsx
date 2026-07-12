@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { GlobalSeoJsonLd } from "@/components/SEOJsonLd"
+import { MetaPixel } from "@/components/MetaPixel"
 
 // Validation environnement au démarrage (serveur uniquement)
 // TEMPORAIRE: Désactivé pour diagnostic - réactiver après fix
@@ -93,6 +94,7 @@ export default function RootLayout({
         <GlobalSeoJsonLd />
       </head>
       <body className={`${inter.className} overflow-x-hidden max-w-[100vw]`} suppressHydrationWarning>
+        <MetaPixel />
         {children}
       </body>
     </html>
