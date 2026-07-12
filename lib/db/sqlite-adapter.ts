@@ -208,16 +208,26 @@ export class SqliteAdapter implements DatabaseAdapter {
     return null
   }
 
-  async updatePack(_id: string, _packData: Partial<Pack>): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[SqliteAdapter] updatePack not yet implemented')
-    return false
+  async updatePack(id: string, packData: Partial<Pack>): Promise<boolean> {
+    try {
+      const { updatePack } = await import('@/lib/pack-management')
+      const changes = await updatePack(id, packData as never)
+      return changes > 0
+    } catch (error) {
+      logger.error('[SqliteAdapter] updatePack error:', error)
+      return false
+    }
   }
 
-  async deletePack(_id: string): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[SqliteAdapter] deletePack not yet implemented')
-    return false
+  async deletePack(id: string): Promise<boolean> {
+    try {
+      const { deletePack } = await import('@/lib/pack-management')
+      await deletePack(id)
+      return true
+    } catch (error) {
+      logger.error('[SqliteAdapter] deletePack error:', error)
+      return false
+    }
   }
 
   // Orders

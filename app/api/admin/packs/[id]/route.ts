@@ -5,7 +5,7 @@ import { getDatabaseAdapter } from '@/lib/db'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { logger } from '@/lib/logger'
 import { updatePackSchema, validateWithSchema } from '@/lib/validations'
-import { sanitizeInput, validateNumericId, requireCSRF } from '@/lib/security'
+import { sanitizeInput, validateProductId, requireCSRF } from '@/lib/security'
 
 /** Utiliser l'adapter pour getPackById si disponible (évite better-sqlite3) */
 async function getPackByIdSafe(id: string): Promise<{ name: string; id: string } | null> {
@@ -75,8 +75,8 @@ export async function PUT(
     
     const { id } = await params
     
-    // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    // SÉCURITÉ: Validation de l'ID (entier, UUID ou slug-safe)
+    if (!validateProductId(id)) {
       return NextResponse.json({ error: 'ID pack invalide' }, { status: 400 })
     }
 
@@ -110,15 +110,21 @@ export async function PUT(
 
     if (validatedData.name) updateData.name = sanitizeInput(validatedData.name)
     if (validatedData.slug) updateData.slug = sanitizeInput(validatedData.slug)
-    if (validatedData.description) updateData.description = sanitizeInput(validatedData.description)
+    if (validatedData.description !== undefined) {
+      updateData.description = validatedData.description
+        ? sanitizeInput(validatedData.description)
+        : ''
+    }
     if (validatedData.price !== undefined) updateData.price = validatedData.price
-    if (validatedData.image_url !== undefined && validatedData.image_url !== null) updateData.image_url = validatedData.image_url
+    if (validatedData.image_url !== undefined && validatedData.image_url !== null) {
+      updateData.image_url = validatedData.image_url
+    }
     if (validatedData.is_featured !== undefined) updateData.is_featured = validatedData.is_featured
 
     let existingPack: { name: string } | null = null
     let pack: { id: string; name: string } | null = null
 
-    // Priorité 1 : adapter (Supabase / SQLite via adapter)
+    // Priorité 1 : adapter (Supabase / Postgres / SQLite via adapter)
     try {
       const adapter = await getDatabaseAdapter()
       if (typeof adapter.getPackById === 'function' && typeof adapter.updatePack === 'function') {
@@ -128,43 +134,67 @@ export async function PUT(
         }
         existingPack = { name: existing.name }
         const updated = await adapter.updatePack(id, updateData)
-        if (updated) {
-          const updatedPack = await adapter.getPackById(id)
-          pack = updatedPack ? { id: String(updatedPack.id), name: updatedPack.name } : existingPack as { id: string; name: string }
-          try {
-            await createNotification({
-              user_id: null,
-              title: 'Pack modifié',
-              message: `Pack "${pack?.name ?? existingPack.name}" modifié par ${user.first_name || user.phone}`,
-              type: 'info',
-              link: `/admin/packs`
-            })
-          } catch (notifError) {
-            logger.warn('Erreur création notification:', { error: notifError })
-          }
-          return NextResponse.json({ success: true, pack: updatedPack ?? pack })
+        if (!updated) {
+          logger.error('[PUT /api/admin/packs/[id]] updatePack a échoué via adapter', {
+            id,
+            fields: Object.keys(updateData),
+          })
+          return NextResponse.json(
+            { error: 'Échec de la mise à jour du pack (base de données)' },
+            { status: 500 }
+          )
         }
+        const updatedPack = await adapter.getPackById(id)
+        pack = updatedPack
+          ? { id: String(updatedPack.id), name: updatedPack.name }
+          : { id: String(existing.id), name: existing.name }
+        try {
+          await createNotification({
+            user_id: null,
+            title: 'Pack modifié',
+            message: `Pack "${pack.name}" modifié par ${user.first_name || user.phone}`,
+            type: 'info',
+            link: `/admin/packs`,
+          })
+        } catch (notifError) {
+          logger.warn('Erreur création notification:', { error: notifError })
+        }
+        return NextResponse.json({ success: true, pack: updatedPack ?? pack })
       }
     } catch (adapterError) {
-      logger.warn('[PUT /api/admin/packs/[id]] Adapter failed, fallback pack-management:', { error: adapterError instanceof Error ? adapterError.message : String(adapterError) })
+      logger.warn('[PUT /api/admin/packs/[id]] Adapter failed, fallback pack-management:', {
+        error: adapterError instanceof Error ? adapterError.message : String(adapterError),
+      })
     }
 
-    // Fallback : pack-management (better-sqlite3)
+    // Fallback : pack-management (better-sqlite3, local uniquement)
     existingPack = await getPackByIdSafe(id)
     if (!existingPack) {
       return NextResponse.json({ error: 'Pack non trouvé' }, { status: 404 })
     }
-    await updatePack(id, updateData)
+    try {
+      await updatePack(id, updateData)
+    } catch (sqliteError) {
+      logger.error('[PUT /api/admin/packs/[id]] Fallback SQLite failed:', sqliteError)
+      return NextResponse.json(
+        {
+          error: 'Échec de la mise à jour du pack',
+          details:
+            sqliteError instanceof Error ? sqliteError.message : 'Erreur base de données',
+        },
+        { status: 500 }
+      )
+    }
     pack = await getPackByIdSafe(id)
 
     // Notification admin
     try {
       await createNotification({
-        user_id: '',
+        user_id: null,
         title: 'Pack modifié',
         message: `Pack "${pack?.name ?? existingPack.name}" modifié par ${user.first_name || user.phone}`,
         type: 'info',
-        link: `/admin/packs`
+        link: `/admin/packs`,
       })
     } catch (notifError) {
       logger.warn('Erreur création notification:', { error: notifError })
@@ -173,7 +203,13 @@ export async function PUT(
     return NextResponse.json({ success: true, pack })
   } catch (error) {
     logger.error('Erreur PUT /api/admin/packs/[id]:', error, {})
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: 'Erreur serveur',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    )
   }
 }
 

@@ -438,9 +438,37 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   async updatePack(id: string, packData: Partial<Pack>): Promise<boolean> {
-    const { error } = await this.updateData('packs', packData, 'id', id)
-    
-    return !error
+    const payload: Record<string, unknown> = {}
+    if (packData.name !== undefined) payload.name = packData.name
+    if (packData.slug !== undefined) payload.slug = packData.slug
+    if (packData.description !== undefined) payload.description = packData.description
+    if (packData.price !== undefined) payload.price = packData.price
+    if (packData.image_url !== undefined) payload.image_url = packData.image_url
+    if (packData.is_featured !== undefined) payload.is_featured = Boolean(packData.is_featured)
+
+    if (Object.keys(payload).length === 0) {
+      logger.warn('[SupabaseAdapter] updatePack: aucun champ à mettre à jour', { id })
+      return false
+    }
+
+    const idFilter = /^\d+$/.test(String(id)) ? Number(id) : id
+    const { error, data } = await this.supabase
+      .from('packs')
+      .update(payload as never)
+      .eq('id', idFilter)
+      .select('id')
+
+    if (error) {
+      logger.error('[SupabaseAdapter] updatePack error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        id,
+      })
+      return false
+    }
+
+    return Array.isArray(data) ? data.length > 0 : true
   }
 
   async deletePack(id: string): Promise<boolean> {

@@ -566,16 +566,52 @@ export class PostgresAdapter implements DatabaseAdapter {
     }
   }
 
-  async updatePack(_id: string, _packData: Partial<Pack>): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[PostgresAdapter] updatePack not yet implemented')
-    return false
+  async updatePack(id: string, packData: Partial<Pack>): Promise<boolean> {
+    try {
+      const fields: string[] = []
+      const values: unknown[] = []
+      let i = 1
+
+      const set = (column: string, value: unknown) => {
+        fields.push(`${column} = $${i++}`)
+        values.push(value)
+      }
+
+      if (packData.name !== undefined) set('name', packData.name)
+      if (packData.slug !== undefined) set('slug', packData.slug)
+      if (packData.description !== undefined) set('description', packData.description ?? null)
+      if (packData.price !== undefined) set('price', packData.price)
+      if (packData.image_url !== undefined) set('image_url', packData.image_url ?? null)
+      if (packData.is_featured !== undefined) set('is_featured', Boolean(packData.is_featured))
+
+      if (fields.length === 0) {
+        logger.warn('[PostgresAdapter] updatePack: aucun champ à mettre à jour')
+        return false
+      }
+
+      values.push(id)
+      const result = await this.pool.query(
+        `UPDATE packs SET ${fields.join(', ')} WHERE id::text = $${i} OR slug = $${i}`,
+        values
+      )
+      return (result.rowCount ?? 0) > 0
+    } catch (error) {
+      logger.error('[PostgresAdapter] updatePack error:', error)
+      return false
+    }
   }
 
-  async deletePack(_id: string): Promise<boolean> {
-    // TODO: Implémenter si nécessaire
-    logger.warn('[PostgresAdapter] deletePack not yet implemented')
-    return false
+  async deletePack(id: string): Promise<boolean> {
+    try {
+      const result = await this.pool.query(
+        `DELETE FROM packs WHERE id::text = $1 OR slug = $1`,
+        [id]
+      )
+      return (result.rowCount ?? 0) > 0
+    } catch (error) {
+      logger.error('[PostgresAdapter] deletePack error:', error)
+      return false
+    }
   }
 
   // Orders

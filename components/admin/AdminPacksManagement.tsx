@@ -251,8 +251,21 @@ export default function AdminPacksManagement() {
           router.push('/profile')
           return
         }
-        const error = await res.json()
-        throw new Error(error.error || 'Erreur lors de la sauvegarde')
+        const error = await res.json().catch(() => ({})) as {
+          error?: string
+          details?: string | string[] | Record<string, string>
+        }
+        const details =
+          typeof error.details === 'string'
+            ? error.details
+            : Array.isArray(error.details)
+              ? error.details.join('\n')
+              : error.details
+                ? Object.values(error.details).join('\n')
+                : ''
+        throw new Error(
+          [error.error || 'Erreur lors de la sauvegarde', details].filter(Boolean).join('\n')
+        )
       }
 
       await fetchPacks()
