@@ -197,20 +197,46 @@ export const customPackLineSchema = z.object({
 
 /**
  * Item de commande
+ * IDs catalogue : numériques (packs) OU texte (`prod-…`, UUID, etc.)
  */
-export const orderItemSchema = z.object({
-  bijou_id: numericIdSchema.optional(),
-  pack_id: numericIdSchema.optional(),
-  quantity: quantitySchema,
-  price: priceSchema,
-  custom_pack_lines: z.array(customPackLineSchema).min(1).max(30).optional(),
-}).refine(
-  (data) =>
-    data.bijou_id != null ||
-    data.pack_id != null ||
-    (Array.isArray(data.custom_pack_lines) && data.custom_pack_lines.length > 0),
-  { message: 'Un produit, un pack ou un pack personnalisé est requis', path: ['bijou_id'] }
-)
+export const orderItemSchema = z
+  .object({
+    bijou_id: bijouRefIdSchema.optional(),
+    pack_id: bijouRefIdSchema.optional(),
+    product_id: bijouRefIdSchema.optional(),
+    id: bijouRefIdSchema.optional(),
+    quantity: quantitySchema,
+    price: priceSchema,
+    custom_pack_lines: z.array(customPackLineSchema).min(1).max(30).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasCustom =
+      Array.isArray(data.custom_pack_lines) && data.custom_pack_lines.length > 0
+    const hasRef =
+      data.bijou_id != null ||
+      data.pack_id != null ||
+      data.product_id != null ||
+      data.id != null
+    if (!hasCustom && !hasRef) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Un produit, un pack ou un pack personnalisé est requis',
+        path: ['bijou_id'],
+      })
+    }
+  })
+  .transform((data) => {
+    const pack_id = data.pack_id
+    const bijou_id =
+      data.bijou_id ?? data.product_id ?? (pack_id ? undefined : data.id)
+    return {
+      bijou_id,
+      pack_id,
+      quantity: data.quantity,
+      price: data.price,
+      custom_pack_lines: data.custom_pack_lines,
+    }
+  })
 
 /**
  * Schéma pour créer une commande

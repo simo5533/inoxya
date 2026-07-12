@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       
       // SÉCURITÉ: Récupérer le prix RÉEL depuis la base de données
       // Vérifier d'abord si c'est un pack (pack_id présent) ou un bijou
-      const productId = item.pack_id || item.bijou_id || (item as { product_id?: string }).product_id
+      const productId = item.pack_id || item.bijou_id
       if (!productId) {
         return NextResponse.json({ error: 'ID produit/pack manquant' }, { status: 400 })
       }
