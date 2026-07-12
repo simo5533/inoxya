@@ -110,13 +110,13 @@ export async function PUT(
 
     if (validatedData.name) updateData.name = sanitizeInput(validatedData.name)
     if (validatedData.slug) updateData.slug = sanitizeInput(validatedData.slug)
-    if (validatedData.description !== undefined) {
-      updateData.description = validatedData.description
-        ? sanitizeInput(validatedData.description)
-        : ''
+    if (typeof validatedData.description === 'string') {
+      updateData.description = sanitizeInput(validatedData.description)
+    } else if (validatedData.description === null) {
+      updateData.description = ''
     }
     if (validatedData.price !== undefined) updateData.price = validatedData.price
-    if (validatedData.image_url !== undefined && validatedData.image_url !== null) {
+    if (typeof validatedData.image_url === 'string') {
       updateData.image_url = validatedData.image_url
     }
     if (validatedData.is_featured !== undefined) updateData.is_featured = validatedData.is_featured

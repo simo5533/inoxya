@@ -349,19 +349,17 @@ export const createPackSchema = z.object({
 export const updatePackSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(200, 'Le nom est trop long').optional(),
   slug: z.string().min(1, 'Le slug est requis').max(200, 'Le slug est trop long').regex(/^[a-z0-9-]+$/, 'Le slug doit contenir uniquement des lettres minuscules, chiffres et tirets').optional(),
-  description: z.preprocess(
-    (val) => (val === null || val === '' ? undefined : val),
-    z.string().min(1, 'La description est requise').max(5000, 'La description est trop longue').optional()
-  ),
+  description: z
+    .string()
+    .min(1, 'La description est requise')
+    .max(5000, 'La description est trop longue')
+    .optional()
+    .nullable(),
   price: priceSchema.optional(),
-  image_url: z.preprocess(
-    (val) => {
-      if (val === undefined || val === null) return undefined
-      if (typeof val === 'string' && val.trim() === '') return undefined
-      return val
-    },
-    productImageRefSchema.optional()
-  ),
+  image_url: z
+    .union([productImageRefSchema, z.literal(''), z.null()])
+    .optional()
+    .transform((val) => (val === '' || val === null ? undefined : val)),
   is_featured: z.boolean().optional()
 })
 

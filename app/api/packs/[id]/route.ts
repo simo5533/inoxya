@@ -105,11 +105,15 @@ export async function PUT(
     
     if (validatedData.name !== undefined) updateData['name'] = sanitizeInput(validatedData.name)
     if (validatedData.slug !== undefined) updateData['slug'] = sanitizeInput(validatedData.slug)
-    if (validatedData.description !== undefined) updateData['description'] = sanitizeInput(validatedData.description)
+    if (typeof validatedData.description === 'string') {
+      updateData['description'] = sanitizeInput(validatedData.description)
+    }
     if (validatedData.price !== undefined) {
       updateData['price'] = validatedData.price
     }
-    if (validatedData.image_url !== undefined) updateData['image_url'] = validatedData.image_url
+    if (typeof validatedData.image_url === 'string') {
+      updateData['image_url'] = validatedData.image_url
+    }
     if (validatedData.is_featured !== undefined) updateData['is_featured'] = validatedData.is_featured
     if (body['stock_quantity'] !== undefined) {
       const stockNum = parseInt(String(body['stock_quantity']))
