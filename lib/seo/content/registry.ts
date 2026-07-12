@@ -54,7 +54,13 @@ export function getSeoFooterGroups(): SeoContentFooterGroup[] {
   ]
   return order
     .filter((c) => byCluster.has(c))
-    .map((c) => byCluster.get(c)!)
+    .map((c) => {
+      const group = byCluster.get(c)
+      if (!group) {
+        throw new Error(`SEO cluster manquant: ${c}`)
+      }
+      return group
+    })
 }
 
 /** Liens footer plats (affichage compact mobile) */

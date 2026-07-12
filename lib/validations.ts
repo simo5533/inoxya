@@ -486,13 +486,14 @@ export const sendInvoiceEmailBodySchema = z.object({
 
 /**
  * Valider les données avec un schéma Zod et retourner les erreurs formatées
+ * Accepte les schémas avec transform (input ≠ output), ex. checkoutSchema.
  */
-export function validateWithSchema<T>(
-  schema: z.ZodSchema<T>,
+export function validateWithSchema<T extends z.ZodTypeAny>(
+  schema: T,
   data: unknown
-): { success: true; data: T } | { success: false; errors: string[] } {
+): { success: true; data: z.infer<T> } | { success: false; errors: string[] } {
   try {
-    const validated = schema.parse(data)
+    const validated = schema.parse(data) as z.infer<T>
     return { success: true, data: validated }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -510,10 +511,10 @@ export function validateWithSchema<T>(
  * Valider les données avec un schéma Zod et lancer une erreur si invalide
  * Utile pour les routes API qui doivent retourner une erreur HTTP
  */
-export function validateOrThrow<T>(
-  schema: z.ZodSchema<T>,
+export function validateOrThrow<T extends z.ZodTypeAny>(
+  schema: T,
   data: unknown
-): T {
-  return schema.parse(data)
+): z.infer<T> {
+  return schema.parse(data) as z.infer<T>
 }
 
