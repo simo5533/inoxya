@@ -510,11 +510,27 @@ export class SupabaseAdapter implements DatabaseAdapter {
     phone?: string
     notes?: string
   }): Promise<Order | null> {
+    const addr = orderData.shipping_address
+    let shipping_address: unknown = null
+    if (addr != null && addr !== '') {
+      if (typeof addr === 'string') {
+        const trimmed = addr.trim()
+        try {
+          shipping_address = JSON.parse(trimmed)
+        } catch {
+          // JSONB Supabase : objet plutôt qu'une string brute
+          shipping_address = { text: trimmed }
+        }
+      } else {
+        shipping_address = addr
+      }
+    }
+
     const payload = {
       user_id: orderData.user_id || null,
       total_amount: Number(orderData.total_amount),
       status: orderData.status ?? 'pending',
-      shipping_address: orderData.shipping_address ?? null,
+      shipping_address,
       phone: orderData.phone ?? null,
       notes: orderData.notes ?? null
     }
@@ -523,6 +539,18 @@ export class SupabaseAdapter implements DatabaseAdapter {
       .single()
     
     if (error || !data) {
+      // Fallback : colonne TEXT qui refuse un objet
+      if (error && /json|jsonb|invalid input/i.test(error.message || '') && typeof addr === 'string') {
+        const retry = await this.insertData('orders', {
+          ...payload,
+          shipping_address: addr,
+        })
+          .select()
+          .single()
+        if (!retry.error && retry.data) {
+          return this.mapOrder(retry.data)
+        }
+      }
       const errPayload = {
         table: 'orders',
         operation: 'insert',

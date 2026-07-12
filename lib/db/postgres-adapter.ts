@@ -640,29 +640,68 @@ export class PostgresAdapter implements DatabaseAdapter {
     notes?: string
   }): Promise<Order | null> {
     try {
+      // shipping_address est souvent JSONB en Neon : une string brute → "invalid input syntax for type json"
       const addr = orderData.shipping_address
-      const shipping_address =
-        addr == null || addr === ''
-          ? null
-          : typeof addr === 'string'
-            ? addr
-            : JSON.stringify(addr)
+      let shippingValue: string | null = null
+      if (addr != null && addr !== '') {
+        if (typeof addr === 'string') {
+          const trimmed = addr.trim()
+          // Déjà du JSON valide ?
+          try {
+            JSON.parse(trimmed)
+            shippingValue = trimmed
+          } catch {
+            shippingValue = JSON.stringify({ text: trimmed })
+          }
+        } else {
+          shippingValue = JSON.stringify(addr)
+        }
+      }
 
-      const result = await this.pool.query(
-        `INSERT INTO orders (user_id, total_amount, status, shipping_address, phone, notes)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [
-          orderData.user_id || null,
-          orderData.total_amount,
-          orderData.status,
-          shipping_address,
-          orderData.phone || null,
-          orderData.notes || null,
-        ]
-      )
-      if (result.rows.length === 0) return null
-      return this.mapOrder(result.rows[0])
+      const params = [
+        orderData.user_id || null,
+        orderData.total_amount,
+        orderData.status,
+        shippingValue,
+        orderData.phone || null,
+        orderData.notes || null,
+      ]
+
+      try {
+        const result = await this.pool.query(
+          `INSERT INTO orders (user_id, total_amount, status, shipping_address, phone, notes)
+           VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+           RETURNING *`,
+          params
+        )
+        if (result.rows.length === 0) return null
+        return this.mapOrder(result.rows[0])
+      } catch (jsonError) {
+        const msg = jsonError instanceof Error ? jsonError.message : String(jsonError)
+        // Colonne TEXT (pas jsonb) : réessayer sans cast
+        if (!/json|jsonb/i.test(msg)) throw jsonError
+        const plain =
+          typeof addr === 'string'
+            ? addr
+            : addr == null
+              ? null
+              : JSON.stringify(addr)
+        const result = await this.pool.query(
+          `INSERT INTO orders (user_id, total_amount, status, shipping_address, phone, notes)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING *`,
+          [
+            orderData.user_id || null,
+            orderData.total_amount,
+            orderData.status,
+            plain,
+            orderData.phone || null,
+            orderData.notes || null,
+          ]
+        )
+        if (result.rows.length === 0) return null
+        return this.mapOrder(result.rows[0])
+      }
     } catch (error) {
       logger.error('[PostgresAdapter] createOrder error:', error)
       throw error
