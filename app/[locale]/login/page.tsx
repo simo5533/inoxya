@@ -57,81 +57,97 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Vérifier que le token CSRF est disponible
-    if (!csrfToken) {
-      setError(locale === 'ar' ? 'رمز الأمان مفقود. يرجى تحديث الصفحة.' : 'Token de sécurité manquant. Veuillez rafraîchir la page.')
-      setIsLoading(false)
-      return
-    }
-
     // Normaliser le téléphone: supprimer les espaces, tirets, points
     const normalizedPhone = phone.replace(/[\s\-\.]/g, '').trim()
 
+    const fallbackError =
+      locale === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur lors de la connexion'
+
     try {
+      // Rafraîchir le CSRF juste avant l'envoi (évite token expiré / onglet longtemps ouvert)
+      let tokenToUse = csrfToken
+      try {
+        const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+        if (csrfRes.ok) {
+          const csrfData = await csrfRes.json()
+          if (csrfData.csrfToken) {
+            tokenToUse = csrfData.csrfToken
+            setCsrfToken(csrfData.csrfToken)
+          }
+        }
+      } catch {
+        // garder le token déjà en mémoire
+      }
+
+      if (!tokenToUse) {
+        setError(
+          locale === 'ar'
+            ? 'رمز الأمان مفقود. يرجى تحديث الصفحة.'
+            : 'Token de sécurité manquant. Veuillez rafraîchir la page.'
+        )
+        setIsLoading(false)
+        return
+      }
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          'X-CSRF-Token': tokenToUse,
         },
         body: JSON.stringify({
           phone: normalizedPhone,
           password: password,
         }),
-        credentials: 'include', // IMPORTANT: Inclure les cookies dans la requête et la réponse
+        credentials: 'include',
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || (locale === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur lors de la connexion'))
+      const result: AuthResponse & { redirect?: string } = await response
+        .json()
+        .catch(() => ({ success: false, error: fallbackError }))
+
+      if (!response.ok || !result.success || !result.user) {
+        setError(result.error || fallbackError)
+        setIsLoading(false)
+        return
       }
 
-      // Récupérer le résultat JSON
-      const result: AuthResponse & { redirect?: string } = await response.json()
+      if (result.user.role === 'admin') {
+        const maxAttempts = 15
+        let attempts = 0
+        const verifyAndRedirect = async () => {
+          attempts += 1
+          try {
+            const checkResponse = await fetch('/api/auth/me', {
+              credentials: 'include',
+            })
+            const checkData = await checkResponse.json()
 
-      if (result.success && result.user) {
-        // IMPORTANT: Le cookie est maintenant disponible dans le navigateur
-        // Vérifier que le cookie est disponible avant de rediriger
-        if (result.user.role === 'admin') {
-          // Admin: vérifier le cookie puis rediriger vers /admin
-          const verifyAndRedirect = async () => {
-            try {
-              // Vérifier que le cookie est disponible en appelant /api/auth/me
-              const checkResponse = await fetch('/api/auth/me', {
-                credentials: 'include'
-              })
-              const checkData = await checkResponse.json()
-              
-              if (checkData.user && checkData.user.role === 'admin') {
-                // Cookie disponible, rediriger immédiatement
-                window.location.replace("/admin")
-              } else {
-                // Cookie pas encore disponible, réessayer après 200ms
-                setTimeout(verifyAndRedirect, 200)
-              }
-            } catch {
-              // En cas d'erreur, réessayer après 200ms
-              setTimeout(verifyAndRedirect, 200)
+            if (checkData.user && checkData.user.role === 'admin') {
+              window.location.replace('/admin')
+              return
             }
+          } catch {
+            // retry below
           }
-          
-          // Démarrer la vérification après 300ms pour laisser le temps au cookie d'être propagé
-          setTimeout(verifyAndRedirect, 300)
-        } else {
-          // Client: rediriger vers la page d'accueil
-          setTimeout(() => {
-            window.location.replace(result.redirect || `/${locale}`)
-          }, 300)
+
+          if (attempts >= maxAttempts) {
+            // Session créée côté API : rediriger quand même
+            window.location.replace('/admin')
+            return
+          }
+          setTimeout(verifyAndRedirect, 200)
         }
+
+        setTimeout(verifyAndRedirect, 200)
       } else {
-        setError(result.error || (locale === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur lors de la connexion'))
-        setIsLoading(false)
+        setTimeout(() => {
+          window.location.replace(result.redirect || `/${locale}`)
+        }, 200)
       }
     } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Erreur lors de la connexion:", err)
-      }
-      setError(locale === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur lors de la connexion')
+      const message = err instanceof Error && err.message ? err.message : fallbackError
+      setError(message)
       setIsLoading(false)
     }
   }
