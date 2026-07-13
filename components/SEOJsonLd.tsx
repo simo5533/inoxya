@@ -44,7 +44,11 @@ export function OrganizationJsonLd() {
           height: 1024,
           caption: SEO_BRAND,
         },
-        image: logoUrl,
+        image: [
+          logoUrl,
+          `${siteUrl}/favicon-192x192.png`,
+          `${siteUrl}/icon.png`,
+        ],
         description:
           'Boutique marocaine de bijoux en acier inoxydable 316L : bagues, colliers, bracelets, boucles d’oreilles, montres et packs. Livraison Maroc.',
         telephone: SEO_PHONE_E164,
