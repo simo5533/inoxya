@@ -23,6 +23,11 @@ import { logger } from '../logger'
 import { serializeError } from '../sqlite'
 import { slugToDbValue } from '../category-mapping'
 import { normalizeImageUrl } from '../image-path'
+import {
+  extractPackItemsCount,
+  stripPackItemsCountMarker,
+  withPackItemsCountMarker,
+} from '../pack-items-count'
 
 export class SupabaseAdapter implements DatabaseAdapter {
   private supabase: ReturnType<typeof createClient>
@@ -348,6 +353,33 @@ export class SupabaseAdapter implements DatabaseAdapter {
   }
 
   // Packs
+  private mapPackRow(row: {
+    id: number | string
+    name: string
+    slug: string
+    description?: string | null
+    price: number
+    image_url?: string | null
+    is_featured?: boolean
+    items_count?: number | null
+  }): Pack {
+    const rawDesc = row.description || undefined
+    const fromColumn =
+      row.items_count != null && Number.isFinite(Number(row.items_count))
+        ? Math.max(1, Math.min(99, Math.floor(Number(row.items_count))))
+        : null
+    return {
+      id: String(row.id),
+      name: row.name,
+      slug: row.slug,
+      description: stripPackItemsCountMarker(rawDesc) || undefined,
+      price: Number(row.price),
+      image_url: row.image_url || undefined,
+      is_featured: Boolean(row.is_featured),
+      items_count: fromColumn ?? extractPackItemsCount(rawDesc),
+    }
+  }
+
   async getPacks(): Promise<Pack[]> {
     const { data, error } = await this.supabase
       .from('packs')
@@ -356,15 +388,16 @@ export class SupabaseAdapter implements DatabaseAdapter {
     
     if (error || !data) return []
     
-    return (data as Array<{ id: number; name: string; slug: string; description?: string; price: number; image_url?: string; is_featured: boolean }>).map(row => ({
-      id: String(row.id),
-      name: row.name,
-      slug: row.slug,
-      description: row.description || undefined,
-      price: Number(row.price),
-      image_url: row.image_url || undefined,
-      is_featured: Boolean(row.is_featured),
-    }))
+    return (data as Array<{
+      id: number
+      name: string
+      slug: string
+      description?: string
+      price: number
+      image_url?: string
+      is_featured: boolean
+      items_count?: number
+    }>).map((row) => this.mapPackRow(row))
   }
 
   async getPackById(id: string): Promise<Pack | null> {
@@ -375,27 +408,35 @@ export class SupabaseAdapter implements DatabaseAdapter {
       .single()
     
     if (error || !data) return null
-    const row = data as { id: number; name: string; slug: string; description?: string; price: number; image_url?: string; is_featured: boolean }
-    
-    return {
-      id: String(row.id),
-      name: row.name,
-      slug: row.slug,
-      description: row.description || undefined,
-      price: Number(row.price),
-      image_url: row.image_url || undefined,
-      is_featured: Boolean(row.is_featured),
-    }
+    return this.mapPackRow(
+      data as {
+        id: number
+        name: string
+        slug: string
+        description?: string
+        price: number
+        image_url?: string
+        is_featured: boolean
+        items_count?: number
+      }
+    )
   }
 
   async createPack(packData: Partial<Pack>): Promise<Pack | null> {
+    const itemsCount =
+      packData.items_count != null
+        ? Math.max(1, Math.min(99, Math.floor(Number(packData.items_count))))
+        : extractPackItemsCount(packData.description)
+    const description = withPackItemsCountMarker(packData.description, itemsCount)
+
     // N'envoyer que les champs définis (Supabase rejette undefined)
     const insertPayload: Record<string, unknown> = {
       name: packData.name ?? '',
       slug: packData.slug ?? '',
-      description: packData.description ?? null,
+      description,
       price: Number(packData.price ?? 0),
       is_featured: Boolean(packData.is_featured ?? false),
+      items_count: itemsCount,
     }
     if (packData.image_url != null && packData.image_url !== '') {
       insertPayload['image_url'] = packData.image_url
@@ -407,9 +448,15 @@ export class SupabaseAdapter implements DatabaseAdapter {
     const nextId = maxId != null ? Number(maxId) + 1 : 1
     insertPayload['id'] = nextId
 
-    const { data, error } = await this.insertData('packs', insertPayload)
-      .select()
-      .single()
+    let { data, error } = await this.insertData('packs', insertPayload).select().single()
+
+    // Colonne items_count absente → réessayer sans
+    if (error && /items_count/i.test(error.message || '')) {
+      delete insertPayload['items_count']
+      const retry = await this.insertData('packs', insertPayload).select().single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) {
       logger.error('[SupabaseAdapter] createPack error:', {
@@ -425,26 +472,41 @@ export class SupabaseAdapter implements DatabaseAdapter {
       return null
     }
 
-    const row = data as { id: number; name: string; slug: string; description?: string; price: number; image_url?: string; is_featured: boolean }
-    return {
-      id: String(row.id),
-      name: row.name,
-      slug: row.slug,
-      description: row.description || undefined,
-      price: Number(row.price),
-      image_url: row.image_url || undefined,
-      is_featured: Boolean(row.is_featured),
-    }
+    return this.mapPackRow(
+      data as {
+        id: number
+        name: string
+        slug: string
+        description?: string
+        price: number
+        image_url?: string
+        is_featured: boolean
+        items_count?: number
+      }
+    )
   }
 
   async updatePack(id: string, packData: Partial<Pack>): Promise<boolean> {
     const payload: Record<string, unknown> = {}
     if (packData.name !== undefined) payload.name = packData.name
     if (packData.slug !== undefined) payload.slug = packData.slug
-    if (packData.description !== undefined) payload.description = packData.description
     if (packData.price !== undefined) payload.price = packData.price
     if (packData.image_url !== undefined) payload.image_url = packData.image_url
     if (packData.is_featured !== undefined) payload.is_featured = Boolean(packData.is_featured)
+
+    if (packData.items_count !== undefined || packData.description !== undefined) {
+      const existing = await this.getPackById(id)
+      const count =
+        packData.items_count !== undefined
+          ? Math.max(1, Math.min(99, Math.floor(Number(packData.items_count))))
+          : (existing?.items_count ?? 1)
+      const baseDesc =
+        packData.description !== undefined
+          ? packData.description
+          : (existing?.description ?? '')
+      payload.description = withPackItemsCountMarker(baseDesc, count)
+      payload.items_count = count
+    }
 
     if (Object.keys(payload).length === 0) {
       logger.warn('[SupabaseAdapter] updatePack: aucun champ à mettre à jour', { id })
@@ -452,11 +514,22 @@ export class SupabaseAdapter implements DatabaseAdapter {
     }
 
     const idFilter = /^\d+$/.test(String(id)) ? Number(id) : id
-    const { error, data } = await this.supabase
+    let { error, data } = await this.supabase
       .from('packs')
       .update(payload as never)
       .eq('id', idFilter)
       .select('id')
+
+    if (error && /items_count/i.test(error.message || '') && 'items_count' in payload) {
+      delete payload.items_count
+      const retry = await this.supabase
+        .from('packs')
+        .update(payload as never)
+        .eq('id', idFilter)
+        .select('id')
+      error = retry.error
+      data = retry.data
+    }
 
     if (error) {
       logger.error('[SupabaseAdapter] updatePack error:', {

@@ -361,10 +361,11 @@ export const packCompositionItemSchema = z.object({
 export const createPackSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(200, 'Le nom est trop long'),
   slug: z.string().min(1, 'Le slug est requis').max(200, 'Le slug est trop long').regex(/^[a-z0-9-]+$/, 'Le slug doit contenir uniquement des lettres minuscules, chiffres et tirets'),
-  description: z.string().min(1, 'La description est requise').max(5000, 'La description est trop longue'),
+  description: z.string().max(5000, 'La description est trop longue').optional().nullable(),
   price: priceSchema,
-  image_url: productImageRefSchema,
+  image_url: optionalProductImageRefSchema,
   is_featured: z.boolean().optional().default(false),
+  items_count: z.coerce.number().int().min(1, 'Au moins 1 pièce').max(99, 'Maximum 99 pièces').optional().default(1),
   composition: z.array(packCompositionItemSchema).optional().default([])
 })
 
@@ -377,7 +378,6 @@ export const updatePackSchema = z.object({
   slug: z.string().min(1, 'Le slug est requis').max(200, 'Le slug est trop long').regex(/^[a-z0-9-]+$/, 'Le slug doit contenir uniquement des lettres minuscules, chiffres et tirets').optional(),
   description: z
     .string()
-    .min(1, 'La description est requise')
     .max(5000, 'La description est trop longue')
     .optional()
     .nullable(),
@@ -386,7 +386,8 @@ export const updatePackSchema = z.object({
     .union([productImageRefSchema, z.literal(''), z.null()])
     .optional()
     .transform((val) => (val === '' || val === null ? undefined : val)),
-  is_featured: z.boolean().optional()
+  is_featured: z.boolean().optional(),
+  items_count: z.coerce.number().int().min(1).max(99).optional(),
 })
 
 // ============================================

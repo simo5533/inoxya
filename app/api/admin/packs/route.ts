@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllPacks, createNotification, getBijouById } from '@/lib/database'
 import { createPack } from '@/lib/pack-management'
+import { getDatabaseAdapter } from '@/lib/db'
 import { requireAdminApi } from '@/lib/admin-auth'
 import { logger } from '@/lib/logger'
 import { createPackSchema, validateWithSchema } from '@/lib/validations'
 import { sanitizeInput, requireCSRF } from '@/lib/security'
+import { withPackItemsCountMarker } from '@/lib/pack-items-count'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
@@ -13,10 +15,11 @@ export const runtime = 'nodejs'
 type CreatePackData = {
   name: string
   slug: string
-  description: string
+  description?: string | null
   price: number
-  image_url: string
+  image_url?: string | null
   is_featured?: boolean
+  items_count?: number
   composition?: Array<{
     bijou_id: number | string
     quantity?: number
@@ -75,6 +78,9 @@ export async function POST(request: NextRequest) {
     const sanitizedName = sanitizeInput(validatedData.name)
     const sanitizedSlug = sanitizeInput(validatedData.slug)
     const sanitizedDescription = sanitizeInput(validatedData.description || '')
+    const itemsCount = Math.max(1, Math.min(99, Math.floor(Number(validatedData.items_count) || 1)))
+    const descriptionWithPieces = withPackItemsCountMarker(sanitizedDescription, itemsCount)
+    const imageUrl = validatedData.image_url || '/placeholder.svg'
 
     // Vérifier que les bijoux de la composition existent (en parallèle)
     const composition = validatedData.composition || []
@@ -102,26 +108,53 @@ export async function POST(request: NextRequest) {
       created_at: ''
     }))
 
-    // Créer le pack
-    const packId = await createPack({
-      name: sanitizedName,
-      slug: sanitizedSlug,
-      description: sanitizedDescription,
-      price: validatedData.price,
-      image_url: validatedData.image_url,
-      images: [],
-      category: 'general',
-      tags: [],
-      is_featured: validatedData.is_featured || false,
-      is_active: true,
-      stock_quantity: 100,
-      min_items: 1,
-      max_items: 5,
-      discount: { type: 'percentage', value: 0 },
-      composition: mappedComposition,
-      rating: 4.5,
-      reviews_count: 0
-    } as Parameters<typeof createPack>[0])
+    let packId: string | null = null
+
+    // Priorité 1 : adapter (Supabase / Postgres)
+    try {
+      const adapter = await getDatabaseAdapter()
+      if (typeof adapter.createPack === 'function') {
+        const created = await adapter.createPack({
+          name: sanitizedName,
+          slug: sanitizedSlug,
+          description: sanitizedDescription,
+          price: validatedData.price,
+          image_url: imageUrl,
+          is_featured: validatedData.is_featured || false,
+          items_count: itemsCount,
+        })
+        if (created?.id) {
+          packId = String(created.id)
+        }
+      }
+    } catch (adapterError) {
+      logger.warn('[POST /api/admin/packs] Adapter createPack failed, fallback SQLite:', {
+        error: adapterError instanceof Error ? adapterError.message : String(adapterError),
+      })
+    }
+
+    // Fallback : pack-management (better-sqlite3, local)
+    if (!packId) {
+      packId = await createPack({
+        name: sanitizedName,
+        slug: sanitizedSlug,
+        description: descriptionWithPieces,
+        price: validatedData.price,
+        image_url: imageUrl,
+        images: [],
+        category: 'general',
+        tags: [],
+        is_featured: validatedData.is_featured || false,
+        is_active: true,
+        stock_quantity: 100,
+        min_items: 1,
+        max_items: 5,
+        discount: { type: 'percentage', value: 0 },
+        composition: mappedComposition,
+        rating: 4.5,
+        reviews_count: 0
+      } as Parameters<typeof createPack>[0])
+    }
 
     if (!packId) {
       return NextResponse.json(
@@ -143,10 +176,12 @@ export async function POST(request: NextRequest) {
       logger.warn('Erreur création notification:', { error: notifError })
     }
 
-    return NextResponse.json({ success: true, pack: { id: packId, name: sanitizedName, slug: sanitizedSlug } })
+    return NextResponse.json({
+      success: true,
+      pack: { id: packId, name: sanitizedName, slug: sanitizedSlug, items_count: itemsCount },
+    })
   } catch (error) {
     logger.error('Erreur POST /api/admin/packs:', error, {})
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
-

@@ -6,6 +6,7 @@ import { requireAdminApi } from '@/lib/admin-auth'
 import { logger } from '@/lib/logger'
 import { updatePackSchema, validateWithSchema } from '@/lib/validations'
 import { sanitizeInput, validateProductId, requireCSRF } from '@/lib/security'
+import { withPackItemsCountMarker, extractPackItemsCount, stripPackItemsCountMarker } from '@/lib/pack-items-count'
 
 /** Utiliser l'adapter pour getPackById si disponible (évite better-sqlite3) */
 async function getPackByIdSafe(id: string): Promise<{ name: string; id: string } | null> {
@@ -29,10 +30,11 @@ export const runtime = 'nodejs'
 type UpdatePackData = {
   name?: string
   slug?: string
-  description?: string
+  description?: string | null
   price?: number
   image_url?: string
   is_featured?: boolean
+  items_count?: number
 }
 
 /**
@@ -106,6 +108,7 @@ export async function PUT(
       price?: number
       image_url?: string
       is_featured?: boolean
+      items_count?: number
     } = {}
 
     if (validatedData.name) updateData.name = sanitizeInput(validatedData.name)
@@ -120,6 +123,9 @@ export async function PUT(
       updateData.image_url = validatedData.image_url
     }
     if (validatedData.is_featured !== undefined) updateData.is_featured = validatedData.is_featured
+    if (validatedData.items_count !== undefined) {
+      updateData.items_count = Math.max(1, Math.min(99, Math.floor(Number(validatedData.items_count) || 1)))
+    }
 
     let existingPack: { name: string } | null = null
     let pack: { id: string; name: string } | null = null
@@ -173,7 +179,21 @@ export async function PUT(
       return NextResponse.json({ error: 'Pack non trouvé' }, { status: 404 })
     }
     try {
-      await updatePack(id, updateData)
+      const legacy = await getPackById(id)
+      const fallbackData: Record<string, unknown> = { ...updateData }
+      if (updateData.items_count !== undefined || updateData.description !== undefined) {
+        const count =
+          updateData.items_count ??
+          extractPackItemsCount(legacy?.description) ??
+          1
+        const baseDesc =
+          updateData.description !== undefined
+            ? updateData.description
+            : stripPackItemsCountMarker(legacy?.description)
+        fallbackData.description = withPackItemsCountMarker(baseDesc, count)
+      }
+      delete fallbackData.items_count
+      await updatePack(id, fallbackData)
     } catch (sqliteError) {
       logger.error('[PUT /api/admin/packs/[id]] Fallback SQLite failed:', sqliteError)
       return NextResponse.json(

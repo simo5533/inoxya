@@ -4,6 +4,10 @@ import {
 } from '@/lib/pack-management'
 import { getAllPacks } from '@/lib/database'
 import { logger } from '@/lib/logger'
+import {
+  extractPackItemsCount,
+  stripPackItemsCountMarker,
+} from '@/lib/pack-items-count'
 import { sanitizeInput, requireCSRF } from '@/lib/security'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -123,12 +127,17 @@ export async function GET(request: NextRequest) {
       }
       
       const composition = (pack as { composition?: unknown[] })['composition']
-      const itemsCount = Array.isArray(composition) && composition.length > 0 ? composition.length : 1
+      const rawDesc = packDescription
+      const itemsFromComposition =
+        Array.isArray(composition) && composition.length > 0 ? composition.length : 0
+      const itemsCount =
+        (pack as { items_count?: number }).items_count ??
+        (itemsFromComposition > 0 ? itemsFromComposition : extractPackItemsCount(rawDesc))
       return {
         id: pack.id,
         name: pack.name,
         slug: pack.slug || pack.name.toLowerCase().replace(/\s+/g, '-'),
-        description: packDescription,
+        description: stripPackItemsCountMarker(packDescription),
         price: pack.price,
         original_price: original_price,
         image_url: pack.image_url || '/placeholder.svg',
@@ -238,7 +247,7 @@ export async function POST(request: NextRequest) {
       slug: sanitizedSlug,
       description: sanitizedDescription,
       price: validatedData.price,
-      image_url: validatedData.image_url,
+      image_url: validatedData.image_url || '/placeholder.svg',
       images: Array.isArray(validatedData.composition) ? validatedData.composition.map(() => '') : [],
       category: sanitizedCategory,
       tags: [],

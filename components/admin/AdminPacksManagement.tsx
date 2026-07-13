@@ -12,6 +12,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { logger } from "@/lib/logger"
+import { stripPackItemsCountMarker, extractPackItemsCount } from "@/lib/pack-items-count"
 
 interface Pack {
   id: string
@@ -21,6 +22,7 @@ interface Pack {
   price: number
   image_url?: string
   is_featured: boolean
+  items_count?: number
   created_at: string
 }
 
@@ -41,6 +43,7 @@ export default function AdminPacksManagement() {
     description: "",
     price: "",
     image_url: "",
+    items_count: "1",
     is_featured: false
   })
 
@@ -127,6 +130,7 @@ export default function AdminPacksManagement() {
       description: "",
       price: "",
       image_url: "",
+      items_count: "1",
       is_featured: false
     })
     setShowForm(true)
@@ -194,12 +198,16 @@ export default function AdminPacksManagement() {
   const handleEditPack = (pack: Pack) => {
     setEditingPack(pack)
     setUploadError(null)
+    const fromDesc = extractPackItemsCount(pack.description)
     setFormData({
       name: pack.name,
       slug: pack.slug,
-      description: pack.description || "",
+      description: stripPackItemsCountMarker(pack.description),
       price: pack.price.toString(),
       image_url: pack.image_url || "",
+      items_count: String(
+        pack.items_count && pack.items_count > 0 ? pack.items_count : fromDesc
+      ),
       is_featured: pack.is_featured
     })
     setShowForm(true)
@@ -213,6 +221,12 @@ export default function AdminPacksManagement() {
 
     if (parseFloat(formData.price) <= 0) {
       alert("Le prix doit être supérieur à 0")
+      return
+    }
+
+    const pieces = parseInt(formData.items_count, 10)
+    if (!Number.isFinite(pieces) || pieces < 1) {
+      alert("Le nombre de pièces doit être au moins 1")
       return
     }
 
@@ -242,6 +256,7 @@ export default function AdminPacksManagement() {
           description: formData.description || null,
           price: parseFloat(formData.price),
           image_url: formData.image_url || null,
+          items_count: pieces,
           is_featured: formData.is_featured
         })
       })
@@ -277,6 +292,7 @@ export default function AdminPacksManagement() {
         description: "",
         price: "",
         image_url: "",
+        items_count: "1",
         is_featured: false
       })
     } catch (error: unknown) {
@@ -449,7 +465,21 @@ export default function AdminPacksManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">URL de l'image</label>
+                      <label className="block text-sm font-medium mb-1">Nombre de pièces *</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={formData.items_count}
+                        onChange={(e) => setFormData({ ...formData, items_count: e.target.value })}
+                        placeholder="Ex: 5"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Affiché sur la fiche pack (ex. « 5 pièces dans ce pack »)
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">URL de l&apos;image</label>
                       <div className="flex gap-2">
                         <Input
                           value={formData.image_url}
@@ -597,9 +627,15 @@ export default function AdminPacksManagement() {
                   </p>
                 )}
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(pack.price)}
-                  </span>
+                  <div>
+                    <span className="text-2xl font-bold text-orange-600">
+                      {formatCurrency(pack.price)}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {pack.items_count && pack.items_count > 0 ? pack.items_count : 1} pièce
+                      {(pack.items_count || 1) > 1 ? 's' : ''}
+                    </p>
+                  </div>
                   <span className="text-xs text-gray-500">
                     {formatDate(pack.created_at)}
                   </span>

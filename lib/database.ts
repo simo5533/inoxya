@@ -419,6 +419,10 @@ export async function getAllPacks() {
           price: Number(pack.price),
           image_url: pack.image_url || '/placeholder.svg',
           is_featured: Boolean(pack.is_featured),
+          items_count:
+            typeof pack.items_count === 'number' && pack.items_count > 0
+              ? pack.items_count
+              : 1,
         }))
       }
     } catch (adapterError) {

@@ -21,6 +21,11 @@ import type {
 } from './types'
 import { logger } from '../logger'
 import { slugToDbValue } from '../category-mapping'
+import {
+  extractPackItemsCount,
+  stripPackItemsCountMarker,
+  withPackItemsCountMarker,
+} from '../pack-items-count'
 
 // Interfaces typées pour les rows PostgreSQL
 interface UserRow {
@@ -87,6 +92,7 @@ interface PackRow {
   price: string | number
   image_url?: string | null
   is_featured?: boolean
+  items_count?: number | string | null
   created_at?: string | Date
 }
 
@@ -495,17 +501,27 @@ export class PostgresAdapter implements DatabaseAdapter {
   }
 
   // Packs
-  async getPacks(): Promise<Pack[]> {
-    const result = await this.pool.query<PackRow>('SELECT * FROM packs ORDER BY created_at DESC')
-    return result.rows.map((row: PackRow) => ({
+  private mapPackRow(row: PackRow): Pack {
+    const rawDesc = row.description || undefined
+    const fromColumn =
+      row.items_count != null && Number.isFinite(Number(row.items_count))
+        ? Math.max(1, Math.min(99, Math.floor(Number(row.items_count))))
+        : null
+    return {
       id: String(row.id),
       name: row.name,
       slug: row.slug,
-      description: row.description || undefined,
+      description: stripPackItemsCountMarker(rawDesc) || undefined,
       price: Number(row.price),
       image_url: row.image_url || undefined,
       is_featured: Boolean(row.is_featured),
-    }))
+      items_count: fromColumn ?? extractPackItemsCount(rawDesc),
+    }
+  }
+
+  async getPacks(): Promise<Pack[]> {
+    const result = await this.pool.query<PackRow>('SELECT * FROM packs ORDER BY created_at DESC')
+    return result.rows.map((row: PackRow) => this.mapPackRow(row))
   }
 
   async getPackById(id: string): Promise<Pack | null> {
@@ -516,15 +532,7 @@ export class PostgresAdapter implements DatabaseAdapter {
     if (result.rows.length === 0) return null
     const row = result.rows[0]
     if (!row) return null
-    return {
-      id: String(row.id),
-      name: row.name,
-      slug: row.slug,
-      description: row.description || undefined,
-      price: Number(row.price),
-      image_url: row.image_url || undefined,
-      is_featured: Boolean(row.is_featured),
-    }
+    return this.mapPackRow(row)
   }
 
   async createPack(packData: Partial<Pack>): Promise<Pack | null> {
@@ -534,31 +542,49 @@ export class PostgresAdapter implements DatabaseAdapter {
         return null
       }
 
-      const result = await this.pool.query<PackRow>(
-        `INSERT INTO packs (name, slug, description, price, image_url, is_featured)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [
-          packData.name,
-          packData.slug,
-          packData.description || null,
-          packData.price,
-          packData.image_url || null,
-          packData.is_featured !== undefined ? Boolean(packData.is_featured) : false,
-        ]
-      )
+      const itemsCount =
+        packData.items_count != null
+          ? Math.max(1, Math.min(99, Math.floor(Number(packData.items_count))))
+          : extractPackItemsCount(packData.description)
+      const description = withPackItemsCountMarker(packData.description, itemsCount)
 
-      const row = result.rows[0]
-      if (!row) return null
-
-      return {
-        id: String(row.id),
-        name: row.name,
-        slug: row.slug,
-        description: row.description || undefined,
-        price: Number(row.price),
-        image_url: row.image_url || undefined,
-        is_featured: Boolean(row.is_featured),
+      try {
+        const result = await this.pool.query<PackRow>(
+          `INSERT INTO packs (name, slug, description, price, image_url, is_featured, items_count)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING *`,
+          [
+            packData.name,
+            packData.slug,
+            description,
+            packData.price,
+            packData.image_url || null,
+            packData.is_featured !== undefined ? Boolean(packData.is_featured) : false,
+            itemsCount,
+          ]
+        )
+        const row = result.rows[0]
+        if (!row) return null
+        return this.mapPackRow(row)
+      } catch (colError) {
+        const msg = colError instanceof Error ? colError.message : String(colError)
+        if (!/items_count/i.test(msg)) throw colError
+        const result = await this.pool.query<PackRow>(
+          `INSERT INTO packs (name, slug, description, price, image_url, is_featured)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING *`,
+          [
+            packData.name,
+            packData.slug,
+            description,
+            packData.price,
+            packData.image_url || null,
+            packData.is_featured !== undefined ? Boolean(packData.is_featured) : false,
+          ]
+        )
+        const row = result.rows[0]
+        if (!row) return null
+        return this.mapPackRow(row)
       }
     } catch (error) {
       logger.error('[PostgresAdapter] createPack error:', error)
@@ -579,10 +605,23 @@ export class PostgresAdapter implements DatabaseAdapter {
 
       if (packData.name !== undefined) set('name', packData.name)
       if (packData.slug !== undefined) set('slug', packData.slug)
-      if (packData.description !== undefined) set('description', packData.description ?? null)
       if (packData.price !== undefined) set('price', packData.price)
       if (packData.image_url !== undefined) set('image_url', packData.image_url ?? null)
       if (packData.is_featured !== undefined) set('is_featured', Boolean(packData.is_featured))
+
+      if (packData.items_count !== undefined || packData.description !== undefined) {
+        const existing = await this.getPackById(id)
+        const count =
+          packData.items_count !== undefined
+            ? Math.max(1, Math.min(99, Math.floor(Number(packData.items_count))))
+            : (existing?.items_count ?? 1)
+        const baseDesc =
+          packData.description !== undefined
+            ? packData.description
+            : (existing?.description ?? '')
+        set('description', withPackItemsCountMarker(baseDesc, count))
+        set('items_count', count)
+      }
 
       if (fields.length === 0) {
         logger.warn('[PostgresAdapter] updatePack: aucun champ à mettre à jour')
@@ -590,11 +629,26 @@ export class PostgresAdapter implements DatabaseAdapter {
       }
 
       values.push(id)
-      const result = await this.pool.query(
-        `UPDATE packs SET ${fields.join(', ')} WHERE id::text = $${i} OR slug = $${i}`,
-        values
-      )
-      return (result.rowCount ?? 0) > 0
+      try {
+        const result = await this.pool.query(
+          `UPDATE packs SET ${fields.join(', ')} WHERE id::text = $${i} OR slug = $${i}`,
+          values
+        )
+        return (result.rowCount ?? 0) > 0
+      } catch (colError) {
+        const msg = colError instanceof Error ? colError.message : String(colError)
+        if (!/items_count/i.test(msg)) throw colError
+        const idx = fields.findIndex((f) => f.startsWith('items_count'))
+        if (idx >= 0) {
+          fields.splice(idx, 1)
+          values.splice(idx, 1)
+        }
+        const result = await this.pool.query(
+          `UPDATE packs SET ${fields.join(', ')} WHERE id::text = $${fields.length + 1} OR slug = $${fields.length + 1}`,
+          values
+        )
+        return (result.rowCount ?? 0) > 0
+      }
     } catch (error) {
       logger.error('[PostgresAdapter] updatePack error:', error)
       return false

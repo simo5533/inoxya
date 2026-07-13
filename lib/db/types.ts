@@ -40,6 +40,8 @@ export interface Pack {
   price: number
   image_url?: string
   is_featured: boolean
+  /** Nombre de pièces affichées sur la fiche pack */
+  items_count?: number
   created_by?: number | string | null
 }
 

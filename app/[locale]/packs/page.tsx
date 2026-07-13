@@ -147,7 +147,12 @@ export default function PacksPage() {
             price: (p['price'] as number) || 0,
             original_price: p['original_price'] as number | undefined,
             image_url: (p['image_url'] as string) || '/placeholder.svg',
-            items_count: Array.isArray(p['composition']) ? p['composition'].length : 0,
+            items_count:
+              typeof p['items_count'] === 'number' && p['items_count'] > 0
+                ? (p['items_count'] as number)
+                : Array.isArray(p['composition']) && (p['composition'] as unknown[]).length > 0
+                  ? (p['composition'] as unknown[]).length
+                  : 1,
             category: (p['category'] as string) || 'general',
             is_featured: (p['is_featured'] as boolean) || false
           }
