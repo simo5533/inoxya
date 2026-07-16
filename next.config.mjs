@@ -53,8 +53,13 @@ const nextConfig = {
   outputFileTracingRoot: process.cwd(),
   async redirects() {
     return [
-      { source: '/', destination: '/fr', permanent: false },
-      { source: '/login', destination: '/fr/login', permanent: false },
+      { source: '/', destination: '/fr', permanent: true },
+      { source: '/login', destination: '/fr/login', permanent: true },
+      { source: '/packs', destination: '/fr/packs', permanent: true },
+      { source: '/sur-mesure', destination: '/fr/sur-mesure', permanent: true },
+      { source: '/a-propos', destination: '/fr/a-propos', permanent: true },
+      { source: '/faq', destination: '/fr/faq', permanent: true },
+      { source: '/bijoux', destination: '/fr/bijoux', permanent: true },
     ]
   },
   async headers() {

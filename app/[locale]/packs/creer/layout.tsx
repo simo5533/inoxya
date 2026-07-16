@@ -1,22 +1,19 @@
 import type { Metadata } from 'next'
-import { getSiteUrlSafe } from '@/lib/site-url'
+import { seoPageMetadata } from '@/lib/seo/config'
 
-export function generateMetadata(): Metadata {
-  const siteUrl = getSiteUrlSafe()
-  return {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  return seoPageMetadata({
     title: 'Créer mon pack | INOXYA BIJOUX',
     description:
       'Composez votre pack personnalisé en acier inoxydable : sélection de bijoux éligibles et −20 % sur le total.',
-    alternates: { canonical: `${siteUrl}/packs/creer` },
-    openGraph: {
-      title: 'Créer mon pack | INOXYA BIJOUX',
-      description: 'Pack personnalisé avec remise −20 % sur le total.',
-      url: `${siteUrl}/packs/creer`,
-      siteName: 'INOXYA BIJOUX',
-      type: 'website',
-      locale: 'fr_FR',
-    },
-  }
+    path: '/packs/creer',
+    locale,
+  })
 }
 
 export default function CreerPackLayout({ children }: { children: React.ReactNode }) {

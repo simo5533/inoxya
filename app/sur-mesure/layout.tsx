@@ -31,7 +31,11 @@ export const metadata: Metadata = {
     images: [`${siteUrl}${BRAND_LOGO}`],
   },
   alternates: {
-    canonical: `${siteUrl}/sur-mesure`,
+    canonical: `${siteUrl}/fr/sur-mesure`,
+  },
+  robots: {
+    index: false,
+    follow: true,
   },
 }
 
