@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getBijouById, createOrderFull, getPackForCheckoutOrder } from '@/lib/database'
-import { sendAdminEmail, renderPaymentEmail } from '@/lib/email'
+import { sendAdminEmail, renderOrderNotificationEmail } from '@/lib/email'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 import { logger } from '@/lib/logger'
 import { sanitizeInput, requireCSRF } from '@/lib/security'
 import { consumePublicRateLimit, getClientIp } from '@/lib/public-rate-limit'
@@ -261,18 +262,28 @@ export async function POST(request: NextRequest) {
 
       logger.info('[POST /api/checkout] Commande créée avec succès', { orderId, paymentId })
 
-      // Email admin (si configuré)
+      // Email patron : nouvelle commande + produits + coordonnées client
       try {
-        await sendAdminEmail(
-          `Nouvelle commande ${orderId}`,
-          renderPaymentEmail({
+        const emailSent = await sendAdminEmail(
+          `Nouvelle commande INOXYA — ${orderId} — ${total.toFixed(2)} MAD`,
+          renderOrderNotificationEmail({
             orderId,
             amount: total,
             method: paymentMethod,
             orderStatus: orderStatusForCheckoutPayment(paymentMethod),
-            transactionId: null
+            customerName: sanitizedCustomerName,
+            customerPhone: sanitizedPhone,
+            city: sanitizedCity,
+            address: sanitizedAddress,
+            items: verifiedItems,
+            adminOrderUrl: `${PRODUCTION_SITE_URL}/admin/orders/${orderId}`,
           })
         )
+        if (!emailSent) {
+          logger.warn('[POST /api/checkout] Email patron non envoyé (SMTP manquant ou échec)', {
+            orderId,
+          })
+        }
       } catch (emailError) {
         const emailErrorDetails = emailError instanceof Error ? {
           message: emailError.message,
