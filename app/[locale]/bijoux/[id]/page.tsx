@@ -40,6 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       return {
         title: t('notFound.title'),
         description: t('notFound.description'),
+        robots: { index: false, follow: false },
       }
     }
 

@@ -1,5 +1,11 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { getLocale } from 'next-intl/server'
+
+export const metadata: Metadata = {
+  title: 'Page introuvable | INOXYA BIJOUX',
+  robots: { index: false, follow: false },
+}
 
 export default async function LocaleNotFound() {
   const locale = await getLocale()
