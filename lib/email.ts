@@ -1,5 +1,4 @@
 import { logger } from './logger'
-import { SEO_EMAIL } from './seo/config'
 import {
   formatPaymentMethodDetailHtml,
   formatPaymentMethodLabelFr,
@@ -203,4 +202,6 @@ export function renderPaymentEmail(params: {
     customerPhone: '—',
     city: '—',
     address: '—',
-    items: 
+    items: [],
+  })
+}
