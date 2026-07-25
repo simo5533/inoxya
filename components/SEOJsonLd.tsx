@@ -162,6 +162,11 @@ export function ProductJsonLd({
       return `${siteUrl}/${img}`
     })
     .filter(Boolean)
+    .map((url) => ({
+      '@type': 'ImageObject',
+      url,
+      contentUrl: url,
+    }))
 
   const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -220,53 +225,75 @@ export function CollectionPageJsonLd({
   const fallbackImage = `${siteUrl}${BRAND_LOGO_ICON}`
 
   const absoluteImage = (img?: string) => {
-    if (!img) return fallbackImage
-    if (img.startsWith('http')) return img
-    // Ne jamais préfixer /images/... avec /fr — chemin public
-    if (img.startsWith('/')) return `${siteUrl}${img}`
-    return `${siteUrl}/${img}`
+    if (!img || !String(img).trim()) return fallbackImage
+    const value = String(img).trim()
+    if (value.startsWith('http')) return value
+    if (value.startsWith('/')) return `${siteUrl}${value}`
+    return `${siteUrl}/${value}`
   }
 
-  return (
-    <JsonLdScript
-      data={{
-        '@context': 'https://schema.org',
-        '@type': 'CollectionPage',
-        name,
-        description,
-        url,
-        mainEntity: {
-          '@type': 'ItemList',
-          itemListElement: items.map((item, index) => {
-            const image = absoluteImage(item.image)
-            return {
-              '@type': 'ListItem',
-              position: index + 1,
-              url: item.url,
-              name: item.name,
-              image,
-              ...(item.price != null
-                ? {
-                    item: {
-                      '@type': 'Product',
-                      name: item.name,
-                      image,
-                      url: item.url,
-                      offers: {
-                        '@type': 'Offer',
-                        url: item.url,
-                        price: String(item.price),
-                        priceCurrency: 'MAD',
-                        availability: 'https://schema.org/InStock',
-                      },
-                    },
-                  }
-                : {}),
+  const listItems = items.map((item, index) => {
+    const imageUrl = absoluteImage(item.image)
+    const images = [
+      {
+        '@type': 'ImageObject',
+        url: imageUrl,
+        contentUrl: imageUrl,
+      },
+    ]
+
+    return {
+      '@type': 'ListItem',
+      position: index + 1,
+      url: item.url,
+      name: item.name,
+      item: {
+        '@type': 'Product',
+        '@id': `${item.url}#product`,
+        name: item.name,
+        image: images,
+        url: item.url,
+        brand: { '@type': 'Brand', name: SEO_BRAND },
+        ...(item.price != null
+          ? {
+              offers: {
+                '@type': 'Offer',
+                url: item.url,
+                price: Number(item.price).toFixed(2),
+                priceCurrency: 'MAD',
+                availability: 'https://schema.org/InStock',
+              },
             }
-          }),
-        },
-      }}
-    />
+          : {}),
+      },
+    }
+  })
+
+  return (
+    <>
+      <JsonLdScript
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name,
+          description,
+          url,
+          mainEntity: {
+            '@type': 'ItemList',
+            itemListElement: listItems,
+          },
+        }}
+      />
+      {/* Produits exposés aussi en ItemList dédiée (meilleure détection Google Rich Results) */}
+      <JsonLdScript
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name,
+          itemListElement: listItems,
+        }}
+      />
+    </>
   )
 }
 
