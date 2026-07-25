@@ -148,11 +148,20 @@ export function ProductJsonLd({
 }) {
   const siteUrl = seoSiteUrl()
   const url = `${siteUrl}/${locale}/bijoux/${product.id}`
-  const images = product.image
+  const fallbackImage = `${siteUrl}${BRAND_LOGO_ICON}`
+  const rawImages = product.image
     ? Array.isArray(product.image)
       ? product.image
       : [product.image]
-    : [`${siteUrl}/placeholder.svg`]
+    : []
+  const images = (rawImages.length > 0 ? rawImages : [fallbackImage])
+    .map((img) => {
+      if (!img) return fallbackImage
+      if (img.startsWith('http')) return img
+      if (img.startsWith('/')) return `${siteUrl}${img}`
+      return `${siteUrl}/${img}`
+    })
+    .filter(Boolean)
 
   const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -207,6 +216,17 @@ export function CollectionPageJsonLd({
   url: string
   items: Array<{ name: string; url: string; image?: string; price?: number }>
 }) {
+  const siteUrl = seoSiteUrl()
+  const fallbackImage = `${siteUrl}${BRAND_LOGO_ICON}`
+
+  const absoluteImage = (img?: string) => {
+    if (!img) return fallbackImage
+    if (img.startsWith('http')) return img
+    // Ne jamais préfixer /images/... avec /fr — chemin public
+    if (img.startsWith('/')) return `${siteUrl}${img}`
+    return `${siteUrl}/${img}`
+  }
+
   return (
     <JsonLdScript
       data={{
@@ -217,26 +237,33 @@ export function CollectionPageJsonLd({
         url,
         mainEntity: {
           '@type': 'ItemList',
-          itemListElement: items.map((item, index) => ({
-            '@type': 'ListItem',
-            position: index + 1,
-            url: item.url,
-            name: item.name,
-            ...(item.image ? { image: item.image } : {}),
-            ...(item.price != null
-              ? {
-                  item: {
-                    '@type': 'Product',
-                    name: item.name,
-                    offers: {
-                      '@type': 'Offer',
-                      price: String(item.price),
-                      priceCurrency: 'MAD',
+          itemListElement: items.map((item, index) => {
+            const image = absoluteImage(item.image)
+            return {
+              '@type': 'ListItem',
+              position: index + 1,
+              url: item.url,
+              name: item.name,
+              image,
+              ...(item.price != null
+                ? {
+                    item: {
+                      '@type': 'Product',
+                      name: item.name,
+                      image,
+                      url: item.url,
+                      offers: {
+                        '@type': 'Offer',
+                        url: item.url,
+                        price: String(item.price),
+                        priceCurrency: 'MAD',
+                        availability: 'https://schema.org/InStock',
+                      },
                     },
-                  },
-                }
-              : {}),
-          })),
+                  }
+                : {}),
+            }
+          }),
         },
       }}
     />

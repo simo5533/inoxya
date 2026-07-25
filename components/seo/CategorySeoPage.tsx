@@ -7,7 +7,7 @@ import { BreadcrumbJsonLd, CollectionPageJsonLd } from '@/components/SEOJsonLd'
 import { getAllBijoux } from '@/lib/database'
 import { getCategorySeo } from '@/lib/seo/categories'
 import { GEO_QA_COLLECTION } from '@/lib/seo/geo-qa'
-import { seoLocalePath, seoPageMetadata } from '@/lib/seo/config'
+import { seoLocalePath, seoPageMetadata, seoSiteUrl } from '@/lib/seo/config'
 import { slugToDbValue } from '@/lib/category-mapping'
 import { logger } from '@/lib/logger'
 
@@ -67,12 +67,19 @@ export default async function CategorySeoPage({
     }
   })
 
-  const listItems = normalizedProducts.slice(0, 48).map((p) => ({
-    name: p.name,
-    url: seoLocalePath(locale, `/bijoux/${p.id}`),
-    image: p.image_url.startsWith('http') ? p.image_url : seoLocalePath(locale, p.image_url),
-    price: p.price,
-  }))
+  const siteUrl = seoSiteUrl()
+  const listItems = normalizedProducts.slice(0, 48).map((p) => {
+    const img = p.image_url || '/placeholder.svg'
+    const absoluteImg = img.startsWith('http')
+      ? img
+      : `${siteUrl}${img.startsWith('/') ? img : `/${img}`}`
+    return {
+      name: p.name,
+      url: seoLocalePath(locale, `/bijoux/${p.id}`),
+      image: absoluteImg,
+      price: p.price,
+    }
+  })
 
   const breadcrumbs = [
     { name: 'Accueil', url: seoLocalePath(locale, '') },

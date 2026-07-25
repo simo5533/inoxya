@@ -142,12 +142,19 @@ export function ProductSchema({
     ? [product.main_image, ...(product.images || [])].filter(Boolean)
     : product.images || []
 
+  const resolvedImages =
+    images.length > 0
+      ? images.map((img) =>
+          img.startsWith('http') ? img : `${siteUrl}${img.startsWith('/') ? img : `/${img}`}`
+        )
+      : [`${siteUrl}/logo-inoxya-icon.png`]
+
   const schema: ProductSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
     description: product.description || `${product.name} - Bijou en acier inoxydable premium`,
-    image: images.length > 0 ? images : [`${siteUrl}/placeholder.svg`],
+    image: resolvedImages,
     brand: {
       '@type': 'Brand',
       name: 'INOXYA BIJOUX',

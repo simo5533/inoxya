@@ -60,6 +60,10 @@ const nextConfig = {
       { source: '/a-propos', destination: '/fr/a-propos', permanent: true },
       { source: '/faq', destination: '/fr/faq', permanent: true },
       { source: '/bijoux', destination: '/fr/bijoux', permanent: true },
+      { source: '/fr/admin', destination: '/admin', permanent: true },
+      { source: '/fr/admin/:path*', destination: '/admin/:path*', permanent: true },
+      { source: '/ar/admin', destination: '/admin', permanent: true },
+      { source: '/ar/admin/:path*', destination: '/admin/:path*', permanent: true },
     ]
   },
   async headers() {
