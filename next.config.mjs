@@ -58,6 +58,7 @@ const nextConfig = {
       { source: '/', destination: '/fr', permanent: true },
       { source: '/login', destination: '/fr/login', permanent: true },
       { source: '/packs', destination: '/fr/packs', permanent: true },
+      { source: '/packs/:id', destination: '/fr/packs/:id', permanent: true },
       { source: '/sur-mesure', destination: '/fr/sur-mesure', permanent: true },
       { source: '/a-propos', destination: '/fr/a-propos', permanent: true },
       { source: '/faq', destination: '/fr/faq', permanent: true },

@@ -6,6 +6,9 @@
 import { getDatabaseAdapter } from './db'
 import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
+import {
+  extractPackItemsCount,
+} from './pack-items-count'
 
 /** Évite de répéter la même erreur [getAllBijoux]/[getAllPacks] pendant le build SSG (30 pages). */
 let loggedProdAdapterFailureBijoux = false
@@ -338,6 +341,34 @@ export async function getBijouById(id: string) {
  * puis repli optionnel sur `pack-management` (SQLite fichier + better-sqlite3) en dev uniquement.
  * Évite le throw « better-sqlite3 is not available » quand seul sql.js / l’adapter est utilisé.
  */
+/**
+ * Fiche pack publique (id numérique ou slug).
+ */
+export async function getPackByIdPublic(packId: string) {
+  try {
+    const adapter = await getDatabaseAdapter()
+    const pack = await adapter.getPackById(packId)
+    if (!pack) return null
+    const itemsCount =
+      typeof pack.items_count === 'number' && pack.items_count > 0
+        ? pack.items_count
+        : extractPackItemsCount(pack.description)
+    return {
+      id: String(pack.id),
+      name: pack.name,
+      slug: pack.slug || pack.name.toLowerCase().replace(/\s+/g, '-'),
+      description: pack.description || '',
+      price: Number(pack.price),
+      image_url: pack.image_url || '/placeholder.svg',
+      is_featured: Boolean(pack.is_featured),
+      items_count: itemsCount,
+    }
+  } catch (error) {
+    logger.error('Erreur getPackByIdPublic:', serializeError(error))
+    return null
+  }
+}
+
 export async function getPackForCheckoutOrder(
   packId: string
 ): Promise<{ id: string; name: string; price: number } | null> {

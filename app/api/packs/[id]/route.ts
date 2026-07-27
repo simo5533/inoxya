@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { 
-  getPackById, 
   updatePack, 
   deletePack 
 } from '@/lib/pack-management'
+import { getPackByIdPublic } from '@/lib/database'
 import { logger } from '@/lib/logger'
-import { sanitizeInput, requireCSRF, validateNumericId } from '@/lib/security'
+import { sanitizeInput, requireCSRF, validateProductId } from '@/lib/security'
 import { getCurrentUser } from '@/lib/auth'
 import { validateWithSchema, updatePackSchema } from '@/lib/validations'
 
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
 
-// GET /api/packs/[id] - Récupérer un pack par ID
+// GET /api/packs/[id] - Récupérer un pack par ID ou slug
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,15 +20,14 @@ export async function GET(
   try {
     const { id } = await params
     
-    // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       return NextResponse.json(
         { error: 'ID pack invalide' },
         { status: 400 }
       )
     }
     
-    const pack = await getPackById(id)
+    const pack = await getPackByIdPublic(id)
 
     if (!pack) {
       return NextResponse.json(
@@ -62,7 +61,7 @@ export async function PUT(
     const { id } = await params
     
     // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       return NextResponse.json(
         { error: 'ID pack invalide' },
         { status: 400 }
@@ -92,7 +91,7 @@ export async function PUT(
     const validatedData = validation.data
 
     // Vérifier que le pack existe
-    const existingPack = await getPackById(id)
+    const existingPack = await getPackByIdPublic(id)
     if (!existingPack) {
       return NextResponse.json(
         { error: 'Pack non trouvé' },
@@ -146,7 +145,7 @@ export async function PUT(
       updateData['max_items'] = maxItems
     }
     if (body['discount_type'] || body['discount_value'] !== undefined) {
-      const discountValue = body['discount_value'] !== undefined ? parseFloat(String(body['discount_value'])) : existingPack.discount.value
+      const discountValue = body['discount_value'] !== undefined ? parseFloat(String(body['discount_value'])) : 0
       if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
         return NextResponse.json(
           { error: 'La valeur de remise doit être entre 0 et 100' },
@@ -154,12 +153,12 @@ export async function PUT(
         )
       }
       updateData['discount'] = {
-        type: body['discount_type'] || existingPack.discount.type,
+        type: body['discount_type'] || 'percentage',
         value: discountValue
       }
     }
 
-    await updatePack(id, updateData)
+    await updatePack(existingPack.id, updateData)
 
     return NextResponse.json(
       { message: 'Pack mis à jour avec succès' },
@@ -189,7 +188,7 @@ export async function DELETE(
     const { id } = await params
     
     // SÉCURITÉ: Validation de l'ID
-    if (!validateNumericId(id)) {
+    if (!validateProductId(id)) {
       return NextResponse.json(
         { error: 'ID pack invalide' },
         { status: 400 }
@@ -206,7 +205,7 @@ export async function DELETE(
     }
 
     // Vérifier que le pack existe
-    const existingPack = await getPackById(id)
+    const existingPack = await getPackByIdPublic(id)
     if (!existingPack) {
       return NextResponse.json(
         { error: 'Pack non trouvé' },
@@ -214,7 +213,7 @@ export async function DELETE(
       )
     }
 
-    await deletePack(id)
+    await deletePack(existingPack.id)
 
     return NextResponse.json(
       { message: 'Pack supprimé avec succès' },

@@ -80,15 +80,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const packs = await getAllPacks()
     for (const locale of LOCALES) {
       for (const pack of packs || []) {
-        const id = (pack as { id?: string | number; slug?: string }).id ?? (pack as { slug?: string }).slug
-        if (!id) continue
+        const p = pack as { id?: string | number; slug?: string }
+        const pathId = p.slug || p.id
+        if (!pathId) continue
         entries.push({
-          url: `${siteUrl}/${locale}/packs`,
+          url: `${siteUrl}/${locale}/packs/${pathId}`,
           lastModified: now,
           changeFrequency: 'weekly',
           priority: 0.75,
         })
-        break
       }
     }
   } catch {

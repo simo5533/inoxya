@@ -354,6 +354,20 @@
     "orderError": "❌ Erreur lors de la commande",
     "ctaPackLine": "Composez votre sélection parmi nos bijoux éligibles : −20 % appliqués automatiquement sur votre pack.",
     "ctaCreatePack": "Créer mon pack",
+    "detail": {
+      "backToPacks": "Retour aux packs",
+      "shipping": "Livraison Maroc — gratuite dès {threshold} MAD",
+      "material": "{material} — qualité garantie",
+      "returns": "Retours sous {days} jours",
+      "notFound": {
+        "title": "Pack introuvable",
+        "description": "Ce pack n'existe pas ou n'est plus disponible."
+      },
+      "default": {
+        "title": "Pack | INOXYA BIJOUX",
+        "description": "Découvrez nos packs bijoux assortis en acier inoxydable 316L."
+      }
+    },
     "creer": {
       "title": "Créer mon pack",
       "subtitle": "Choisissez jusqu’à 6 bijoux en acier inoxydable — la remise de 20 % s’applique au total de votre sélection.",

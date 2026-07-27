@@ -20,9 +20,11 @@ interface OrderFormProps {
   productName: string
   price: number
   productId: string
+  /** Si true, envoie `pack_id` au checkout (packs) au lieu de `bijou_id`. */
+  isPack?: boolean
 }
 
-export default function OrderForm({ productName, price, productId }: OrderFormProps) {
+export default function OrderForm({ productName, price, productId, isPack = false }: OrderFormProps) {
   const t = useTranslations('orderForm')
   const tc = useTranslations('checkout')
   const locale = useLocale()
@@ -88,7 +90,9 @@ export default function OrderForm({ productName, price, productId }: OrderFormPr
           notes: formData.notes,
           payment_method: formData.payment_method,
           items: [
-            { bijou_id: productId, price, quantity: 1 }
+            isPack
+              ? { id: productId, pack_id: productId, price, quantity: 1 }
+              : { bijou_id: productId, price, quantity: 1 },
           ]
         })
       })
