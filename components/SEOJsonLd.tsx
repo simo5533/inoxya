@@ -7,10 +7,14 @@ import {
   SEO_EMAIL,
   SEO_MATERIAL,
   SEO_PHONE_E164,
+  SEO_RETURN_DAYS,
   SEO_SLOGAN,
+  SEO_FREE_SHIPPING_THRESHOLD,
+  SEO_CURRENCY,
   seoSiteUrl,
 } from '@/lib/seo/config'
 import { BRAND_LOGO, BRAND_LOGO_ICON } from '@/lib/brand'
+import { absoluteProductImages, buildMerchantOffer } from '@/lib/seo/merchant-offer'
 
 function JsonLdScript({ data }: { data: Record<string, unknown> }) {
   return (
@@ -66,6 +70,46 @@ export function OrganizationJsonLd() {
           'https://www.instagram.com/inoxya_accesoires',
           'https://www.tiktok.com/@inoxya2',
         ],
+        hasMerchantReturnPolicy: {
+          '@type': 'MerchantReturnPolicy',
+          '@id': `${siteUrl}/#return-policy`,
+          applicableCountry: 'MA',
+          returnPolicyCountry: 'MA',
+          returnPolicyCategory:
+            'https://schema.org/MerchantReturnFiniteReturnWindow',
+          merchantReturnDays: SEO_RETURN_DAYS,
+          returnMethod: 'https://schema.org/ReturnByMail',
+          returnFees: 'https://schema.org/FreeReturn',
+        },
+        shippingDetails: {
+          '@type': 'OfferShippingDetails',
+          '@id': `${siteUrl}/#shipping`,
+          shippingRate: {
+            '@type': 'MonetaryAmount',
+            value: '0',
+            currency: SEO_CURRENCY,
+          },
+          shippingDestination: {
+            '@type': 'DefinedRegion',
+            addressCountry: 'MA',
+          },
+          deliveryTime: {
+            '@type': 'ShippingDeliveryTime',
+            handlingTime: {
+              '@type': 'QuantitativeValue',
+              minValue: 0,
+              maxValue: 1,
+              unitCode: 'DAY',
+            },
+            transitTime: {
+              '@type': 'QuantitativeValue',
+              minValue: 1,
+              maxValue: 5,
+              unitCode: 'DAY',
+            },
+          },
+          name: `Livraison Maroc — gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD`,
+        },
       }}
     />
   )
@@ -154,19 +198,8 @@ export function ProductJsonLd({
       ? product.image
       : [product.image]
     : []
-  const images = (rawImages.length > 0 ? rawImages : [fallbackImage])
-    .map((img) => {
-      if (!img) return fallbackImage
-      if (img.startsWith('http')) return img
-      if (img.startsWith('/')) return `${siteUrl}${img}`
-      return `${siteUrl}/${img}`
-    })
-    .filter(Boolean)
-    .map((url) => ({
-      '@type': 'ImageObject',
-      url,
-      contentUrl: url,
-    }))
+  // Google Merchant Listings : URLs d’images (pas ImageObject) — format officiel
+  const images = absoluteProductImages(siteUrl, rawImages, fallbackImage)
 
   const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -177,18 +210,14 @@ export function ProductJsonLd({
       `${product.name} — bijou en ${SEO_MATERIAL}, ${SEO_BRAND}, livraison Maroc.`,
     image: images,
     sku: product.id,
+    mpn: product.id,
     brand: { '@type': 'Brand', name: SEO_BRAND },
     material: SEO_MATERIAL,
-    offers: {
-      '@type': 'Offer',
+    offers: buildMerchantOffer({
       url,
-      priceCurrency: 'MAD',
-      price: String(product.price),
-      availability: product.inStock !== false
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      seller: { '@type': 'Organization', name: SEO_BRAND },
-    },
+      price: product.price,
+      inStock: product.inStock,
+    }),
   }
 
   if (product.category) {
@@ -219,52 +248,48 @@ export function CollectionPageJsonLd({
   name: string
   description: string
   url: string
-  items: Array<{ name: string; url: string; image?: string; price?: number }>
+  items: Array<{
+    name: string
+    url: string
+    image?: string
+    price?: number
+    description?: string
+    sku?: string
+  }>
 }) {
   const siteUrl = seoSiteUrl()
   const fallbackImage = `${siteUrl}${BRAND_LOGO_ICON}`
 
-  const absoluteImage = (img?: string) => {
-    if (!img || !String(img).trim()) return fallbackImage
-    const value = String(img).trim()
-    if (value.startsWith('http')) return value
-    if (value.startsWith('/')) return `${siteUrl}${value}`
-    return `${siteUrl}/${value}`
-  }
-
   const listItems = items.map((item, index) => {
-    const imageUrl = absoluteImage(item.image)
-    const images = [
-      {
-        '@type': 'ImageObject',
-        url: imageUrl,
-        contentUrl: imageUrl,
-      },
-    ]
+    const images = absoluteProductImages(
+      siteUrl,
+      item.image ? [item.image] : [],
+      fallbackImage
+    )
+    const productUrl = item.url
+    const price = item.price ?? 0
 
     return {
       '@type': 'ListItem',
       position: index + 1,
-      url: item.url,
-      name: item.name,
       item: {
         '@type': 'Product',
-        '@id': `${item.url}#product`,
+        '@id': `${productUrl}#product`,
         name: item.name,
+        description:
+          item.description ||
+          `${item.name} — bijou en ${SEO_MATERIAL}, ${SEO_BRAND}, livraison Maroc.`,
         image: images,
-        url: item.url,
+        sku: item.sku || productUrl.split('/').pop() || item.name,
+        mpn: item.sku || productUrl.split('/').pop() || item.name,
+        url: productUrl,
         brand: { '@type': 'Brand', name: SEO_BRAND },
-        ...(item.price != null
-          ? {
-              offers: {
-                '@type': 'Offer',
-                url: item.url,
-                price: Number(item.price).toFixed(2),
-                priceCurrency: 'MAD',
-                availability: 'https://schema.org/InStock',
-              },
-            }
-          : {}),
+        material: SEO_MATERIAL,
+        offers: buildMerchantOffer({
+          url: productUrl,
+          price,
+          inStock: true,
+        }),
       },
     }
   })
@@ -284,12 +309,12 @@ export function CollectionPageJsonLd({
           },
         }}
       />
-      {/* Produits exposés aussi en ItemList dédiée (meilleure détection Google Rich Results) */}
       <JsonLdScript
         data={{
           '@context': 'https://schema.org',
           '@type': 'ItemList',
           name,
+          numberOfItems: listItems.length,
           itemListElement: listItems,
         }}
       />

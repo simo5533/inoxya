@@ -78,6 +78,8 @@ export default async function CategorySeoPage({
       url: seoLocalePath(locale, `/bijoux/${p.id}`),
       image: absoluteImg,
       price: p.price,
+      sku: p.id,
+      description: `${p.name} — bijou en acier inoxydable 316L INOXYA, livraison Maroc.`,
     }
   })
 
