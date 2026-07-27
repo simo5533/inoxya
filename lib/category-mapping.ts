@@ -1,6 +1,12 @@
 /**
  * Mapping canonique des catégories
  * Garantit la cohérence entre DB, API et Frontend
+ *
+ * Note historique : en base, certains libellés ont été croisés :
+ * - produits « colliers » (photos colliers) → category = "Montres"
+ * - produits « montres » (photos montres) → category = "Parures"
+ * - produits « parures / ensembles » → category = "Colliers"
+ * Les slugs d’URL restent corrects ( /colliers, /montres, /parures ).
  */
 
 export interface CategoryDefinition {
@@ -19,44 +25,47 @@ export const CATEGORIES: Record<string, CategoryDefinition> = {
     label: 'Bagues',
     dbValue: 'Bagues',
     slug: 'bagues',
-    subtitle: 'Collection de bagues berbères et modernes'
+    subtitle: 'Collection de bagues berbères et modernes',
   },
   colliers: {
-    label: 'Ensemble',
-    dbValue: 'Colliers',
+    label: 'Colliers',
+    // Historique DB : les colliers sont stockés sous "Montres"
+    dbValue: 'Montres',
     slug: 'colliers',
-    subtitle: 'Ensembles assortis de bijoux en acier inoxydable'
+    subtitle: 'Colliers traditionnels et contemporains',
   },
   bracelets: {
     label: 'Bracelets',
     dbValue: 'Bracelets',
     slug: 'bracelets',
-    subtitle: 'Bracelets élégants et résistants'
+    subtitle: 'Bracelets élégants et résistants',
   },
   'boucles-oreilles': {
     label: "Boucles d'oreilles",
     dbValue: "Boucles d'oreilles",
     slug: 'boucles-oreilles',
-    subtitle: "Boucles d'oreilles traditionnelles et modernes"
-  },
-  parures: {
-    label: 'Montres',
-    dbValue: 'Parures',
-    slug: 'parures',
-    subtitle: 'Montres élégantes et précises'
+    subtitle: "Boucles d'oreilles traditionnelles et modernes",
   },
   montres: {
-    label: 'Colliers',
-    dbValue: 'Montres',
+    label: 'Montres',
+    // Historique DB : les montres sont stockées sous "Parures"
+    dbValue: 'Parures',
     slug: 'montres',
-    subtitle: 'Colliers traditionnels et contemporains'
+    subtitle: 'Montres élégantes et précises',
+  },
+  parures: {
+    label: 'Parures',
+    // Historique DB : les parures / ensembles sont stockés sous "Colliers"
+    dbValue: 'Colliers',
+    slug: 'parures',
+    subtitle: 'Parures et ensembles assortis en acier inoxydable',
   },
   broches: {
     label: 'Nos packs',
     dbValue: 'Nos packs',
     slug: 'broches',
-    subtitle: 'Packs exclusifs de bijoux à prix avantageux'
-  }
+    subtitle: 'Packs exclusifs de bijoux à prix avantageux',
+  },
 }
 
 /**
@@ -68,7 +77,7 @@ export const CATEGORY_ID_TO_NAME: Record<number, string> = {
   3: 'Bracelets',
   4: "Boucles d'oreilles",
   5: 'Nos packs',
-  55: 'Montres'
+  55: 'Montres',
 }
 
 /**
@@ -80,13 +89,11 @@ export function slugToDbValue(slug: string): string | null {
 }
 
 /**
- * Convertit une valeur DB en slug
+ * Convertit une valeur DB en slug d’URL
  */
 export function dbValueToSlug(dbValue: string): string | null {
-  // Parures (ensembles) → carte Montres ; produits « Montres » → slug montres (carte Colliers)
-  if (dbValue === 'Parures') return 'parures'
   for (const [slug, category] of Object.entries(CATEGORIES)) {
-    if (category.dbValue === dbValue && slug !== 'parures') {
+    if (category.dbValue === dbValue) {
       return slug
     }
   }
@@ -105,20 +112,17 @@ export function idToDbValue(id: number | string): string | null {
  * Normalise une valeur de catégorie (ID numérique, nom, ou slug) vers la valeur DB canonique
  */
 export function normalizeCategoryValue(value: string | number): string | null {
-  if (typeof value === 'number' || (!isNaN(parseFloat(value)))) {
-    // C'est un ID numérique
+  if (typeof value === 'number' || !isNaN(parseFloat(String(value)))) {
     return idToDbValue(parseFloat(String(value)))
   }
 
-  // Vérifier si c'est déjà une valeur DB
   for (const category of Object.values(CATEGORIES)) {
     if (category.dbValue === value) {
       return category.dbValue
     }
   }
 
-  // Vérifier si c'est un slug
-  const category = CATEGORIES[value]
+  const category = CATEGORIES[String(value)]
   if (category) {
     return category.dbValue
   }
@@ -143,7 +147,6 @@ export function categoryDbValueToDisplayName(dbValue: string): string {
 
 /**
  * Titre + sous-titre des cartes catégorie : mapping canonique prioritaire sur la ligne DB
- * (évite « Colliers » / textes seed obsolètes si Supabase/SQLite n’a pas été migré).
  */
 export function resolveCategoryCardDisplay(
   slug: string,
@@ -156,4 +159,3 @@ export function resolveCategoryCardDisplay(
   }
   return { name: dbName, description: dbDescription }
 }
-

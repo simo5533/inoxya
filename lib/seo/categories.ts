@@ -60,19 +60,6 @@ Découvrez les modèles disponibles ci-dessous. Paiement à la livraison, livrai
   colliers: {
     slug: 'colliers',
     dbSlug: 'colliers',
-    h1: 'Ensemble bijoux en acier inoxydable au Maroc',
-    title: 'Ensemble acier inoxydable 316L INOXYA Maroc',
-    description:
-      'Ensembles de bijoux en acier inoxydable 316L INOXYA. Style marocain, hypoallergéniques, livraison Maroc, paiement à la livraison.',
-    intro:
-      'Ensembles assortis en acier inoxydable 316L pour un look harmonieux et durable.',
-    body: `Nos ensembles INOXYA en acier inoxydable 316L associent plusieurs pièces coordonnées pour un style marocain raffiné. Idéal pour offrir ou pour compléter votre collection sans chercher chaque bijou séparément.
-
-L’acier 316L résiste à l’eau et convient aux peaux sensibles. Livraison partout au Maroc, paiement à la livraison, livraison gratuite dès 200 MAD et retour sous 30 jours.`,
-  },
-  montres: {
-    slug: 'montres',
-    dbSlug: 'montres',
     h1: 'Colliers en acier inoxydable au Maroc',
     title: 'Colliers acier inoxydable 316L au Maroc',
     description:
@@ -83,9 +70,9 @@ L’acier 316L résiste à l’eau et convient aux peaux sensibles. Livraison pa
 
 L’acier 316L est résistant à l’eau et adapté aux peaux sensibles. Livraison partout au Maroc, paiement à la livraison, livraison gratuite dès 200 MAD.`,
   },
-  parures: {
-    slug: 'parures',
-    dbSlug: 'parures',
+  montres: {
+    slug: 'montres',
+    dbSlug: 'montres',
     h1: 'Montres en acier inoxydable au Maroc',
     title: 'Montres acier inoxydable INOXYA Maroc',
     description:
@@ -95,6 +82,19 @@ L’acier 316L est résistant à l’eau et adapté aux peaux sensibles. Livrais
     body: `La sélection montres INOXYA propose des pièces en acier inoxydable 316L au design soigné. Élégance discrète, finitions durables et confort au poignet.
 
 Comme l’ensemble de la collection INOXYA, ces pièces résistent à l’eau et conviennent à un usage quotidien au Maroc. Livraison nationale avec paiement à la livraison.`,
+  },
+  parures: {
+    slug: 'parures',
+    dbSlug: 'parures',
+    h1: 'Parures et ensembles bijoux en acier inoxydable au Maroc',
+    title: 'Parures acier inoxydable 316L INOXYA Maroc',
+    description:
+      'Parures et ensembles de bijoux en acier inoxydable 316L INOXYA. Style marocain, hypoallergéniques, livraison Maroc, paiement à la livraison.',
+    intro:
+      'Parures et ensembles assortis en acier inoxydable 316L pour un look harmonieux et durable.',
+    body: `Nos parures INOXYA en acier inoxydable 316L associent plusieurs pièces coordonnées pour un style marocain raffiné. Idéal pour offrir ou pour compléter votre collection sans chercher chaque bijou séparément.
+
+L’acier 316L résiste à l’eau et convient aux peaux sensibles. Livraison partout au Maroc, paiement à la livraison, livraison gratuite dès 200 MAD et retour sous 30 jours.`,
   },
 }
 

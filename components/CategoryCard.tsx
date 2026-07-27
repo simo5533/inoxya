@@ -48,12 +48,10 @@ export default function CategoryCard({ category, index }: CategoryCardProps) {
   // Obtenir l'image source garantie
   const imageSrc = getCategoryImageSrc(category.slug, category.image_url, category.coverImage)
 
-  // parures (carte Montres) → /bijoux/parures ; montres (carte Colliers) → /bijoux/montres
-  const seoSlug =
-    category.slug === 'parures' ? 'parures' : category.slug
+  // Liens catégorie alignés sur le slug (colliers / montres / parures)
   const href = isPacksCategory
     ? `/${locale}/packs`
-    : `/${locale}/bijoux/${seoSlug}`
+    : `/${locale}/bijoux/${category.slug}`
 
   return (
     <Link href={href} className="block" aria-label={`Voir les ${displayName}`}>

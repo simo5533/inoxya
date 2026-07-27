@@ -8,7 +8,7 @@ import { getAllBijoux } from '@/lib/database'
 import { getCategorySeo } from '@/lib/seo/categories'
 import { GEO_QA_COLLECTION } from '@/lib/seo/geo-qa'
 import { seoLocalePath, seoPageMetadata, seoSiteUrl } from '@/lib/seo/config'
-import { slugToDbValue } from '@/lib/category-mapping'
+import { CATEGORIES, slugToDbValue } from '@/lib/category-mapping'
 import { logger } from '@/lib/logger'
 
 export async function generateCategoryMetadata(
@@ -124,7 +124,7 @@ export default async function CategorySeoPage({
 
         <section aria-labelledby="category-products-heading">
           <h2 id="category-products-heading" className="text-2xl font-bold text-gray-900 mb-6">
-            Nos {slugToDbValue(slug) || seo.h1} — {normalizedProducts.length} modèle
+            Nos {CATEGORIES[slug]?.label || slugToDbValue(slug) || seo.h1} — {normalizedProducts.length} modèle
             {normalizedProducts.length !== 1 ? 's' : ''}
           </h2>
           {normalizedProducts.length > 0 ? (
@@ -140,14 +140,14 @@ export default async function CategorySeoPage({
         </section>
 
         <nav className="mt-10 flex flex-wrap gap-3 text-sm" aria-label="Autres catégories">
-          {['bagues', 'colliers', 'bracelets', 'boucles-oreilles', 'montres'].map((s) =>
+          {['bagues', 'colliers', 'bracelets', 'boucles-oreilles', 'montres', 'parures'].map((s) =>
             s !== slug ? (
               <Link
                 key={s}
                 href={`/${locale}/bijoux/${s}`}
                 className="rounded-full border border-gray-200 px-4 py-2 hover:border-orange-300 hover:text-orange-700"
               >
-                {getCategorySeo(s)?.h1.replace(/ au Maroc$/, '') ?? s}
+                {CATEGORIES[s]?.label ?? getCategorySeo(s)?.h1.replace(/ au Maroc$/, '') ?? s}
               </Link>
             ) : null
           )}

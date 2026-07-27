@@ -1,6 +1,6 @@
 /**
  * Catégories du formulaire admin produit (création / édition / filtres).
- * `dbValue` = valeur stockée dans products.category
+ * `dbValue` = valeur stockée dans products.category (historique DB croisé).
  */
 export type AdminCategoryOption = {
   id: string
@@ -11,9 +11,9 @@ export type AdminCategoryOption = {
 
 export const ADMIN_PRODUCT_CATEGORIES: AdminCategoryOption[] = [
   { id: 'cat-bagues', name: 'Bagues', slug: 'bagues', dbValue: 'Bagues' },
-  { id: 'cat-colliers', name: 'Ensemble', slug: 'colliers', dbValue: 'Colliers' },
-  { id: 'cat-montres', name: 'Colliers', slug: 'montres', dbValue: 'Montres' },
-  { id: 'cat-parures', name: 'Montres', slug: 'parures', dbValue: 'Parures' },
+  { id: 'cat-colliers', name: 'Colliers', slug: 'colliers', dbValue: 'Montres' },
+  { id: 'cat-montres', name: 'Montres', slug: 'montres', dbValue: 'Parures' },
+  { id: 'cat-parures', name: 'Parures', slug: 'parures', dbValue: 'Colliers' },
   { id: 'cat-bracelets', name: 'Bracelets', slug: 'bracelets', dbValue: 'Bracelets' },
   { id: 'cat-boucles', name: "Boucles d'oreilles", slug: 'boucles-oreilles', dbValue: "Boucles d'oreilles" },
   { id: 'cat-broches', name: 'Nos packs', slug: 'broches', dbValue: 'Nos packs' },
