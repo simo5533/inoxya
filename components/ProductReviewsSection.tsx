@@ -76,14 +76,8 @@ export default function ProductReviewsSection({
   }, [open])
 
   const canSubmit = useMemo(() => {
-    return (
-      form.rating > 0 &&
-      form.comment.trim().length >= 5 &&
-      !submitting &&
-      !!csrfToken &&
-      !csrfLoading
-    )
-  }, [form.rating, form.comment, submitting, csrfToken, csrfLoading])
+    return form.rating > 0 && !submitting && !!csrfToken && !csrfLoading
+  }, [form.rating, submitting, csrfToken, csrfLoading])
 
   const fetchReviews = useCallback(async () => {
     setLoadingReviews(true)
@@ -127,11 +121,6 @@ export default function ProductReviewsSection({
 
     if (form.rating < 1 || form.rating > 5) {
       setError("Veuillez selectionner une note entre 1 et 5.")
-      return
-    }
-
-    if (form.comment.trim().length < 5) {
-      setError("Votre avis doit contenir au moins 5 caracteres.")
       return
     }
 
@@ -262,7 +251,7 @@ export default function ProductReviewsSection({
 
             <div>
               <label htmlFor="review-comment" className="mb-1 block text-sm font-medium text-gray-800">
-                Votre avis <span className="font-normal text-gray-500">(min. 5 caracteres)</span>
+                Votre avis <span className="font-normal text-gray-500">(optionnel)</span>
               </label>
               <textarea
                 id="review-comment"

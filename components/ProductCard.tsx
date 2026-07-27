@@ -64,16 +64,14 @@ const formatPrice = (price: number) => {
   return `${Math.round(price)} MAD`
 }
 
-// Génération d'une note réaliste basée sur l'ID du produit
-const getProductRating = (productId: string, baseRating?: number, baseReviews?: number) => {
-  if (baseRating && baseReviews) {
-    return { rating: baseRating, reviews: baseReviews }
+// Affiche uniquement les notes réelles (avis clients), jamais de faux ratings
+const getProductRating = (baseRating?: number, baseReviews?: number) => {
+  const reviews = Number(baseReviews) || 0
+  const rating = Number(baseRating) || 0
+  if (reviews > 0 && rating > 0) {
+    return { rating, reviews }
   }
-
-  const seed = productId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  const rating = 4.0 + (seed % 10) / 10 // Entre 4.0 et 4.9
-  const reviews = 15 + (seed % 200) // Entre 15 et 215 avis
-  return { rating: Math.round(rating * 10) / 10, reviews }
+  return { rating: 0, reviews: 0 }
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
@@ -82,7 +80,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [imageError, setImageError] = useState(false)
   const badges = getProductBadges(product.images)
-  const { rating, reviews } = getProductRating(product.id, product.rating, product.reviews_count)
+  const { rating, reviews } = getProductRating(product.rating, product.reviews_count)
   
   // Convertir le chemin d'image en URL API si nécessaire - Enhanced fallback chain
   const imageUrl = useMemo(() => {
@@ -253,20 +251,22 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.name_ar && <p className="text-sm text-gray-500 font-arabic text-right">{product.name_ar}</p>}
         </div>
 
-        {/* ⭐ Note avec étoiles et nombre d'avis */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`w-4 h-4 ${i < Math.floor(rating) ? "fill-luxury-gold text-luxury-gold" : "text-gray-300"}`}
-              />
-            ))}
+        {/* ⭐ Note réelle uniquement */}
+        {reviews > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`w-4 h-4 ${i < Math.floor(rating) ? "fill-luxury-gold text-luxury-gold" : "text-gray-300"}`}
+                />
+              ))}
+            </div>
+            <span className="text-sm text-gray-600">
+              {rating} ({reviews})
+            </span>
           </div>
-          <span className="text-sm text-gray-600">
-            {rating} ({reviews})
-          </span>
-        </div>
+        )}
 
         {/* 💰 Prix */}
         <div className="flex items-center justify-between">

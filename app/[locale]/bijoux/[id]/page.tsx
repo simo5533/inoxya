@@ -5,18 +5,19 @@ import type { Metadata } from "next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, ArrowLeft, Truck, Shield, RotateCcw } from "lucide-react"
+import { ArrowLeft, Truck, Shield, RotateCcw } from "lucide-react"
 import { getBijouById, getAllBijoux } from "@/lib/database"
 import OrderForm from "@/components/OrderForm"
 import ProductImageGallery from "@/components/ProductImageGallery"
 import ProductReviewsSection from "@/components/ProductReviewsSection"
+import ProductStarRating from "@/components/ProductStarRating"
 import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/SEOJsonLd"
 import { ProductPremiumContent } from "@/components/seo/ProductPremiumContent"
 import { buildProductSeo } from "@/lib/seo/product"
 import { SEO_MATERIAL, SEO_FREE_SHIPPING_THRESHOLD, SEO_RETURN_DAYS } from "@/lib/seo/config"
 import { dbValueToSlug, categoryDbValueToDisplayName } from "@/lib/category-mapping"
 import { seoPageMetadata } from "@/lib/seo/config"
-import { selectRows } from "@/lib/sqlite"
+import { getProductRatingStats } from "@/lib/reviews"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 import { ShareButton } from '@/components/ShareButton'
@@ -141,19 +142,9 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     .filter(b => String(b.id) !== String(id) && String(b.category_id || '') === productCategory)
     .slice(0, 4)
 
-  const rating = product.rating ?? 0
-  const reviews = (() => {
-    const tableColumns = selectRows("PRAGMA table_info(reviews)") as Array<{ name?: string }>
-    const hasProductId = tableColumns.some((col) => String(col.name || "").toLowerCase() === "product_id")
-    const hasBijouId = tableColumns.some((col) => String(col.name || "").toLowerCase() === "bijou_id")
-    const idColumn = hasProductId ? "product_id" : (hasBijouId ? "bijou_id" : "product_id")
-    const countRows = selectRows(
-      `SELECT COUNT(*) AS count FROM reviews WHERE CAST(${idColumn} AS TEXT) = ?`,
-      [product.id]
-    ) as Array<{ count?: number | string }>
-    const count = Number(countRows[0]?.count || 0)
-    return Number.isFinite(count) ? count : (product.reviews_count ?? 0)
-  })()
+  const ratingStats = await getProductRatingStats(String(product.id))
+  const rating = ratingStats.reviewsCount > 0 ? ratingStats.rating : 0
+  const reviews = ratingStats.reviewsCount
 
   // Préparer les images pour le schema et la galerie
   // Gérer les images qui peuvent être un string JSON, un array, ou undefined
@@ -337,24 +328,15 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            {/* rating — uniquement si avis réels */}
-            {reviews > 0 && (
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-5 h-5 ${
-                      i < Math.floor(rating) ? "fill-luxury-gold text-luxury-gold" : "text-gray-300"
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="text-base font-medium text-gray-700">
-                {rating.toFixed(1)} <span className="text-gray-500">({reviews} {t('reviews')})</span>
-              </span>
+            {/* Notation client interactive */}
+            <div className="mb-6">
+              <ProductStarRating
+                productId={String(product.id)}
+                initialRating={rating}
+                initialReviewsCount={reviews}
+                rateLabel={t('tabs.leaveReview')}
+              />
             </div>
-            )}
 
             {/* price */}
             <div className="flex items-center gap-3 mb-6 flex-wrap min-w-0 max-w-full">

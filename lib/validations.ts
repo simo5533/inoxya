@@ -284,7 +284,13 @@ export const reviewCreateSchema = z.object({
   productId: z.string().min(1, 'Produit requis').max(128).trim(),
   name: z.string().max(80, 'Nom trop long').trim().optional().nullable(),
   rating: z.coerce.number().int().min(1).max(5),
-  comment: z.string().min(5, 'Commentaire trop court (5 caractères min)').max(2000, 'Commentaire trop long').trim(),
+  comment: z
+    .string()
+    .max(2000, 'Commentaire trop long')
+    .trim()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : 'Note uniquement')),
 })
 
 /**
