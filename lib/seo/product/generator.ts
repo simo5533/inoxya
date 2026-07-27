@@ -1,4 +1,9 @@
-import { categoryDbValueToDisplayName } from '@/lib/category-mapping'
+import {
+  CATEGORIES,
+  categoryDbValueToDisplayName,
+  dbValueToSlug,
+  normalizeCategoryValue,
+} from '@/lib/category-mapping'
 import {
   SEO_BRAND,
   SEO_FREE_SHIPPING_THRESHOLD,
@@ -29,13 +34,57 @@ function countWords(text: string): number {
 
 type CategoryKey = 'bagues' | 'colliers' | 'bracelets' | 'boucles' | 'montres' | 'ensemble' | 'default'
 
+function slugToCategoryKey(slug: string): CategoryKey {
+  if (slug === 'boucles-oreilles') return 'boucles'
+  if (slug === 'parures') return 'ensemble'
+  if (
+    slug === 'bagues' ||
+    slug === 'colliers' ||
+    slug === 'bracelets' ||
+    slug === 'montres'
+  ) {
+    return slug
+  }
+  return 'default'
+}
+
+/**
+ * Résout la clé SEO à partir d’un slug URL, d’une valeur DB historique
+ * (Montres↔Colliers, Parures↔Montres, Colliers↔Parures) ou d’un libellé.
+ * Ne jamais matcher « montre » / « collier » sur la valeur DB brute.
+ */
 function resolveCategoryKey(raw?: string): CategoryKey {
-  const c = (raw || '').toLowerCase()
-  if (c.includes('bague')) return 'bagues'
-  if (c.includes('boucle') || c.includes('oreille')) return 'boucles'
-  if (c.includes('bracelet')) return 'bracelets'
-  if (c.includes('montre') || c.includes('parure')) return 'montres'
-  if (c.includes('collier') || c.includes('ensemble')) return c.includes('ensemble') ? 'ensemble' : 'colliers'
+  const s = (raw || '').trim()
+  if (!s) return 'default'
+
+  const lower = s.toLowerCase()
+
+  // 1) Déjà un slug d’URL (ex. category_id = "colliers")
+  if (CATEGORIES[lower]) {
+    return slugToCategoryKey(lower)
+  }
+
+  // 2) Valeur stockée en products.category (mapping historique) ou ID numérique
+  const normalized = normalizeCategoryValue(s)
+  const fromDb = dbValueToSlug(normalized || s)
+  if (fromDb) {
+    return slugToCategoryKey(fromDb)
+  }
+
+  // 3) Libellé affiché (Colliers, Montres, …)
+  for (const [slug, cat] of Object.entries(CATEGORIES)) {
+    if (cat.label.toLowerCase() === lower) {
+      return slugToCategoryKey(slug)
+    }
+  }
+
+  // 4) Fallback flou uniquement pour catégories non croisées
+  if (lower.includes('bague')) return 'bagues'
+  if (lower.includes('boucle') || lower.includes('oreille')) return 'boucles'
+  if (lower.includes('bracelet')) return 'bracelets'
+  if (lower.includes('ensemble') || lower.includes('parure')) return 'ensemble'
+  if (lower.includes('collier')) return 'colliers'
+  if (lower.includes('montre')) return 'montres'
   return 'default'
 }
 

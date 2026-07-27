@@ -1105,18 +1105,18 @@ export function initializeDatabase(): void {
     
     const categories = [
       ['Bagues', 'bagues', 'Magnifiques bagues berbères traditionnelles'],
-      ['Ensemble', 'colliers', 'Ensembles assortis de bijoux en acier inoxydable'],
+      ['Colliers', 'colliers', 'Colliers traditionnels et contemporains'],
       ['Bracelets', 'bracelets', 'Bracelets élégants aux designs authentiques'],
       ['Boucles d\'oreilles', 'boucles-oreilles', 'Boucles d\'oreilles raffinées'],
+      ['Montres', 'montres', 'Montres élégantes et précises'],
+      ['Parures', 'parures', 'Parures et ensembles assortis en acier inoxydable'],
       ['Nos packs', 'broches', 'Packs exclusifs de bijoux à prix avantageux']
     ]
     
     categories.forEach(category => {
       insertCategory.run(category)
-      // Mettre à jour le libellé si la ligne existe déjà (slug stable)
-      if (category[1] === 'broches' || category[1] === 'colliers') {
-        updateCategory.run(category[0], category[2], category[1])
-      }
+      // Toujours aligner name/description sur le slug URL
+      updateCategory.run(category[0], category[2], category[1])
     })
     
     // NOTE: Les produits et packs ne sont plus insérés automatiquement

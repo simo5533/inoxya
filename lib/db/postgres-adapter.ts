@@ -252,18 +252,14 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   private async ensureDefaultCategories(): Promise<void> {
     try {
-      const countResult = await this.pool.query<{ c: number }>(
-        'SELECT COUNT(*)::int AS c FROM categories'
-      )
-      if ((countResult.rows[0]?.c ?? 0) > 0) return
-
+      // name/description alignés sur le slug URL (products.category reste historique)
       const defaults: [string, string, string][] = [
         ['Bagues', 'bagues', 'Collection de bagues berberes et modernes'],
-        ['Ensemble', 'colliers', 'Ensembles assortis de bijoux en acier inoxydable'],
+        ['Colliers', 'colliers', 'Colliers traditionnels et contemporains'],
         ['Bracelets', 'bracelets', 'Bracelets elegants et resistants'],
         ["Boucles d'oreilles", 'boucles-oreilles', "Boucles d'oreilles traditionnelles et modernes"],
-        ['Colliers', 'montres', 'Colliers traditionnels et contemporains'],
-        ['Montres', 'parures', 'Montres elegantes et precises'],
+        ['Montres', 'montres', 'Montres elegantes et precises'],
+        ['Parures', 'parures', 'Parures et ensembles assortis en acier inoxydable'],
         ['Nos packs', 'broches', 'Packs exclusifs de bijoux a prix avantageux'],
       ]
 
@@ -271,11 +267,13 @@ export class PostgresAdapter implements DatabaseAdapter {
         await this.pool.query(
           `INSERT INTO categories (name, slug, description)
            VALUES ($1, $2, $3)
-           ON CONFLICT (slug) DO NOTHING`,
+           ON CONFLICT (slug) DO UPDATE SET
+             name = EXCLUDED.name,
+             description = EXCLUDED.description`,
           [name, slug, description]
         )
       }
-      logger.info('[PostgresAdapter] Catégories par défaut insérées')
+      logger.info('[PostgresAdapter] Catégories par défaut synchronisées')
     } catch (error) {
       logger.warn('[PostgresAdapter] ensureDefaultCategories:', {
         error: error instanceof Error ? error.message : String(error),

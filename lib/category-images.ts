@@ -63,7 +63,7 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   bracelets: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=1920&h=1080&fit=crop&q=90',
   'boucles-oreilles': 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1920&h=1080&fit=crop&q=90',
   montres: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1920&h=1080&fit=crop&q=90', // Image spécifique de montre
-  parures: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1920&h=1080&fit=crop&q=90', // Alias pour montres
+  parures: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920&h=1080&fit=crop&q=90', // Parures / ensembles
   broches: '/images/packs/pack-prestige.jpg',
 }
 

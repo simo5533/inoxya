@@ -18,7 +18,7 @@ export const CATEGORY_STATIC_IMAGES: Record<string, string> = {
   bracelets: '/images/categories/bracelets.jpg',
   'boucles-oreilles': '/images/categories/boucles-oreilles.jpg',
   montres: '/images/categories/montres.jpg',
-  parures: '/images/categories/colliers.jpg',
+  parures: '/images/categories/packs.jpg',
   broches: '/images/categories/packs.jpg',
   packs: '/images/categories/packs.jpg',
 }
