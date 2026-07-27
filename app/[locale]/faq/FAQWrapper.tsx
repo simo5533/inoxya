@@ -1,21 +1,11 @@
 'use client'
 
-import dynamic from 'next/dynamic'
+import FAQClient from './FAQClient'
 
-// Charger le composant uniquement côté client pour éviter les erreurs SSR
-const FAQClient = dynamic(() => import('./FAQClient'), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-screen bg-luxury-black flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-luxury-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-luxury-ivory/70">Chargement...</p>
-      </div>
-    </div>
-  ),
-})
-
+/**
+ * Wrapper client — le contenu FAQ est rendu côté serveur via FAQClient (SSR activé).
+ * Les interactions (accordéon, recherche) restent client.
+ */
 export default function FAQWrapper() {
   return <FAQClient />
 }
-

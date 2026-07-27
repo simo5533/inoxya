@@ -5,17 +5,22 @@ export const dynamicParams = true
 
 import { Metadata } from 'next'
 import FAQWrapper from './FAQWrapper'
+import { FaqSeoContent } from './FaqSeoContent'
 import { seoPageMetadata } from '@/lib/seo/config'
+import { getTranslations } from 'next-intl/server'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   try {
     const { locale } = await params
+    const t = await getTranslations({ locale, namespace: 'faq' })
     return seoPageMetadata({
-      title: 'FAQ bijoux acier inoxydable Maroc',
+      title: t('title') || 'FAQ bijoux acier inoxydable Maroc',
       description:
+        t('description') ||
         'Livraison, paiement à la livraison, entretien 316L, retours 30 jours : réponses INOXYA BIJOUX sur vos commandes au Maroc.',
       path: '/faq',
       locale,
+      keywords: t('keywords')?.split(',') || undefined,
     })
   } catch {
     return seoPageMetadata({
@@ -27,6 +32,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   }
 }
 
-export default async function FAQPage() {
-  return <FAQWrapper />
+export default async function FAQPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  return (
+    <>
+      <FaqSeoContent locale={locale} />
+      <FAQWrapper />
+    </>
+  )
 }

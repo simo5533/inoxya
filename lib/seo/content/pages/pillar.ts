@@ -88,7 +88,7 @@ export const pillarPages: Record<string, SeoContentPage> = {
       {
         h2: 'Acheter des bijoux INOXYA au Maroc',
         paragraphs: [
-          'La boutique en ligne inoxya-bijoux.vercel.app centralise l\'ensemble du catalogue. Vous parcourez les catégories, consultez les fiches produits détaillées et passez commande en quelques minutes. Le paiement à la livraison est proposé : vous réglez à la réception, sans carte bancaire obligatoire — un mode de paiement encore très attendu au Maroc.',
+          'La boutique en ligne https://inoxya.ma centralise l\'ensemble du catalogue. Vous parcourez les catégories, consultez les fiches produits détaillées et passez commande en quelques minutes. Le paiement à la livraison est proposé : vous réglez à la réception, sans carte bancaire obligatoire — un mode de paiement encore très attendu au Maroc.',
           'La livraison est gratuite à partir de 200 MAD. Les délais varient selon la ville ; l\'équipe INOXYA reste joignable par téléphone ou WhatsApp pour toute question sur une commande. Le retour gratuit sous 30 jours, dans les conditions affichées sur le site, sécurise votre achat si la taille ou le style ne convient pas.',
         ],
         subsections: [

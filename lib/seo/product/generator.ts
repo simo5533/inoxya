@@ -10,6 +10,7 @@ import {
   SEO_MATERIAL,
   SEO_RETURN_DAYS,
 } from '@/lib/seo/config'
+import { getProductGrammar, demonstrativeNoun } from '@/lib/seo/product-grammar'
 import type { ProductSeoInput, ProductSeoPackage } from './types'
 
 function hashSeed(str: string): number {
@@ -133,32 +134,36 @@ const INTRO_POOL: Record<CategoryKey, string[]> = {
 
 function buildLongParagraphs(
   name: string,
+  categoryKey: string,
   categoryLabel: string,
   price: number,
   seed: number
 ): string[] {
+  const g = getProductGrammar(categoryKey)
+  const demo = demonstrativeNoun(categoryKey)
   const finish = pick(['dorée chaleureuse', 'argentée lumineuse', 'polie miroir', 'brossée moderne'], seed, 1)
   return [
-    `${name} est fabriqué en ${SEO_MATERIAL}, matière reconnue pour sa résistance à l'oxydation et son confort sur la peau. Chez ${SEO_BRAND}, chaque pièce est sélectionnée pour sa tenue dans le temps : vous profitez d'un bijou premium sans l'entretien exigeant de l'argent non rhodié ou des alliages bon marché.`,
-    `La finition ${finish} de ce ${categoryLabel.toLowerCase()} met en valeur les détails sans ostentation. Que vous soyez à Casablanca, Rabat, Marrakech ou en voyage côtier, l'acier 316L supporte humidité, chaleur et port répété — à condition d'un rinçage à l'eau claire après contact prolongé avec l'eau salée.`,
-    `Au prix de ${Math.round(price)} MAD, ${name} propose un excellent rapport qualité-élégance. Livraison partout au Maroc, paiement à la livraison et livraison gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD. Retour gratuit sous ${SEO_RETURN_DAYS} jours selon les conditions affichées sur le site : vous commandez en confiance.`,
-    `Les clientes INOXYA apprécient la cohérence entre photos, description et produit reçu. Ce ${categoryLabel.toLowerCase()} s'accorde avec d'autres pièces de la collection — bagues, bracelets ou colliers — pour composer un ensemble personnel. Consultez nos packs si vous souhaitez offrir plusieurs bijoux assortis à prix avantageux.`,
+    `${name} est ${g.pastParticiple} en ${SEO_MATERIAL}, matière reconnue pour sa résistance à l'oxydation et son confort sur la peau. Chez ${SEO_BRAND}, chaque pièce est sélectionnée pour sa tenue dans le temps : vous profitez d'un bijou premium sans l'entretien exigeant de l'argent non rhodié ou des alliages bon marché.`,
+    `La finition ${finish} de ${demo} met en valeur les détails sans ostentation. Que vous soyez à Casablanca, Rabat, Marrakech ou en voyage côtier, l'acier 316L supporte humidité, chaleur et port répété — à condition d'un rinçage à l'eau claire après contact prolongé avec l'eau salée.`,
+    `Au prix de ${Math.round(price)} MAD, ${name} propose un excellent rapport qualité-élégance. Livraison partout au Maroc, paiement à la livraison et livraison gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD. Retour sous ${SEO_RETURN_DAYS} jours selon les conditions du site : vous commandez en confiance.`,
+    `Les clientes INOXYA apprécient la cohérence entre photos, description et produit reçu. ${demo.charAt(0).toUpperCase()}${demo.slice(1)} s'accorde avec d'autres pièces de la collection — bagues, bracelets ou colliers — pour composer un ensemble personnel. Consultez nos packs si vous souhaitez offrir plusieurs bijoux assortis à prix avantageux.`,
     `Pour les peaux sensibles, le 316L limite les risques d'irritation par rapport aux bijoux fantaisie. Si vous débutez avec l'acier inoxydable, ${name} est une entrée idéale dans l'univers INOXYA : qualité visible, confort au quotidien, style inspiré de l'élégance marocaine.`,
     `Entretien simple : eau tiède, savon doux, chiffon microfibre. Évitez parfums et produits abrasifs sur les zones dorées. Rangez séparément des autres bijoux pour préserver le brillant. Avec ces gestes, ${name} reste un compagnon durable de vos sorties, cérémonies et moments du quotidien.`,
     `${SEO_BRAND} s'engage sur la transparence : le prix affiché de ${Math.round(price)} MAD correspond au produit décrit, sans frais cachés au checkout. Le paiement à la livraison vous permet de commander sereinement, y compris si vous découvrez la marque via Instagram, TikTok ou la recommandation d'une amie.`,
     `Vous hésitez entre plusieurs modèles ? Comparez les finitions sur la boutique : doré pour réchauffer le teint, argenté pour un look minimaliste. ${name} s'intègre aussi bien à une tenue traditionnelle qu'à un style urbain contemporain — c'est l'une des forces de l'acier 316L chez INOXYA.`,
-    `Chaque ${categoryLabel.toLowerCase()} est contrôlé avant expédition. Notre équipe reste joignable par téléphone ou WhatsApp pour toute question sur la taille, la disponibilité ou la livraison dans votre ville. Commander ${name}, c'est rejoindre une communauté de clientes marocaines qui privilégient bijoux durables et élégance accessible.`,
+    `Chaque ${g.singular} est ${g.checked} avant expédition. Notre équipe reste joignable par téléphone ou WhatsApp pour toute question sur la taille, la disponibilité ou la livraison dans votre ville. Commander ${name}, c'est rejoindre une communauté de clientes marocaines qui privilégient bijoux durables et élégance accessible.`,
     `L'acier inoxydable 316L utilisé pour ${name} répond aux attentes des clientes exigeantes : tenue de la couleur, absence de ternissement rapide et confort au contact de la peau. Contrairement aux bijoux fantaisie en laiton ou en alliage nickelé, cette matière conserve son aspect premium après des mois de port régulier, y compris dans un climat marocain où chaleur et humidité mettent les accessoires à l'épreuve.`,
     `Vous cherchez un cadeau qui fait plaisir sans compromettre la qualité ? ${name} arrive dans un emballage soigné INOXYA, prêt à offrir pour un anniversaire, une fête religieuse ou simplement pour dire merci. Le paiement à la livraison rassure celles qui commandent en ligne pour la première fois : vous vérifiez le bijou avant de régler le livreur.`,
-    `Pour composer un look coordonné, associez ${name} à d'autres pièces de la même finition — dorée ou argentée — disponibles dans notre catalogue ${categoryLabel.toLowerCase()}s et parures. Les influenceuses et clientes fidèles INOXYA partagent régulièrement leurs combinaisons sur les réseaux sociaux : une source d'inspiration pour porter ce bijou avec caftan, robe de soirée ou tenue casual chic.`,
+    `Pour composer un look coordonné, associez ${name} à d'autres pièces de la même finition — dorée ou argentée — disponibles dans notre catalogue ${categoryLabel.toLowerCase()} et parures. Les influenceuses et clientes fidèles INOXYA partagent régulièrement leurs combinaisons sur les réseaux sociaux : une source d'inspiration pour porter ce bijou avec caftan, robe de soirée ou tenue casual chic.`,
   ]
 }
 
 function buildFaq(
   name: string,
-  categoryLabel: string,
+  categoryKey: string,
   _price: number
 ): ProductSeoPackage['faq'] {
+  const g = getProductGrammar(categoryKey)
   return [
     {
       question: `${name} est-il en acier inoxydable 316L ?`,
@@ -169,7 +174,7 @@ function buildFaq(
       answer: 'Oui, le paiement à la livraison est disponible pour votre commande INOXYA.',
     },
     {
-      question: `Ce ${categoryLabel.toLowerCase()} convient-il aux peaux sensibles ?`,
+      question: `${g.suitQuestion} aux peaux sensibles ?`,
       answer: 'Le 316L est généralement bien toléré. En cas de réaction, retirez le bijou et consultez un professionnel.',
     },
     {
@@ -182,7 +187,7 @@ function buildFaq(
     },
     {
       question: 'Y a-t-il une garantie ou un retour ?',
-      answer: `Retour gratuit sous ${SEO_RETURN_DAYS} jours selon les conditions du site. Livraison gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD.`,
+      answer: `Retour sous ${SEO_RETURN_DAYS} jours selon les conditions du site (frais de retour à votre charge sauf défaut). Livraison gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD.`,
     },
     {
       question: `Comment entretenir ${name} au quotidien ?`,
@@ -190,7 +195,7 @@ function buildFaq(
     },
     {
       question: `${name} est-il adapté comme cadeau ?`,
-      answer: `Oui. ${name} est un ${categoryLabel.toLowerCase()} premium INOXYA, livré au Maroc avec paiement à la livraison — idéal pour offrir en toute confiance.`,
+      answer: `Oui. ${name} est ${g.indefinite} ${g.singular} premium INOXYA, livré au Maroc avec paiement à la livraison — idéal pour offrir en toute confiance.`,
     },
   ]
 }
@@ -225,7 +230,7 @@ export function buildProductSeo(product: ProductSeoInput): ProductSeoPackage {
   )
 
   const intro = pick(INTRO_POOL[catKey], seed)
-  const paragraphs = buildLongParagraphs(product.name, categoryLabel, price, seed)
+  const paragraphs = buildLongParagraphs(product.name, catKey, categoryLabel, price, seed)
   const whyChoose = paragraphs[0]
   const conclusion = paragraphs[paragraphs.length - 1]
 
@@ -236,7 +241,7 @@ export function buildProductSeo(product: ProductSeoInput): ProductSeoPackage {
     'Finition : premium dorée ou argentée selon modèle',
     'Hypoallergénique : acier 316L adapté aux peaux sensibles',
     'Résistance à l\'eau : port quotidien, rinçage conseillé après mer',
-    product.is_available !== false ? 'Disponibilité : en stock' : 'Disponibilité : sur commande',
+    product.is_available !== false ? 'Disponibilité : en stock' : 'Disponibilité : rupture de stock',
     `Prix : ${Math.round(price)} MAD`,
   ]
 
@@ -246,7 +251,7 @@ export function buildProductSeo(product: ProductSeoInput): ProductSeoPackage {
     'Rapport qualité-prix premium accessible',
     `Livraison gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD`,
     'Paiement à la livraison partout au Maroc',
-    `Retour gratuit sous ${SEO_RETURN_DAYS} jours`,
+    `Retour sous ${SEO_RETURN_DAYS} jours selon conditions`,
   ]
 
   const usageTips = [
@@ -272,7 +277,7 @@ export function buildProductSeo(product: ProductSeoInput): ProductSeoPackage {
     2
   ) as string[]
 
-  const faq = buildFaq(product.name, categoryLabel, price)
+  const faq = buildFaq(product.name, catKey, price)
 
   const primary = [
     `${categoryLabel.toLowerCase()} acier inoxydable Maroc`,

@@ -7,20 +7,28 @@ import {
   SEO_EMAIL,
   SEO_MATERIAL,
   SEO_PHONE_E164,
-  SEO_RETURN_DAYS,
   SEO_SLOGAN,
   SEO_FREE_SHIPPING_THRESHOLD,
   SEO_CURRENCY,
   seoSiteUrl,
 } from '@/lib/seo/config'
 import { BRAND_LOGO, BRAND_LOGO_ICON } from '@/lib/brand'
-import { absoluteProductImages, buildMerchantOffer } from '@/lib/seo/merchant-offer'
+import {
+  absoluteProductImages,
+  buildMerchantOffer,
+  buildReturnPolicy,
+  buildShippingDetails,
+} from '@/lib/seo/merchant-offer'
+import {
+  buildProductStructuredData,
+  safeJsonLdString,
+} from '@/lib/seo/product-structured-data'
 
-function JsonLdScript({ data }: { data: Record<string, unknown> }) {
+function JsonLdScript({ data }: { data: Record<string, unknown> | Record<string, unknown>[] }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLdString(data) }}
       suppressHydrationWarning
     />
   )
@@ -70,46 +78,37 @@ export function OrganizationJsonLd() {
           'https://www.instagram.com/inoxya_accesoires',
           'https://www.tiktok.com/@inoxya2',
         ],
-        hasMerchantReturnPolicy: {
-          '@type': 'MerchantReturnPolicy',
-          '@id': `${siteUrl}/#return-policy`,
-          applicableCountry: 'MA',
-          returnPolicyCountry: 'MA',
-          returnPolicyCategory:
-            'https://schema.org/MerchantReturnFiniteReturnWindow',
-          merchantReturnDays: SEO_RETURN_DAYS,
-          returnMethod: 'https://schema.org/ReturnByMail',
-          returnFees: 'https://schema.org/FreeReturn',
-        },
-        shippingDetails: {
-          '@type': 'OfferShippingDetails',
-          '@id': `${siteUrl}/#shipping`,
-          shippingRate: {
-            '@type': 'MonetaryAmount',
-            value: '0',
-            currency: SEO_CURRENCY,
-          },
-          shippingDestination: {
-            '@type': 'DefinedRegion',
-            addressCountry: 'MA',
-          },
-          deliveryTime: {
-            '@type': 'ShippingDeliveryTime',
-            handlingTime: {
-              '@type': 'QuantitativeValue',
-              minValue: 0,
-              maxValue: 1,
-              unitCode: 'DAY',
-            },
-            transitTime: {
-              '@type': 'QuantitativeValue',
-              minValue: 1,
-              maxValue: 5,
-              unitCode: 'DAY',
-            },
-          },
-          name: `Livraison Maroc — gratuite dès ${SEO_FREE_SHIPPING_THRESHOLD} MAD`,
-        },
+        hasMerchantReturnPolicy: buildReturnPolicy(siteUrl),
+        shippingDetails: buildShippingDetails({
+          siteUrl,
+          productPrice: SEO_FREE_SHIPPING_THRESHOLD,
+        }),
+      }}
+    />
+  )
+}
+
+/** Boutique en ligne — une seule entité liée aux politiques @id */
+export function OnlineStoreJsonLd() {
+  const siteUrl = seoSiteUrl()
+  return (
+    <JsonLdScript
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'OnlineStore',
+        '@id': `${siteUrl}/#store`,
+        name: 'INOXYA',
+        url: siteUrl,
+        logo: `${siteUrl}${BRAND_LOGO}`,
+        parentOrganization: { '@id': `${siteUrl}/#organization` },
+        sameAs: [
+          'https://www.instagram.com/inoxya_accesoires',
+          'https://www.tiktok.com/@inoxya2',
+        ],
+        hasMerchantReturnPolicy: { '@id': `${siteUrl}/#return-policy` },
+        currenciesAccepted: SEO_CURRENCY,
+        paymentAccepted: 'Cash, Cash on Delivery',
+        areaServed: { '@type': 'Country', name: 'Morocco' },
       }}
     />
   )
@@ -181,60 +180,38 @@ export function ProductJsonLd({
     id: string
     name: string
     description?: string
+    seoDescription?: string
     price: number
     image?: string | string[]
     category?: string
     inStock?: boolean
+    is_available?: boolean
+    is_active?: boolean
+    stock?: number | null
     rating?: number
     reviews_count?: number
+    gtin?: string | null
   }
   locale?: string
 }) {
-  const siteUrl = seoSiteUrl()
-  const url = `${siteUrl}/${locale}/bijoux/${product.id}`
-  const fallbackImage = `${siteUrl}${BRAND_LOGO_ICON}`
-  const rawImages = product.image
-    ? Array.isArray(product.image)
-      ? product.image
-      : [product.image]
-    : []
-  // Google Merchant Listings : URLs d’images (pas ImageObject) — format officiel
-  const images = absoluteProductImages(siteUrl, rawImages, fallbackImage)
-
-  const data: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.name,
-    description:
-      product.description ||
-      `${product.name} — bijou en ${SEO_MATERIAL}, ${SEO_BRAND}, livraison Maroc.`,
-    image: images,
-    sku: product.id,
-    mpn: product.id,
-    brand: { '@type': 'Brand', name: SEO_BRAND },
-    material: SEO_MATERIAL,
-    offers: buildMerchantOffer({
-      url,
+  const data = buildProductStructuredData(
+    {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      seoDescription: product.seoDescription,
       price: product.price,
-      inStock: product.inStock,
-    }),
-  }
-
-  if (product.category) {
-    data['category'] = product.category
-  }
-
-  if (
-    product.rating != null &&
-    product.reviews_count != null &&
-    product.reviews_count > 0
-  ) {
-    data['aggregateRating'] = {
-      '@type': 'AggregateRating',
-      ratingValue: String(product.rating),
-      reviewCount: String(product.reviews_count),
-    }
-  }
+      image: product.image,
+      category: product.category,
+      is_available: product.is_available ?? product.inStock,
+      is_active: product.is_active,
+      stock: product.stock,
+      rating: product.rating,
+      reviews_count: product.reviews_count,
+      gtin: product.gtin,
+    },
+    locale
+  )
 
   return <JsonLdScript data={data} />
 }
@@ -343,11 +320,12 @@ export function ItemListJsonLd({
   )
 }
 
-/** Ensemble Organization + WebSite pour le layout racine */
+/** Ensemble Organization + OnlineStore + WebSite pour le layout racine */
 export function GlobalSeoJsonLd() {
   return (
     <>
       <OrganizationJsonLd />
+      <OnlineStoreJsonLd />
       <WebSiteJsonLd />
     </>
   )

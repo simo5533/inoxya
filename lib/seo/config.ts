@@ -26,14 +26,24 @@ export function seoLocalePath(locale: string, path: string): string {
   return `${seoSiteUrl()}/${locale}${clean === '/' ? '' : clean}`
 }
 
-export function seoAlternates(path: string): { canonical: string; languages: Record<string, string> } {
+export function seoAlternates(
+  path: string,
+  locale?: string
+): { canonical: string; languages: Record<string, string> } {
   const base = seoSiteUrl()
   const clean = path.startsWith('/') ? path : `/${path}`
+  const loc = locale === 'ar' ? 'ar' : 'fr'
+  const frUrl = `${base}/fr${clean}`
+  const arUrl = `${base}/ar${clean}`
   return {
-    canonical: `${base}/fr${clean}`,
+    // Canonical auto-référent par langue
+    canonical: `${base}/${loc}${clean}`,
     languages: {
-      fr: `${base}/fr${clean}`,
-      ar: `${base}/ar${clean}`,
+      'fr-MA': frUrl,
+      fr: frUrl,
+      'ar-MA': arUrl,
+      ar: arUrl,
+      'x-default': frUrl,
     },
   }
 }
@@ -52,7 +62,7 @@ export function seoPageMetadata(opts: {
   const locale = opts.locale ?? 'fr'
   const path = opts.path.startsWith('/') ? opts.path : `/${opts.path}`
   const url = `${siteUrl}/${locale}${path}`
-  const alt = seoAlternates(path)
+  const alt = seoAlternates(path, locale)
   const image = opts.ogImage ?? `${siteUrl}${BRAND_LOGO}`
 
   return {

@@ -4,7 +4,7 @@ export const GEO_QA_HOME: GeoQaItem[] = [
   {
     question: 'Où acheter des bijoux en acier inoxydable au Maroc ?',
     answer:
-      'Sur INOXYA BIJOUX (inoxya-bijoux.vercel.app), boutique marocaine spécialisée en bijoux en acier inoxydable 316L : bagues, bracelets, colliers, boucles d’oreilles, montres et packs cadeaux.',
+      'Sur INOXYA BIJOUX (https://inoxya.ma), boutique marocaine spécialisée en bijoux en acier inoxydable 316L : bagues, bracelets, colliers, boucles d’oreilles, montres et packs cadeaux.',
   },
   {
     question: 'INOXYA livre-t-elle partout au Maroc ?',

@@ -232,13 +232,19 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     <>
       <ProductJsonLd
         product={{
-          id: product.id,
+          id: String(product.id),
           name: product.name,
-          description: productSeo.shortDescription,
+          description:
+            (product.description && String(product.description).trim()) ||
+            productSeo.shortDescription,
+          seoDescription: productSeo.shortDescription,
           price: product.price,
           image: normalizedImages,
           category: categoryDisplay,
           inStock: product.is_available !== false,
+          is_available: product.is_available !== false,
+          is_active: product.is_active !== false,
+          stock: typeof product.stock === 'number' ? product.stock : undefined,
           ...(reviews > 0 ? { rating, reviews_count: reviews } : {}),
         }}
         locale={locale}
