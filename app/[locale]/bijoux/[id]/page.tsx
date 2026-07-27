@@ -192,8 +192,8 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     [key: string]: unknown
   }
   const productWithCategory = product as ProductWithCategory
-  const categoryName = (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : null) 
-    || (typeof productWithCategory.category === 'string' ? productWithCategory.category : null)
+  const categoryName = (typeof productWithCategory.category === 'string' ? productWithCategory.category : null) 
+    || (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : null)
     || t('breadcrumb.jewelry')
   const categorySlug = dbValueToSlug(categoryName) || (typeof productWithCategory.category_id === 'string' ? productWithCategory.category_id : '')
   const categoryDisplay = categoryDbValueToDisplayName(categoryName)
@@ -205,7 +205,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     price: product.price,
     original_price: product.original_price,
     category_id: productCategory,
-    category: productWithCategory.category as string | undefined,
+    category: (productWithCategory.category as string | undefined) || productCategory,
     is_available: product.is_available,
     is_featured: product.is_featured,
     rating,

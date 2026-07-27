@@ -49,9 +49,12 @@ function slugToCategoryKey(slug: string): CategoryKey {
 }
 
 /**
- * Résout la clé SEO à partir d’un slug URL, d’une valeur DB historique
- * (Montres↔Colliers, Parures↔Montres, Colliers↔Parures) ou d’un libellé.
- * Ne jamais matcher « montre » / « collier » sur la valeur DB brute.
+ * Résout la clé SEO à partir de products.category (valeur DB historique)
+ * ou d’un slug / libellé.
+ *
+ * IMPORTANT : ne jamais traiter « Montres » / « montres » comme le slug URL
+ * avant le mapping historique — en DB, « Montres » = colliers, « Parures » = montres,
+ * « Colliers » = parures.
  */
 function resolveCategoryKey(raw?: string): CategoryKey {
   const s = (raw || '').trim()
@@ -59,32 +62,42 @@ function resolveCategoryKey(raw?: string): CategoryKey {
 
   const lower = s.toLowerCase()
 
-  // 1) Déjà un slug d’URL (ex. category_id = "colliers")
+  // 1) Valeur DB exacte (ex. "Montres" → colliers)
+  const exactDb = dbValueToSlug(s)
+  if (exactDb) return slugToCategoryKey(exactDb)
+
+  // 2) Valeur DB insensible à la casse (ex. "montres" → colliers, pas slug montres)
+  for (const [slug, cat] of Object.entries(CATEGORIES)) {
+    if (cat.dbValue.toLowerCase() === lower) {
+      return slugToCategoryKey(slug)
+    }
+  }
+
+  // 3) ID numérique → valeur DB
+  const normalized = normalizeCategoryValue(s)
+  if (normalized) {
+    const fromNorm = dbValueToSlug(normalized)
+    if (fromNorm) return slugToCategoryKey(fromNorm)
+  }
+
+  // 4) Slug URL explicite (bagues, bracelets, … — montres/colliers/parures déjà couverts)
   if (CATEGORIES[lower]) {
     return slugToCategoryKey(lower)
   }
 
-  // 2) Valeur stockée en products.category (mapping historique) ou ID numérique
-  const normalized = normalizeCategoryValue(s)
-  const fromDb = dbValueToSlug(normalized || s)
-  if (fromDb) {
-    return slugToCategoryKey(fromDb)
-  }
-
-  // 3) Libellé affiché (Colliers, Montres, …)
+  // 5) Libellé affiché ( colliers, montres, … )
   for (const [slug, cat] of Object.entries(CATEGORIES)) {
     if (cat.label.toLowerCase() === lower) {
       return slugToCategoryKey(slug)
     }
   }
 
-  // 4) Fallback flou uniquement pour catégories non croisées
+  // 6) Fallback flou — catégories non croisées d’abord
   if (lower.includes('bague')) return 'bagues'
   if (lower.includes('boucle') || lower.includes('oreille')) return 'boucles'
   if (lower.includes('bracelet')) return 'bracelets'
-  if (lower.includes('ensemble') || lower.includes('parure')) return 'ensemble'
-  if (lower.includes('collier')) return 'colliers'
-  if (lower.includes('montre')) return 'montres'
+  // Ne pas matcher montre/collier/parure ici : trop ambigu avec les libellés DB
+  if (lower.includes('ensemble')) return 'ensemble'
   return 'default'
 }
 
@@ -184,7 +197,8 @@ function buildFaq(
 
 export function buildProductSeo(product: ProductSeoInput): ProductSeoPackage {
   const seed = hashSeed(product.id + product.name)
-  const categoryRaw = product.category_id || product.category || ''
+  // Preferer products.category (libellé DB historique) à category_id (parfois un slug ambigu)
+  const categoryRaw = product.category || product.category_id || ''
   const categoryLabel = categoryDbValueToDisplayName(String(categoryRaw)) || 'Bijou'
   const catKey = resolveCategoryKey(String(categoryRaw))
   const price = Number(product.price) || 0
