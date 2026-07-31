@@ -16,6 +16,14 @@ import { STOCK_UNKNOWN } from '@/lib/custom-pack'
 // PHASE 1: Forcer Node runtime (better-sqlite3 nécessite Node, pas Edge)
 export const runtime = 'nodejs'
 
+function productImageFromRecord(product: {
+  main_image?: string | null
+  image_url?: string | null
+}): string | null {
+  const raw = product.main_image || product.image_url || null
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null
+}
+
 export async function POST(request: NextRequest) {
   try {
     // SÉCURITÉ: Validation CSRF
@@ -62,7 +70,14 @@ export async function POST(request: NextRequest) {
     
     // SÉCURITÉ CRITIQUE: Vérifier les prix depuis la base de données, PAS depuis le client
     let total = 0
-    const verifiedItems: { id: string; price: number; quantity: number; name: string; isPack?: boolean }[] = []
+    const verifiedItems: {
+      id: string
+      price: number
+      quantity: number
+      name: string
+      isPack?: boolean
+      imageUrl?: string | null
+    }[] = []
     
      
     for (const item of validatedData.items) {
@@ -120,6 +135,7 @@ export async function POST(request: NextRequest) {
             quantity: qty,
             name: `${product.name} (pack −20 %)`,
             isPack: false,
+            imageUrl: productImageFromRecord(product),
           })
           total += lineTotal
         }
@@ -151,6 +167,7 @@ export async function POST(request: NextRequest) {
             quantity: qty,
             name: pack.name,
             isPack: true,
+            imageUrl: pack.image_url || null,
           })
 
           if (Math.abs(item.price - verifiedPrice) > 0.01) {
@@ -180,7 +197,8 @@ export async function POST(request: NextRequest) {
         price: verifiedPrice,
         quantity: qty,
         name: product.name,
-        isPack: false
+        isPack: false,
+        imageUrl: productImageFromRecord(product),
       })
       
       // Log si le prix client diffère du prix réel (tentative de fraude potentielle)

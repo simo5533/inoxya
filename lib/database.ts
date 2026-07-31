@@ -371,12 +371,17 @@ export async function getPackByIdPublic(packId: string) {
 
 export async function getPackForCheckoutOrder(
   packId: string
-): Promise<{ id: string; name: string; price: number } | null> {
+): Promise<{ id: string; name: string; price: number; image_url?: string | null } | null> {
   try {
     const adapter = await getDatabaseAdapter()
     const p = await adapter.getPackById(packId)
     if (p) {
-      return { id: String(p.id), name: p.name, price: Number(p.price) }
+      return {
+        id: String(p.id),
+        name: p.name,
+        price: Number(p.price),
+        image_url: p.image_url || null,
+      }
     }
   } catch (adapterError) {
     if (IS_PRODUCTION) {
@@ -390,7 +395,12 @@ export async function getPackForCheckoutOrder(
     const { getPackById } = await import('./pack-management')
     const p = await getPackById(packId)
     if (p) {
-      return { id: String(p.id), name: p.name, price: Number(p.price) }
+      return {
+        id: String(p.id),
+        name: p.name,
+        price: Number(p.price),
+        image_url: (p as { image_url?: string | null }).image_url || null,
+      }
     }
   } catch (e) {
     logger.warn('[getPackForCheckoutOrder] pack-management indisponible:', serializeError(e))

@@ -1,10 +1,12 @@
 import { logger } from './logger'
+import { normalizeImageUrl, PLACEHOLDER_IMAGE } from './image-path'
 import {
   formatPaymentMethodDetailHtml,
   formatPaymentMethodLabelFr,
   normalizeCheckoutPaymentMethod,
   PAYMENT_METHOD_BANK_TRANSFER,
 } from './payment-methods'
+import { PRODUCTION_SITE_URL } from './site-url'
 
 // Import conditionnel de nodemailer (optionnel)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,6 +98,18 @@ export type OrderEmailItem = {
   quantity: number
   price: number
   isPack?: boolean
+  /** URL image produit (relative ou absolue) pour le vendeur */
+  imageUrl?: string | null
+}
+
+/** URL absolue affichable dans les clients mail (Gmail, etc.). */
+export function toAbsoluteEmailImageUrl(src: string | null | undefined): string | null {
+  if (!src || typeof src !== 'string') return null
+  const normalized = normalizeImageUrl(src.trim())
+  if (!normalized || normalized === PLACEHOLDER_IMAGE) return null
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) return normalized
+  if (normalized.startsWith('/')) return `${PRODUCTION_SITE_URL}${normalized}`
+  return `${PRODUCTION_SITE_URL}/${normalized.replace(/^\/+/, '')}`
 }
 
 export function renderOrderNotificationEmail(params: {
@@ -133,11 +147,16 @@ export function renderOrderNotificationEmail(params: {
     .map((item) => {
       const label = escapeHtml(item.name) + (item.isPack ? ' (pack)' : '')
       const lineTotal = (Number(item.price) * Number(item.quantity)).toFixed(2)
+      const absImg = toAbsoluteEmailImageUrl(item.imageUrl)
+      const photoCell = absImg
+        ? `<img src="${escapeHtml(absImg)}" alt="${label}" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #eee;" />`
+        : `<div style="width:72px;height:72px;background:#f3f3f3;border-radius:6px;border:1px solid #eee;text-align:center;line-height:72px;font-size:11px;color:#999;">—</div>`
       return `<tr>
-        <td style="padding:8px;border-bottom:1px solid #eee;">${label}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${Number(item.price).toFixed(2)} MAD</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${lineTotal} MAD</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;width:88px;vertical-align:middle;">${photoCell}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;vertical-align:middle;">${label}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;vertical-align:middle;">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;vertical-align:middle;">${Number(item.price).toFixed(2)} MAD</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;vertical-align:middle;">${lineTotal} MAD</td>
       </tr>`
     })
     .join('')
@@ -165,10 +184,11 @@ export function renderOrderNotificationEmail(params: {
       <p><strong>Statut :</strong> ${escapeHtml(orderStatus)}</p>
       ${bankNote}
 
-      <h3>Produits commandés</h3>
+      <h3>Produits à livrer</h3>
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
         <thead>
           <tr style="background:#f5f5f5;text-align:left;">
+            <th style="padding:8px;">Photo</th>
             <th style="padding:8px;">Produit</th>
             <th style="padding:8px;text-align:center;">Qté</th>
             <th style="padding:8px;text-align:right;">Prix</th>
@@ -176,7 +196,7 @@ export function renderOrderNotificationEmail(params: {
           </tr>
         </thead>
         <tbody>
-          ${rows || '<tr><td colspan="4" style="padding:8px;">Aucun article</td></tr>'}
+          ${rows || '<tr><td colspan="5" style="padding:8px;">Aucun article</td></tr>'}
         </tbody>
       </table>
 
