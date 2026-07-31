@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import type { Metadata } from "next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -42,9 +42,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         title: t('notFound.title'),
         description: t('notFound.description'),
         robots: { index: false, follow: false },
+        alternates: {
+          canonical: `${siteUrl}/${locale}/bijoux/${encodeURIComponent(id)}`,
+        },
       }
     }
 
+    const productId = String(bijou.id)
     // Normaliser l'URL de l'image pour Open Graph
     const rawImageUrl = bijou.main_image || bijou.image_url || (Array.isArray(bijou.images) ? bijou.images[0] : '') || ''
     let imageUrl = `${siteUrl}/images/default-product.jpg`
@@ -58,9 +62,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
     
+    const displayName =
+      locale === 'ar' && bijou.name_ar
+        ? String(bijou.name_ar)
+        : String(bijou.name)
+
     const seo = buildProductSeo({
-      id: String(bijou.id),
-      name: bijou.name,
+      id: productId,
+      name: displayName,
       name_ar: bijou.name_ar,
       description: bijou.description,
       price: Number(bijou.price) || 0,
@@ -74,18 +83,28 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return seoPageMetadata({
       title: seo.seoTitle.length > 60 ? seo.seoTitle.slice(0, 57) + '…' : seo.seoTitle.replace(/\s*\|\s*INOXYA BIJOUX\s*$/i, ''),
       description: seo.metaDescription,
-      path: `/bijoux/${id}`,
+      // Canonical toujours sur l’id réel du produit (évite doublons prod-* / param)
+      path: `/bijoux/${productId}`,
       locale,
       ogImage: imageUrl,
       keywords: [...seo.keywords.primary, ...seo.keywords.secondary, ...seo.keywords.searchVariants],
+      noindex: false,
     })
   } catch {
     try {
       const { locale } = await params
       const t = await getTranslations({ locale, namespace: 'bijoux.detail' })
-      return { title: t('default.title'), description: t('default.description') }
+      return {
+        title: t('default.title'),
+        description: t('default.description'),
+        robots: { index: false, follow: false },
+      }
     } catch {
-      return { title: 'Produit | INOXYA BIJOUX', description: 'Découvrez nos bijoux.' }
+      return {
+        title: 'Produit | INOXYA BIJOUX',
+        description: 'Découvrez nos bijoux.',
+        robots: { index: false, follow: false },
+      }
     }
   }
 }
@@ -117,10 +136,16 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     notFound()
   }
 
+  const productId = String(bijou.id)
+  // Unifier l’URL canonique si l’utilisateur / Google arrive avec un autre identifiant
+  if (productId !== String(id)) {
+    permanentRedirect(`/${locale}/bijoux/${productId}`)
+  }
+
   // Normaliser les champs pour éviter erreurs en production (données DB variables)
   const product = {
     ...bijou,
-    id: String(bijou.id ?? id),
+    id: productId,
     price: Number(bijou.price) || 0,
     original_price: bijou.original_price != null ? Number(bijou.original_price) : undefined,
     name: String(bijou.name ?? ''),

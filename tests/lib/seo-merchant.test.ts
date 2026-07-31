@@ -193,10 +193,17 @@ describe('seoAlternates', () => {
   it('uses locale-self canonical', () => {
     const fr = seoAlternates('/bijoux/10', 'fr')
     expect(fr.canonical).toContain('/fr/bijoux/10')
+    expect(fr.canonical.endsWith('/')).toBe(false)
     const ar = seoAlternates('/bijoux/10', 'ar')
     expect(ar.canonical).toContain('/ar/bijoux/10')
     expect(ar.languages['x-default']).toContain('/fr/')
     expect(ar.languages['fr-MA']).toContain('/fr/')
     expect(ar.languages['ar-MA']).toContain('/ar/')
+  })
+
+  it('home canonical has no trailing slash', () => {
+    const home = seoAlternates('', 'fr')
+    expect(home.canonical.endsWith('/fr')).toBe(true)
+    expect(home.canonical.endsWith('/fr/')).toBe(false)
   })
 })

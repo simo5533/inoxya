@@ -63,6 +63,23 @@ const nextConfig = {
       { source: '/a-propos', destination: '/fr/a-propos', permanent: true },
       { source: '/faq', destination: '/fr/faq', permanent: true },
       { source: '/bijoux', destination: '/fr/bijoux', permanent: true },
+      // Anciennes URLs guide (GSC : page en double / 404)
+      {
+        source: '/guide-d-entretien-bijoux-acier-inoxydable',
+        destination: '/fr/guide/entretien-bijoux-acier-inoxydable',
+        permanent: true,
+      },
+      {
+        source: '/fr/guide-d-entretien-bijoux-acier-inoxydable',
+        destination: '/fr/guide/entretien-bijoux-acier-inoxydable',
+        permanent: true,
+      },
+      {
+        source: '/ar/guide-d-entretien-bijoux-acier-inoxydable',
+        destination: '/ar/guide/entretien-bijoux-acier-inoxydable',
+        permanent: true,
+      },
+      { source: '/guide/:slug', destination: '/fr/guide/:slug', permanent: true },
       { source: '/fr/admin', destination: '/admin', permanent: true },
       { source: '/fr/admin/:path*', destination: '/admin/:path*', permanent: true },
       { source: '/ar/admin', destination: '/admin', permanent: true },

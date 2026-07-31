@@ -22,8 +22,20 @@ export function seoSiteUrl(): string {
 }
 
 export function seoLocalePath(locale: string, path: string): string {
-  const clean = path.startsWith('/') ? path : `/${path}`
-  return `${seoSiteUrl()}/${locale}${clean === '/' ? '' : clean}`
+  const clean =
+    !path || path === '/'
+      ? ''
+      : path.startsWith('/')
+        ? path
+        : `/${path}`
+  return `${seoSiteUrl()}/${locale}${clean}`
+}
+
+/** Normalise un path SEO : '' pour l’accueil, sinon /segment… sans slash final. */
+export function normalizeSeoPath(path: string): string {
+  if (!path || path === '/') return ''
+  const withSlash = path.startsWith('/') ? path : `/${path}`
+  return withSlash.replace(/\/+$/, '') || ''
 }
 
 export function seoAlternates(
@@ -31,12 +43,12 @@ export function seoAlternates(
   locale?: string
 ): { canonical: string; languages: Record<string, string> } {
   const base = seoSiteUrl()
-  const clean = path.startsWith('/') ? path : `/${path}`
+  const clean = normalizeSeoPath(path)
   const loc = locale === 'ar' ? 'ar' : 'fr'
   const frUrl = `${base}/fr${clean}`
   const arUrl = `${base}/ar${clean}`
   return {
-    // Canonical auto-référent par langue
+    // Canonical auto-référent par langue (sans slash final)
     canonical: `${base}/${loc}${clean}`,
     languages: {
       'fr-MA': frUrl,
@@ -60,9 +72,9 @@ export function seoPageMetadata(opts: {
 }): import('next').Metadata {
   const siteUrl = seoSiteUrl()
   const locale = opts.locale ?? 'fr'
-  const path = opts.path.startsWith('/') ? opts.path : `/${opts.path}`
-  const url = `${siteUrl}/${locale}${path}`
-  const alt = seoAlternates(path, locale)
+  const clean = normalizeSeoPath(opts.path)
+  const url = `${siteUrl}/${locale}${clean}`
+  const alt = seoAlternates(clean || '', locale)
   const image = opts.ogImage ?? `${siteUrl}${BRAND_LOGO}`
 
   return {
@@ -91,6 +103,15 @@ export function seoPageMetadata(opts: {
     },
     robots: opts.noindex
       ? { index: false, follow: false }
-      : { index: true, follow: true },
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large' as const,
+            'max-snippet': -1,
+          },
+        },
   }
 }

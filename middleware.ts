@@ -5,8 +5,37 @@ import { routing } from './i18n/routing'
 
 const intlMiddleware = createMiddleware(routing)
 
+/** Segments invalides / junk crawlés par Google (&, %26, etc.) */
+function isJunkSegment(segment: string | undefined): boolean {
+  if (!segment) return false
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(segment)
+    } catch {
+      return segment
+    }
+  })()
+  if (decoded === '&' || decoded === '%26') return true
+  // Un seul caractère non alphanumérique / trop exotique
+  if (decoded.length <= 2 && !/^[a-z0-9_-]+$/i.test(decoded)) return true
+  if (/^[&?=]+$/.test(decoded)) return true
+  return false
+}
+
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const segments = pathname.split('/').filter(Boolean)
+
+  // URLs parasites : /&, /%26, /%26/bijoux → 410 Gone (réduit l’indexation junk)
+  if (segments.some((s) => isJunkSegment(s))) {
+    return new NextResponse('Gone', {
+      status: 410,
+      headers: {
+        'X-Robots-Tag': 'noindex, nofollow',
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    })
+  }
 
   // /fr/admin ou /ar/admin → /admin (l’admin n’est pas localisé)
   const adminLocaleMatch = pathname.match(/^\/(fr|ar)\/admin(\/.*)?$/)
@@ -16,8 +45,8 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
 
-  // Fausse locale (ex: /%26/bijoux → locale "&") → rediriger vers /fr
-  const firstSegment = pathname.split('/').filter(Boolean)[0]
+  // Fausse locale (ex: /xx/bijoux) → rediriger vers /fr…
+  const firstSegment = segments[0]
   if (
     firstSegment &&
     !routing.locales.includes(firstSegment as (typeof routing.locales)[number]) &&

@@ -20,6 +20,10 @@ const DISALLOW = [
   '/ar/inscription',
   '/ar/favoris',
   '/ar/mot-de-passe-oublie',
+  // URLs junk historiques (GSC)
+  '/&',
+  '/%26',
+  '/%26/',
 ]
 
 export default function robots(): MetadataRoute.Robots {
