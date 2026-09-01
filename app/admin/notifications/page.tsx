@@ -19,8 +19,11 @@ interface OrderItemEnriched {
   id: string
   quantity: number
   price: number
+  display_name?: string
   product_name?: string
   pack_name?: string
+  image_url?: string
+  is_pack?: boolean
 }
 
 interface OrderDetails {
@@ -227,16 +230,24 @@ export default function AdminNotificationsPage() {
                               {expanded && (
                                 <div className="border-t border-amber-100 px-3 py-3 space-y-2">
                                   {details.items.map((item) => (
-                                    <div key={item.id} className="flex items-center justify-between text-sm">
-                                      <span className="flex items-center gap-2 text-stone-700">
-                                        {item.pack_name ? (
-                                          <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                                    <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                                      <span className="flex items-center gap-2 text-stone-700 min-w-0">
+                                        {item.image_url ? (
+                                          <img
+                                            src={item.image_url}
+                                            alt={item.display_name || item.pack_name || item.product_name || 'Article'}
+                                            className="w-10 h-10 rounded object-cover border border-amber-100 shrink-0"
+                                          />
+                                        ) : item.is_pack || item.pack_name ? (
+                                          <ShoppingBag className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                         ) : (
-                                          <Package className="w-3.5 h-3.5 text-amber-600" />
+                                          <Package className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                         )}
-                                        {item.pack_name || item.product_name || `Article #${item.id}`}
+                                        <span className="truncate">
+                                          {item.display_name || item.pack_name || item.product_name || `Article #${item.id}`}
+                                        </span>
                                       </span>
-                                      <span className="text-stone-600">
+                                      <span className="text-stone-600 shrink-0">
                                         {item.quantity} × {Number(item.price).toFixed(0)} MAD = {(item.quantity * Number(item.price)).toFixed(0)} MAD
                                       </span>
                                     </div>

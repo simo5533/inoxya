@@ -664,6 +664,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
         pack_id: packId,
         quantity: Number(itemData.quantity),
         price: Number(itemData.price),
+        ...(itemData.product_name ? { product_name: String(itemData.product_name) } : {}),
       })
     }
     if (productRef) {
@@ -673,18 +674,21 @@ export class SupabaseAdapter implements DatabaseAdapter {
         pack_id: null,
         quantity: Number(itemData.quantity),
         price: Number(itemData.price),
+        ...(itemData.product_name ? { product_name: String(itemData.product_name) } : {}),
       })
       attempts.push({
         order_id,
         bijou_id: productRef,
         quantity: Number(itemData.quantity),
         price: Number(itemData.price),
+        ...(itemData.product_name ? { product_name: String(itemData.product_name) } : {}),
       })
     }
     attempts.push({
       order_id,
       quantity: Number(itemData.quantity),
       price: Number(itemData.price),
+      ...(itemData.product_name ? { product_name: String(itemData.product_name) } : {}),
     })
 
     let lastError: { message?: string; code?: string; details?: string; hint?: string } | null = null
@@ -734,12 +738,30 @@ export class SupabaseAdapter implements DatabaseAdapter {
     
     if (error || !data) return []
     
-    return (data as Array<{ id: number; order_id: number; bijou_id: string; quantity: number; price: number }>).map(row => ({
+    return (
+      data as Array<{
+        id: number
+        order_id: number
+        bijou_id?: string | null
+        pack_id?: string | null
+        quantity: number
+        price: number
+        product_name?: string | null
+      }>
+    ).map((row) => ({
       id: String(row.id),
       order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id),
+      bijou_id:
+        row.bijou_id != null && String(row.bijou_id).trim() !== ''
+          ? String(row.bijou_id)
+          : undefined,
+      pack_id:
+        row.pack_id != null && String(row.pack_id).trim() !== ''
+          ? String(row.pack_id)
+          : undefined,
       quantity: Number(row.quantity),
       price: Number(row.price),
+      product_name: row.product_name != null ? String(row.product_name) : undefined,
     }))
   }
 

@@ -70,10 +70,12 @@ export interface Order {
 export interface OrderItem {
   id: string
   order_id: string
-  bijou_id: string
+  bijou_id?: string
   pack_id?: string
   quantity: number
   price: number
+  /** Nom figé à la commande (si colonne présente en base) */
+  product_name?: string | null
 }
 
 export interface CartItem {

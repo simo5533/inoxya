@@ -779,10 +779,31 @@ export class PostgresAdapter implements DatabaseAdapter {
     // Ordre des tentatives : schémas Neon/Supabase varient (UUID FK vs TEXT, pack_id, product_id…)
     const attempts: Array<Record<string, unknown>> = []
     if (packId) {
+      if (name) {
+        attempts.push({ order_id: orderId, bijou_id: null, pack_id: packId, quantity: qty, price, product_name: name })
+        attempts.push({ order_id: orderId, pack_id: packId, quantity: qty, price, product_name: name })
+      }
       attempts.push({ order_id: orderId, bijou_id: null, pack_id: packId, quantity: qty, price })
       attempts.push({ order_id: orderId, pack_id: packId, quantity: qty, price })
     }
     if (productRef) {
+      if (name) {
+        attempts.push({
+          order_id: orderId,
+          bijou_id: productRef,
+          pack_id: null,
+          quantity: qty,
+          price,
+          product_name: name,
+        })
+        attempts.push({
+          order_id: orderId,
+          product_id: productRef,
+          quantity: qty,
+          price,
+          product_name: name,
+        })
+      }
       attempts.push({ order_id: orderId, bijou_id: productRef, pack_id: null, quantity: qty, price })
       attempts.push({ order_id: orderId, product_id: productRef, quantity: qty, price })
       attempts.push({
@@ -792,6 +813,9 @@ export class PostgresAdapter implements DatabaseAdapter {
         price,
         product_name: name,
       })
+    }
+    if (name) {
+      attempts.push({ order_id: orderId, quantity: qty, price, product_name: name })
     }
     attempts.push({ order_id: orderId, quantity: qty, price })
 
@@ -838,14 +862,25 @@ export class PostgresAdapter implements DatabaseAdapter {
       'SELECT * FROM order_items WHERE order_id = $1',
       [orderId]
     )
-    return result.rows.map((row: { id: number; order_id: number; bijou_id: string; pack_id?: string | null; quantity: number; price: number }) => ({
-      id: String(row.id),
-      order_id: String(row.order_id),
-      bijou_id: String(row.bijou_id ?? ''),
-      pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
-      quantity: Number(row.quantity),
-      price: Number(row.price),
-    }))
+    return result.rows.map(
+      (row: {
+        id: number
+        order_id: number
+        bijou_id?: string | null
+        pack_id?: string | null
+        quantity: number
+        price: number
+        product_name?: string | null
+      }) => ({
+        id: String(row.id),
+        order_id: String(row.order_id),
+        bijou_id: row.bijou_id != null && row.bijou_id !== '' ? String(row.bijou_id) : undefined,
+        pack_id: row.pack_id != null && row.pack_id !== '' ? String(row.pack_id) : undefined,
+        quantity: Number(row.quantity),
+        price: Number(row.price),
+        product_name: row.product_name != null ? String(row.product_name) : undefined,
+      })
+    )
   }
 
   async updateOrderStatus(id: string, status: string): Promise<boolean> {

@@ -7,7 +7,17 @@ import Link from 'next/link'
 import { ArrowLeft, Package, CreditCard, User, MapPin, FileText } from 'lucide-react'
 
 interface Order { id: string; total_amount: number; status: string; phone?: string; created_at: string; shipping_address?: unknown; notes?: string }
-interface Item { id: string; order_id: string; bijou_id?: string; quantity: number; price: number }
+interface Item {
+  id: string
+  order_id: string
+  bijou_id?: string
+  pack_id?: string
+  quantity: number
+  price: number
+  display_name: string
+  image_url: string
+  is_pack?: boolean
+}
 interface Payment { id: string; amount: number; status: string; payment_method: string; created_at: string }
 
 export default function AdminOrderDetailPage() {
@@ -129,14 +139,34 @@ export default function AdminOrderDetailPage() {
     }).format(amount)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('fr-FR', {
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return '—'
+    const d = new Date(dateString)
+    if (Number.isNaN(d.getTime())) return '—'
+    return d.toLocaleString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const formatAddress = (address: unknown) => {
+    if (!address) return ''
+    if (typeof address === 'string') {
+      try {
+        const parsed = JSON.parse(address) as { text?: string }
+        if (parsed?.text) return parsed.text
+      } catch {
+        return address
+      }
+      return address
+    }
+    if (typeof address === 'object' && address !== null && 'text' in address) {
+      return String((address as { text?: string }).text || '')
+    }
+    return JSON.stringify(address)
   }
 
   const getStatusColor = (status: string) => {
@@ -240,9 +270,7 @@ export default function AdminOrderDetailPage() {
                     <span>Adresse:</span>
                   </div>
                   <div className="font-medium">
-                    {typeof order.shipping_address === 'string' 
-                      ? order.shipping_address 
-                      : JSON.stringify(order.shipping_address)}
+                    {formatAddress(order.shipping_address)}
                   </div>
                 </div>
               )}
@@ -292,22 +320,32 @@ export default function AdminOrderDetailPage() {
               <div className="text-center py-8 text-gray-500">Aucun article</div>
             ) : (
               items.map(it => (
-                <div key={it.id} className="flex justify-between items-center border-b pb-3 last:border-0">
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {it.bijou_id ? (
-                        <Link href={`/admin/produits/${it.bijou_id}/modifier`} className="text-blue-600 hover:underline">
-                          Produit #{String(it.bijou_id).slice(-8)}
-                        </Link>
-                      ) : (
-                        'Produit supprimé'
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-500">Quantité: {it.quantity}</div>
+                <div key={it.id} className="flex gap-4 items-center border-b pb-3 last:border-0">
+                  <div className="shrink-0 w-20 h-20 rounded-lg overflow-hidden border bg-gray-50">
+                    <img
+                      src={it.image_url}
+                      alt={it.display_name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
                   </div>
-                  <div className="text-right">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900">
+                      {it.is_pack ? '📦 ' : ''}{it.display_name}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">Quantité : {it.quantity}</div>
+                    {it.bijou_id && (
+                      <Link
+                        href={`/admin/produits/${it.bijou_id}/modifier`}
+                        className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                      >
+                        Voir la fiche produit
+                      </Link>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
                     <div className="font-bold">{formatCurrency(it.price)}</div>
-                    <div className="text-sm text-gray-500">Total: {formatCurrency(it.price * it.quantity)}</div>
+                    <div className="text-sm text-gray-500">Total : {formatCurrency(it.price * it.quantity)}</div>
                   </div>
                 </div>
               ))
@@ -329,7 +367,7 @@ export default function AdminOrderDetailPage() {
                   <div className="flex-1">
                     <div className="font-medium">{paymentMethodLabel(p.payment_method)}</div>
                     <div className="text-sm text-gray-500">
-                      {new Date(p.created_at).toLocaleString('fr-FR')}
+                      {formatDate(p.created_at)}
                     </div>
                   </div>
                   <div className="text-right">
