@@ -650,7 +650,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
     quantity: number
     price: number
     product_name?: string
-  }): Promise<{ id: string; order_id: string; bijou_id: string; quantity: number; price: number } | null> {
+  }): Promise<OrderItem | null> {
     const orderIdRaw = itemData.order_id
     const order_id = Number.isFinite(Number(orderIdRaw)) ? Number(orderIdRaw) : orderIdRaw
     const packId = itemData.pack_id ? String(itemData.pack_id) : null
@@ -696,13 +696,29 @@ export class SupabaseAdapter implements DatabaseAdapter {
       // eslint-disable-next-line no-await-in-loop
       const { data, error } = await this.insertData('order_items', payload).select().single()
       if (!error && data) {
-        const row = data as { id: number; order_id: number; bijou_id: string; quantity: number; price: number }
+        const row = data as {
+          id: number
+          order_id: number
+          bijou_id?: string | null
+          pack_id?: string | null
+          quantity: number
+          price: number
+          product_name?: string | null
+        }
         return {
           id: String(row.id),
           order_id: String(row.order_id),
-          bijou_id: String(row.bijou_id ?? productRef ?? ''),
+          bijou_id:
+            row.bijou_id != null && String(row.bijou_id).trim() !== ''
+              ? String(row.bijou_id)
+              : undefined,
+          pack_id:
+            row.pack_id != null && String(row.pack_id).trim() !== ''
+              ? String(row.pack_id)
+              : undefined,
           quantity: Number(row.quantity),
           price: Number(row.price),
+          product_name: row.product_name != null ? String(row.product_name) : undefined,
         }
       }
       lastError = error

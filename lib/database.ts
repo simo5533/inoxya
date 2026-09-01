@@ -4,6 +4,7 @@
  */
 
 import { getDatabaseAdapter } from './db'
+import type { OrderItem } from './db/types'
 import { slugToDbValue } from './category-mapping'
 import { logger } from './logger'
 import {
@@ -845,7 +846,7 @@ export async function createOrderFull(orderData: {
       }
       
       // Créer les items (en parallèle pour meilleure performance)
-      const orderItems: Array<{ id: string; order_id: string; bijou_id: string; quantity: number; price: number }> = []
+      const orderItems: OrderItem[] = []
       const itemPromises = orderData.items.map(async (item) => {
         const isPack = Boolean(item.isPack)
         const orderItem = await adapter.createOrderItem({
