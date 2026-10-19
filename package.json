@@ -130,7 +130,7 @@
     "db:migrate:indexes": "node scripts/run-migration.js scripts/migrations/001_add_performance_indexes.sql"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.9.1",
+    "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.1",
