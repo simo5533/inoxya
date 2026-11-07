@@ -49,6 +49,7 @@ interface ProductRow {
   image_url?: string | null
   main_image?: string | null
   images?: string | string[] | null
+  slug?: string | null
   category_id?: string | number | null
   category?: string | null
   is_available?: boolean | null
@@ -202,13 +203,50 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   async getProductById(id: string): Promise<Product | null> {
     const result = await this.pool.query<ProductRow>(
-      'SELECT * FROM products WHERE id = $1',
+      'SELECT * FROM products WHERE id::text = $1',
       [id]
     )
     if (result.rows.length === 0) return null
     const row = result.rows[0]
     if (!row) return null
     return this.mapProduct(row)
+  }
+
+  async getProductBySlug(slug: string): Promise<Product | null> {
+    const s = String(slug || '').trim().toLowerCase()
+    if (!s) return null
+    try {
+      const cols = await this.getProductColumnMeta()
+      if (!cols.has('slug')) return null
+      const result = await this.pool.query<ProductRow>(
+        'SELECT * FROM products WHERE lower(slug) = $1 LIMIT 1',
+        [s]
+      )
+      const row = result.rows[0]
+      if (!row) return null
+      return this.mapProduct(row)
+    } catch {
+      return null
+    }
+  }
+
+  /** Best-effort : crée la colonne slug si absente. */
+  async ensureProductSlugColumn(): Promise<boolean> {
+    try {
+      await this.pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS slug TEXT`)
+      this.productColumnsCache = null
+      await this.pool.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_products_slug_unique
+         ON products (slug)
+         WHERE slug IS NOT NULL AND slug <> ''`
+      )
+      return true
+    } catch (error) {
+      logger.warn('[PostgresAdapter] ensureProductSlugColumn:', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
   }
 
   private async getProductColumnMeta(): Promise<Map<string, ProductColumnMeta>> {
@@ -339,6 +377,16 @@ export class PostgresAdapter implements DatabaseAdapter {
 
     if (cols.has('name')) row['name'] = productData.name
     if (cols.has('name_ar')) row['name_ar'] = productData.name_ar || null
+    if (cols.has('slug')) {
+      const { resolveProductSlug } = await import('../product-slug')
+      row['slug'] =
+        productData.slug ||
+        resolveProductSlug({
+          id: String(row['id'] || productData.id || `tmp-${Date.now()}`),
+          name: productData.name,
+          slug: productData.slug,
+        })
+    }
     if (cols.has('description')) {
       row['description'] = productData.description || 'Description non fournie'
     }
@@ -425,6 +473,7 @@ export class PostgresAdapter implements DatabaseAdapter {
         is_featured: productData.is_featured,
         image_url: productData.image_url ?? productData.main_image,
         category: productData.category ?? productData.category_id,
+        slug: productData.slug,
       }
 
       if (productData.stock !== undefined) {
@@ -454,7 +503,7 @@ export class PostgresAdapter implements DatabaseAdapter {
       values.push(id)
 
       const result = await this.pool.query(
-        `UPDATE products SET ${sets.join(', ')} WHERE id = $${idx}`,
+        `UPDATE products SET ${sets.join(', ')} WHERE id::text = $${idx}`,
         values
       )
       return (result.rowCount ?? 0) > 0
@@ -1160,6 +1209,7 @@ export class PostgresAdapter implements DatabaseAdapter {
       image_url: imageUrl,
       main_image: mainImage,
       images: imagesArray.length > 0 ? imagesArray : undefined,
+      slug: row.slug ? String(row.slug) : undefined,
       category_id: categoryId,
       category: category,
       is_available: row.is_available !== undefined ? Boolean(row.is_available) : (row.is_active !== undefined ? Boolean(row.is_active) : true),

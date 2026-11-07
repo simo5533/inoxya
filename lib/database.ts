@@ -4,8 +4,9 @@
  */
 
 import { getDatabaseAdapter } from './db'
-import type { OrderItem } from './db/types'
+import type { OrderItem, Product } from './db/types'
 import { slugToDbValue } from './category-mapping'
+import { assignProductSlugs } from './product-slug'
 import { logger } from './logger'
 import {
   extractPackItemsCount,
@@ -122,7 +123,7 @@ export async function getAllBijoux(categorySlug?: string) {
       const products = await adapter.getProducts(categorySlug)
       const activeProducts = products.filter((p) => p.is_available === true)
       
-      return activeProducts.map((product) => {
+      const mapped = activeProducts.map((product) => {
         // Convertir images en tableau si nécessaire
         let imagesArray: string[] = []
         if (product.images) {
@@ -159,6 +160,7 @@ export async function getAllBijoux(categorySlug?: string) {
           image_url: normalizedImage,
           main_image: normalizedImage,
           images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
+          slug: product.slug || undefined,
           stock: typeof product.stock === 'number' ? product.stock : STOCK_UNKNOWN,
           is_available: product.is_available !== false,
           is_featured: Boolean(product.is_featured),
@@ -166,6 +168,7 @@ export async function getAllBijoux(categorySlug?: string) {
           created_at: product.created_at || new Date().toISOString(),
         }
       })
+      return withAssignedPublicSlugs(mapped)
     } catch (adapterError) {
       if (IS_PRODUCTION) {
         if (!loggedProdAdapterFailureBijoux) {
@@ -201,7 +204,7 @@ export async function getAllBijoux(categorySlug?: string) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const products = await selectAsync(sqlQuery, [dbValue]) as any[]
         
-        return products.map((product: {
+        return withAssignedPublicSlugs(products.map((product: {
           id?: number
           name?: string
           name_ar?: string | null
@@ -211,6 +214,7 @@ export async function getAllBijoux(categorySlug?: string) {
           image_url?: string | null
           main_image?: string | null
           images?: string | null
+          slug?: string | null
           is_active?: number | boolean | null
           is_available?: number | boolean | null
           is_featured?: number | boolean | null
@@ -227,6 +231,7 @@ export async function getAllBijoux(categorySlug?: string) {
           image_url: product.image_url || product.main_image || '/placeholder.svg',
           main_image: product.main_image || product.image_url || '/placeholder.svg',
           images: product.images || undefined,
+          slug: product.slug || undefined,
           stock: (() => {
             const s = (product as unknown as { stock?: number }).stock
             return typeof s === 'number' ? s : 0
@@ -235,7 +240,7 @@ export async function getAllBijoux(categorySlug?: string) {
           is_featured: product.is_featured !== undefined ? Boolean(product.is_featured) : false,
           category_id: product.category_id || product.category || 'Général',
           created_at: product.created_at || new Date().toISOString(),
-        }))
+        })))
         }
       }
       
@@ -249,7 +254,7 @@ export async function getAllBijoux(categorySlug?: string) {
         return isActive && isAvailable
       })
       
-      return activeProducts.map((product) => {
+      return withAssignedPublicSlugs(activeProducts.map((product) => {
       // Convertir images en tableau si nécessaire
       let imagesArray: string[] = []
       if (product.images) {
@@ -286,6 +291,7 @@ export async function getAllBijoux(categorySlug?: string) {
         image_url: normalizedImage,
         main_image: normalizedImage,
         images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
+        slug: (product as { slug?: string }).slug || undefined,
         stock: (() => {
           const s = (product as unknown as { stock?: number }).stock
           return typeof s === 'number' ? s : 0
@@ -297,7 +303,7 @@ export async function getAllBijoux(categorySlug?: string) {
         category_id: product.category_id || product.category || 'Général',
         created_at: product.created_at || new Date().toISOString(),
       }
-      })
+      }))
     }
   } catch (error) {
     logger.error('Erreur getAllBijoux:', error)
@@ -305,15 +311,47 @@ export async function getAllBijoux(categorySlug?: string) {
   }
 }
 
+/** Attache des slugs URL uniques (catalogue) sans écraser un slug DB valide. */
+function withAssignedPublicSlugs<T extends { id: string | number; name?: string; slug?: string | null }>(
+  products: T[]
+): T[] {
+  const map = assignProductSlugs(products)
+  return products.map((p) => ({
+    ...p,
+    slug: map.get(String(p.id)) || p.slug || undefined,
+  }))
+}
+
 export async function getBijouById(id: string) {
   try {
+    const param = String(id || '').trim()
+    if (!param) return null
+
     // PRIORITÉ 1: Utiliser l'adapter de base de données (Supabase/Postgres/SQLite)
     try {
       const adapter = await getDatabaseAdapter()
-      const product = await adapter.getProductById(id)
+      const product = await adapter.getProductById(param)
       if (product) {
-        logger.info(`[getBijouById] ✅ Produit ${id} récupéré via adapter`)
-        return product
+        return await ensureProductHasSlug(product, adapter)
+      }
+
+      // Lookup par slug URL public
+      if (typeof adapter.getProductBySlug === 'function') {
+        const bySlug = await adapter.getProductBySlug(param)
+        if (bySlug) {
+          return await ensureProductHasSlug(bySlug, adapter)
+        }
+      }
+
+      // Repli : scan catalogue (slugs calculés si colonne absente)
+      const { isLikelyProductIdParam, resolveProductSlugInCatalog } = await import('./product-slug')
+      if (!isLikelyProductIdParam(param)) {
+        const all = await adapter.getProducts()
+        const match = (all || []).find((p) => {
+          const slug = resolveProductSlugInCatalog(p, all || [])
+          return slug === param.toLowerCase() || String(p.slug || '').toLowerCase() === param.toLowerCase()
+        })
+        if (match) return await ensureProductHasSlug(match, adapter)
       }
     } catch (adapterError) {
       if (IS_PRODUCTION) {
@@ -330,11 +368,39 @@ export async function getBijouById(id: string) {
       if (isConnected) isConnected = forceConnection()
     }
     if (isConnected) await new Promise<void>(r => { setTimeout(r, 50) })
-    return await getSqliteProductByIdAsync(id)
+    return await getSqliteProductByIdAsync(param)
   } catch (error) {
     logger.error('Erreur getBijouById:', error)
     return null
   }
+}
+
+/**
+ * Attache un slug public stable et le persiste (best-effort) sans écraser un slug déjà stocké.
+ */
+async function ensureProductHasSlug(
+  product: Product,
+  adapter: Awaited<ReturnType<typeof getDatabaseAdapter>>
+): Promise<Product> {
+  const { resolveProductSlug, isValidStoredProductSlug } = await import('./product-slug')
+  if (isValidStoredProductSlug(product.slug)) {
+    return product
+  }
+  const slug = resolveProductSlug(product)
+  const withSlug = { ...product, slug }
+  try {
+    const maybeEnsure = adapter as unknown as {
+      ensureProductSlugColumn?: () => Promise<boolean>
+    }
+    if (typeof maybeEnsure.ensureProductSlugColumn === 'function') {
+      await maybeEnsure.ensureProductSlugColumn()
+    }
+    // Ne met à jour que si slug encore vide — ne change pas lors d’un rename futur
+    await adapter.updateProduct(String(product.id), { slug })
+  } catch {
+    // Colonne absente ou contrainte : OK, slug calculé reste en mémoire pour l’URL
+  }
+  return withSlug
 }
 
 /**

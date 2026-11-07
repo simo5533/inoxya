@@ -164,7 +164,7 @@ export function ProductSchema({
       priceCurrency: 'MAD',
       price: product.price.toString(),
       availability: 'https://schema.org/InStock',
-      url: `${siteUrl}/bijoux/${product.id}`,
+      url: `${siteUrl}/fr/bijoux/${encodeURIComponent(String((product as { slug?: string }).slug || product.id))}`,
     },
   }
 

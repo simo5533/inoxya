@@ -2,10 +2,11 @@ import { MetadataRoute } from 'next'
 import { CATEGORY_SEO_SLUGS } from '@/lib/seo/categories'
 import { SEO_CONTENT_SLUGS } from '@/lib/seo/content/registry'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { assignProductSlugs } from '@/lib/product-slug'
 
 /**
  * Sitemap dynamique : liste complète des URLs canoniques indexables.
- * Évite les trous « détectée, non indexée » dus à un sitemap figé au build.
+ * Produits = /{locale}/bijoux/{slug} (pas l’id numérique).
  */
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
@@ -66,19 +67,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await getAllBijoux()
     type Product = {
       id: string | number
+      name?: string
+      slug?: string | null
       is_active?: boolean
       is_available?: boolean
       updated_at?: string | null
     }
+    const active = ((products || []) as Product[]).filter(
+      (p) => p.is_active !== false && p.is_available !== false && String(p.id || '').trim()
+    )
+    const slugMap = assignProductSlugs(active)
+
     for (const locale of LOCALES) {
-      for (const product of (products || []) as Product[]) {
-        if (product.is_active === false || product.is_available === false) continue
-        const id = String(product.id || '').trim()
-        if (!id) continue
-        // Ne pas indexer les IDs qui collisionnent avec des slugs catégorie
-        if ((CATEGORY_SEO_SLUGS as string[]).includes(id)) continue
+      for (const product of active) {
+        const id = String(product.id)
+        const slug = slugMap.get(id)
+        if (!slug) continue
+        if ((CATEGORY_SEO_SLUGS as string[]).includes(slug)) continue
         const updatedAt = product.updated_at
-        push(`${siteUrl}/${locale}/bijoux/${id}`, {
+        push(`${siteUrl}/${locale}/bijoux/${slug}`, {
           lastModified: updatedAt ? new Date(updatedAt) : now,
           changeFrequency: 'weekly',
           priority: 0.8,

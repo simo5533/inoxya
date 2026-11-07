@@ -27,6 +27,7 @@ import type { Product } from "@/lib/types"
 import { logger } from "@/lib/logger"
 import { useToast } from "@/hooks/use-toast"
 import { useTranslations, useLocale } from 'next-intl'
+import { productHref } from '@/lib/product-slug'
 
 interface FavoriteItem extends FavoriteItemType {
   description?: string
@@ -237,7 +238,14 @@ export default function FavorisPage() {
   }
 
   const handleViewProduct = (id: string) => {
-    router.push(`/${locale}/bijoux/${id}`)
+    const fromCatalog = products.find((p) => String(p.id) === String(id))
+    const fromFav = favorites.find((f) => String(f.id) === String(id))
+    const product = fromCatalog || {
+      id,
+      name: fromFav?.name || '',
+      slug: (fromCatalog as { slug?: string } | undefined)?.slug,
+    }
+    router.push(productHref(locale, product))
   }
 
   const formatCurrency = (amount: number) => {

@@ -924,6 +924,16 @@ export function initializeDatabase(): void {
         logger.warn('⚠️ Erreur lors de l\'ajout de la colonne created_by:', { error: msg })
       }
     }
+
+    // Slug URL public SEO
+    try {
+      db.exec(`ALTER TABLE products ADD COLUMN slug TEXT`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (!msg.includes('duplicate column')) {
+        logger.warn('⚠️ Erreur lors de l\'ajout de la colonne slug:', { error: msg })
+      }
+    }
     
     // Pour sql.js aussi, ajouter created_by si nécessaire
     if (sqlJsDb) {

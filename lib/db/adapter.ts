@@ -34,6 +34,8 @@ export interface DatabaseAdapter {
   // Products
   getProducts(categorySlug?: string): Promise<Product[]>
   getProductById(id: string): Promise<Product | null>
+  /** Lookup par slug URL public (optionnel selon adapter). */
+  getProductBySlug?(slug: string): Promise<Product | null>
   createProduct(productData: Partial<Product> & { name: string; price: number }): Promise<Product | null>
   updateProduct(id: string, productData: Partial<Product>): Promise<boolean>
   deleteProduct(id: string): Promise<boolean>

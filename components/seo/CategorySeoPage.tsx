@@ -10,6 +10,7 @@ import { GEO_QA_COLLECTION } from '@/lib/seo/geo-qa'
 import { seoLocalePath, seoPageMetadata, seoSiteUrl } from '@/lib/seo/config'
 import { CATEGORIES, slugToDbValue } from '@/lib/category-mapping'
 import { logger } from '@/lib/logger'
+import { productSeoPath } from '@/lib/product-slug'
 
 export async function generateCategoryMetadata(
   slug: string,
@@ -75,7 +76,7 @@ export default async function CategorySeoPage({
       : `${siteUrl}${img.startsWith('/') ? img : `/${img}`}`
     return {
       name: p.name,
-      url: seoLocalePath(locale, `/bijoux/${p.id}`),
+      url: seoLocalePath(locale, productSeoPath(p)),
       image: absoluteImg,
       price: p.price,
       sku: p.id,

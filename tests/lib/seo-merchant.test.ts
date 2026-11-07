@@ -51,6 +51,7 @@ describe('buildProductStructuredData', () => {
     const data = buildProductStructuredData(
       {
         id: '42',
+        slug: 'porte-al-medina',
         name: 'Porte Al-Medina',
         description: 'Collier élégant en acier 316L.',
         price: 89,
@@ -60,12 +61,13 @@ describe('buildProductStructuredData', () => {
         category: 'Colliers',
       },
       'fr',
-      'https://inoxya.ma/fr/bijoux/42'
+      'https://inoxya.ma/fr/bijoux/porte-al-medina'
     )
 
     expect(data['@type']).toBe('Product')
-    expect(data['@id']).toBe('https://inoxya.ma/fr/bijoux/42#product')
+    expect(data['@id']).toBe('https://inoxya.ma/fr/bijoux/porte-al-medina#product')
     expect(data['sku']).toBe('42')
+    expect(data['url']).toBe('https://inoxya.ma/fr/bijoux/porte-al-medina')
     expect(data['description']).toContain('Collier')
     expect(data['gtin13']).toBeUndefined()
     expect(data['gtin']).toBeUndefined()
@@ -191,11 +193,11 @@ describe('merchant offer shipping', () => {
 
 describe('seoAlternates', () => {
   it('uses locale-self canonical', () => {
-    const fr = seoAlternates('/bijoux/10', 'fr')
-    expect(fr.canonical).toContain('/fr/bijoux/10')
+    const fr = seoAlternates('/bijoux/porte-al-medina', 'fr')
+    expect(fr.canonical).toContain('/fr/bijoux/porte-al-medina')
     expect(fr.canonical.endsWith('/')).toBe(false)
-    const ar = seoAlternates('/bijoux/10', 'ar')
-    expect(ar.canonical).toContain('/ar/bijoux/10')
+    const ar = seoAlternates('/bijoux/porte-al-medina', 'ar')
+    expect(ar.canonical).toContain('/ar/bijoux/porte-al-medina')
     expect(ar.languages['x-default']).toContain('/fr/')
     expect(ar.languages['fr-MA']).toContain('/fr/')
     expect(ar.languages['ar-MA']).toContain('/ar/')

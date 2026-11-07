@@ -12,6 +12,8 @@ import {
 
 export type ProductStructuredDataInput = AvailabilityProductInput & {
   id: string
+  /** Slug URL public (préféré pour url / @id) */
+  slug?: string | null
   name: string
   /** Description réelle du produit (prioritaire) */
   description?: string | null
@@ -68,9 +70,10 @@ export function buildProductStructuredData(
 ): Record<string, unknown> {
   const siteUrl = seoSiteUrl()
   const loc = locale === 'ar' ? 'ar' : 'fr'
+  const pathKey = String(product.slug || product.id).trim()
   const url =
     canonicalUrl ||
-    `${siteUrl}/${loc}/bijoux/${encodeURIComponent(String(product.id))}`
+    `${siteUrl}/${loc}/bijoux/${encodeURIComponent(pathKey)}`
   const fallbackImage = `${siteUrl}${BRAND_LOGO_ICON}`
   const rawImages = product.image
     ? Array.isArray(product.image)

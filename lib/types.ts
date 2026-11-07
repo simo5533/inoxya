@@ -14,6 +14,8 @@ export interface Product {
   original_price?: number
   category: string
   category_id?: string
+  /** Slug URL public persisté */
+  slug?: string
   stock: number
   is_active: boolean
   is_available?: boolean

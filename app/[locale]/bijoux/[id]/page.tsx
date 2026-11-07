@@ -21,6 +21,7 @@ import { getProductRatingStats } from "@/lib/reviews"
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 import { ShareButton } from '@/components/ShareButton'
+import { productHref, productSeoPath, resolveProductSlug } from '@/lib/product-slug'
 
 // Force dynamic rendering - do NOT prerender at build time
 export const runtime = 'nodejs'
@@ -42,13 +43,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         title: t('notFound.title'),
         description: t('notFound.description'),
         robots: { index: false, follow: false },
-        alternates: {
-          canonical: `${siteUrl}/${locale}/bijoux/${encodeURIComponent(id)}`,
-        },
+        // Pas de canonical indexable pour produit absent
       }
     }
 
     const productId = String(bijou.id)
+    const publicSlug = resolveProductSlug(bijou)
     // Normaliser l'URL de l'image pour Open Graph
     const rawImageUrl = bijou.main_image || bijou.image_url || (Array.isArray(bijou.images) ? bijou.images[0] : '') || ''
     let imageUrl = `${siteUrl}/images/default-product.jpg`
@@ -83,8 +83,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return seoPageMetadata({
       title: seo.seoTitle.length > 60 ? seo.seoTitle.slice(0, 57) + '…' : seo.seoTitle.replace(/\s*\|\s*INOXYA BIJOUX\s*$/i, ''),
       description: seo.metaDescription,
-      // Canonical toujours sur l’id réel du produit (évite doublons prod-* / param)
-      path: `/bijoux/${productId}`,
+      // Canonical absolue sur le slug descriptif (pas l’id numérique / prod-*)
+      path: productSeoPath({ ...bijou, slug: publicSlug }),
       locale,
       ogImage: imageUrl,
       keywords: [...seo.keywords.primary, ...seo.keywords.secondary, ...seo.keywords.searchVariants],
@@ -137,15 +137,17 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
   }
 
   const productId = String(bijou.id)
-  // Unifier l’URL canonique si l’utilisateur / Google arrive avec un autre identifiant
-  if (productId !== String(id)) {
-    permanentRedirect(`/${locale}/bijoux/${productId}`)
+  const publicSlug = resolveProductSlug(bijou)
+  // 301/308 : anciennes URL id/prod-* → slug descriptif
+  if (String(id) !== publicSlug) {
+    permanentRedirect(`/${locale}/bijoux/${publicSlug}`)
   }
 
   // Normaliser les champs pour éviter erreurs en production (données DB variables)
   const product = {
     ...bijou,
     id: productId,
+    slug: publicSlug,
     price: Number(bijou.price) || 0,
     original_price: bijou.original_price != null ? Number(bijou.original_price) : undefined,
     name: String(bijou.name ?? ''),
@@ -246,7 +248,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
     ...(categoryName !== t('breadcrumb.jewelry') && categorySlug
       ? [{ name: categoryDisplay, href: `/${locale}/bijoux/${categorySlug}` }]
       : []),
-    { name: product.name, href: `/${locale}/bijoux/${product.id}` },
+    { name: product.name, href: productHref(locale, product) },
   ]
   const breadcrumbItems = breadcrumbNav.map((b) => ({
     name: b.name,
@@ -258,6 +260,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
       <ProductJsonLd
         product={{
           id: String(product.id),
+          slug: publicSlug,
           name: product.name,
           description:
             (product.description && String(product.description).trim()) ||
@@ -273,6 +276,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
           ...(reviews > 0 ? { rating, reviews_count: reviews } : {}),
         }}
         locale={locale}
+        canonicalUrl={`${siteUrl}${productHref(locale, product)}`}
       />
       <BreadcrumbJsonLd items={breadcrumbItems} />
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white w-full max-w-full min-w-0 overflow-x-hidden">
@@ -602,7 +606,7 @@ export default async function BijouDetailPage({ params }: { params: Promise<{ id
             <h2 className="text-2xl font-bold text-gray-900 mb-8">{t('similarProducts')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {similarProducts.map((similar) => (
-                <Link key={similar.id} href={`/${locale}/bijoux/${similar.id}`}>
+                <Link key={similar.id} href={productHref(locale, similar)}>
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                     <CardContent className="p-4">
                       <div className="relative w-full h-0 pb-[100%] rounded-lg overflow-hidden bg-gray-100 mb-3">

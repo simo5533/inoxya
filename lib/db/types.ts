@@ -12,6 +12,8 @@ export interface Product {
   image_url?: string
   main_image?: string
   images?: string | string[]
+  /** Slug URL public persisté (/bijoux/{slug}) — ne pas régénérer si présent */
+  slug?: string
   category_id?: string
   category?: string
   is_available: boolean

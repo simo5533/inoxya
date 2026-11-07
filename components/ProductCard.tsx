@@ -11,6 +11,7 @@ import { addToFavorites, removeFromFavorites, isFavorite, addToCart } from "@/li
 import { useLocale } from "next-intl"
 
 import { getSafeImageSrc } from '@/lib/image-path'
+import { productHref } from '@/lib/product-slug'
 
 /**
  * Convertit un chemin d'image en URL valide
@@ -23,6 +24,7 @@ function convertToImageUrl(imagePath: string): string {
 interface ProductCardProps {
   product: {
     id: string
+    slug?: string
     name: string
     name_ar?: string
     description?: string
@@ -206,7 +208,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* 🖼️ Image du produit — zone cliquable (même URL que « Voir ») */}
       <Link
-        href={`/${locale}/bijoux/${product.id}`}
+        href={productHref(locale, product)}
         className="group/image relative block w-full aspect-[4/5] overflow-hidden rounded-t-xl bg-neutral-100/40 min-h-[300px] cursor-pointer"
         aria-label={`Voir ${product.name}`}
       >
@@ -241,7 +243,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <CardContent className="p-4 space-y-3">
         {/* 📝 Nom du bijou */}
         <div className="space-y-1">
-          <Link href={`/${locale}/bijoux/${product.id}`}>
+          <Link href={productHref(locale, product)}>
             <h3 className="font-bold text-luxury-black group-hover:text-luxury-gold transition-colors line-clamp-1 text-base">
               {product.name}
             </h3>
@@ -296,7 +298,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* 🛒 Boutons d'action */}
         <div className="flex gap-2 pt-2">
-          <Link href={`/${locale}/bijoux/${product.id}`} className="flex-1">
+          <Link href={productHref(locale, product)} className="flex-1">
             <Button
               variant="outline"
               size="sm" 

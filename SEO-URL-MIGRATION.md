@@ -2,47 +2,41 @@
 
 **Domaine canonique production :** `https://inoxya.ma`
 
-## Formats d’URL produit
+## Formats d’URL produit (2026-11)
 
 | Type | Pattern | Canonical |
 |------|---------|-----------|
-| FR | `/fr/bijoux/{id}` | Auto-référent FR |
-| AR | `/ar/bijoux/{id}` | Auto-référent AR |
+| FR | `/fr/bijoux/{slug}` | Auto-référent FR |
+| AR | `/ar/bijoux/{slug}` | Auto-référent AR |
+| Ancien id | `/fr/bijoux/{id}` ou `prod-*` | **308** → `/fr/bijoux/{slug}` si produit existe |
+| Produit absent | toute URL | **404** + noindex (pas de redirect vers un autre produit) |
 | Sans locale | `/bijoux` → `/fr/bijoux` | Redirect 301 (`next.config.mjs`) |
 | FAQ | `/faq` → `/fr/faq` | Redirect 301 |
 | Packs | `/packs` → `/fr/packs` ; `/packs/:id` → `/fr/packs/:id` | Redirect 301 |
 | Admin | `/fr/admin` → `/admin` | Redirect 301 |
 
-## Ancien domaine Vercel
+## Slugs
 
-| Ancienne référence | Action |
-|--------------------|--------|
-| `inoxya-bijoux.vercel.app` dans `geo-qa.ts` / `pillar.ts` | Remplacé par `https://inoxya.ma` |
-| Preview `*.vercel.app` via `NEXT_PUBLIC_SITE_URL` en prod | Forcé vers `inoxya.ma` (`lib/site-url.ts`) |
+- Colonne `products.slug` (migration `scripts/migrations/002_add_product_slug.sql`)
+- Générés depuis le nom (sans accents), uniques ; suffixe id court si collision / réservé
+- **Persistants** : ne changent pas si le nom produit est modifié après stockage
+- Les ids internes restent inchangés
 
 ## Hreflang
 
-Pour chaque path (ex. `/bijoux/10`) :
+Pour chaque path (ex. `/bijoux/fleur-de-grace`) :
 
 | Clé | URL |
 |-----|-----|
-| `fr` / `fr-MA` | `https://inoxya.ma/fr/bijoux/10` |
-| `ar` / `ar-MA` | `https://inoxya.ma/ar/bijoux/10` |
-| `x-default` | `https://inoxya.ma/fr/bijoux/10` |
+| `fr` / `fr-MA` | `https://inoxya.ma/fr/bijoux/fleur-de-grace` |
+| `ar` / `ar-MA` | `https://inoxya.ma/ar/bijoux/fleur-de-grace` |
+| `x-default` | URL FR |
 | `canonical` | URL de la locale courante |
 
-## Doublons / IDs
+## Sitemap / robots
 
-Les produits utilisent un **id numérique stable** dans l’URL (`/bijoux/10`).  
-Pas de slug produit séparé documenté comme second URL indexable.  
-Si d’anciennes URLs `prod-xxxxx` existent hors repo, les rediriger en 301 vers `/fr/bijoux/{id}` (action manuelle Search Console / logs).
+- Sitemap : slugs produits + catégories + guides + packs
+- `Allow: /api/shop-blob` pour images ; reste de `/api/` disallow
+- Junk `/&`, `/%26` : 410
 
-## Sitemap
-
-`app/sitemap.ts` : locales `fr` + `ar`, produits actifs, packs, guides, catégories.
-
-## Actions manuelles éventuelles
-
-1. Dans Search Console : fixer la propriété `inoxya.ma`, demander indexation des sitemaps.
-2. Vérifier le rapport « pages avec redirection » pour d’éventuels `vercel.app`.
-3. Si d’anciennes URLs produit apparaissent dans Coverage, ajouter redirects ciblés.
+Voir aussi `SEO-URL-INDEXING-FIX.md`.

@@ -126,14 +126,8 @@ export function WebSiteJsonLd() {
         alternateName: 'INOXYA',
         url: siteUrl,
         publisher: { '@id': `${siteUrl}/#organization` },
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: `${siteUrl}/fr/bijoux?search={search_term_string}`,
-          },
-          'query-input': 'required name=search_term_string',
-        },
+        // SearchAction volontairement omis : évite l’indexation de
+        // /fr/bijoux?search={search_term_string} et des résultats internes.
       }}
     />
   )
@@ -175,9 +169,11 @@ export function FAQPageJsonLd({ items }: { items: Array<{ question: string; answ
 export function ProductJsonLd({
   product,
   locale = 'fr',
+  canonicalUrl,
 }: {
   product: {
     id: string
+    slug?: string
     name: string
     description?: string
     seoDescription?: string
@@ -193,10 +189,12 @@ export function ProductJsonLd({
     gtin?: string | null
   }
   locale?: string
+  canonicalUrl?: string
 }) {
   const data = buildProductStructuredData(
     {
       id: product.id,
+      slug: product.slug,
       name: product.name,
       description: product.description,
       seoDescription: product.seoDescription,
@@ -210,7 +208,8 @@ export function ProductJsonLd({
       reviews_count: product.reviews_count,
       gtin: product.gtin,
     },
-    locale
+    locale,
+    canonicalUrl
   )
 
   return <JsonLdScript data={data} />

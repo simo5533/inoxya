@@ -217,6 +217,23 @@ export class SupabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  async getProductBySlug(slug: string): Promise<Product | null> {
+    const s = String(slug || '').trim().toLowerCase()
+    if (!s) return null
+    try {
+      const { data, error } = await this.supabase
+        .from('products')
+        .select('*')
+        .ilike('slug', s)
+        .limit(1)
+        .maybeSingle()
+      if (error || !data) return null
+      return this.mapProduct(data)
+    } catch {
+      return null
+    }
+  }
+
   async createProduct(productData: Partial<Product>): Promise<Product | null> {
     if (!productData.name || productData.price == null) {
       throw new Error('Champs requis manquants: name et price')
@@ -236,6 +253,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
       }
     }
 
+    const { resolveProductSlug } = await import('../product-slug')
     const insertData: Record<string, unknown> = {
       name: productData.name,
       price: productData.price,
@@ -245,6 +263,13 @@ export class SupabaseAdapter implements DatabaseAdapter {
       category: productData.category || productData.category_id || 'Général',
       image_url: imageUrl,
       images: imagesPayload,
+      slug:
+        productData.slug ||
+        resolveProductSlug({
+          id: String(productData.id || `tmp-${Date.now()}`),
+          name: productData.name,
+          slug: productData.slug,
+        }),
       is_active: productData.is_active !== undefined ? productData.is_active : true,
       is_featured: productData.is_featured !== undefined ? productData.is_featured : false,
       is_available:
@@ -1132,6 +1157,7 @@ export class SupabaseAdapter implements DatabaseAdapter {
         : undefined,
       category: row.category != null ? String(row.category) : undefined,
       category_id: row.category_id != null ? String(row.category_id) : (row.category != null ? String(row.category) : undefined),
+      slug: row.slug != null && String(row.slug).trim() ? String(row.slug).trim() : undefined,
       is_available: row.is_active !== false,
       is_active: row.is_active !== false,
       is_featured: Boolean(row.is_featured),

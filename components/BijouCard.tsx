@@ -16,6 +16,7 @@ import { useState } from "react"
 import { logger } from "@/lib/logger"
 import { useLocale } from "next-intl"
 import { FavoriteButton } from "@/components/FavoriteButton"
+import { productHref } from '@/lib/product-slug'
 
 interface BijouCardProps {
   bijou: Product
@@ -118,7 +119,7 @@ export default function BijouCard({ bijou }: BijouCardProps) {
       </div>
 
       <CardContent className="p-4">
-        <Link href={`/${locale}/bijoux/${bijou.id}`}>
+        <Link href={productHref(locale, bijou)}>
           <h3 className="font-semibold mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
             {bijou.name}
           </h3>
@@ -132,7 +133,7 @@ export default function BijouCard({ bijou }: BijouCardProps) {
 
         {/* Bouton d'achat avec formulaire */}
         <div className="flex gap-2">
-          <Link href={`/${locale}/bijoux/${bijou.id}`} className="flex-1">
+          <Link href={productHref(locale, bijou)} className="flex-1">
             <Button variant="outline" size="sm" className="w-full bg-transparent">
               Voir détails
             </Button>

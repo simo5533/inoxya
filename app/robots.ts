@@ -3,6 +3,10 @@ import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
 const siteUrl = PRODUCTION_SITE_URL
 
+/**
+ * /api/ bloqué sauf /api/shop-blob (images produits publiques pour Googlebot Images).
+ * Les autres routes API restent protégées.
+ */
 const DISALLOW = [
   '/admin/',
   '/api/',
@@ -26,15 +30,46 @@ const DISALLOW = [
   '/%26/',
 ]
 
+const ALLOW_EXCEPTIONS = ['/api/shop-blob']
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      { userAgent: '*', allow: '/', disallow: DISALLOW },
-      { userAgent: 'OAI-SearchBot', allow: '/', disallow: DISALLOW },
-      { userAgent: 'ChatGPT-User', allow: '/', disallow: DISALLOW },
-      { userAgent: 'GPTBot', allow: '/', disallow: DISALLOW },
-      { userAgent: 'Googlebot', allow: '/', disallow: DISALLOW },
-      { userAgent: 'Google-Extended', allow: '/', disallow: DISALLOW },
+      {
+        userAgent: '*',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
+      {
+        userAgent: 'Googlebot',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
+      {
+        userAgent: 'Googlebot-Image',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
+      {
+        userAgent: 'OAI-SearchBot',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
+      {
+        userAgent: 'ChatGPT-User',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
+      {
+        userAgent: 'GPTBot',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
+      {
+        userAgent: 'Google-Extended',
+        allow: ['/', ...ALLOW_EXCEPTIONS],
+        disallow: DISALLOW,
+      },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
   }

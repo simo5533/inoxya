@@ -15,9 +15,27 @@ import { seoPageMetadata } from '@/lib/seo/config'
 import { getSiteUrlSafe } from '@/lib/site-url'
 import { getTranslations } from 'next-intl/server'
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>
+  searchParams?: Promise<{ category?: string; search?: string }>
+}): Promise<Metadata> {
   try {
     const { locale } = await params
+    const sp = searchParams ? await searchParams : {}
+    const hasSearch = Boolean((sp.search || '').trim())
+    // Résultats de recherche internes : noindex (évite GSC search={search_term_string})
+    if (hasSearch) {
+      return seoPageMetadata({
+        title: 'Recherche bijoux | INOXYA BIJOUX',
+        description: 'Résultats de recherche internes INOXYA.',
+        path: '/bijoux',
+        locale,
+        noindex: true,
+      })
+    }
     if (locale === 'fr') {
       return seoPageMetadata({
         title: 'Bijoux acier inoxydable au Maroc',
@@ -153,6 +171,7 @@ export default async function BijouxPage({ params, searchParams }: BijouxPagePro
       image_url: normalizedImage,
       main_image: normalizedImage,
       images: imagesArray.length > 0 ? JSON.stringify(imagesArray) : undefined,
+      slug: typeof product.slug === 'string' && product.slug ? product.slug : String(product.id || ''),
       // Disponibilité
       is_available: product.is_available !== undefined 
         ? Boolean(product.is_available) 
